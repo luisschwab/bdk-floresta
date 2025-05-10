@@ -6,8 +6,8 @@ fmt:
 
 check:
   cargo +nightly fmt -- --check
-  cargo clippy -- -D warnings
-  cargo check --all-features
+  cargo +nightly clippy -- -D warnings
+  cargo +nightly check --all-features
 
 example name="example":
   cargo run --example {{name}} --release
