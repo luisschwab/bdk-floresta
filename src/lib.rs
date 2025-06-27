@@ -38,11 +38,18 @@ pub struct FlorestaClient {
 
 impl FlorestaClient {
     /// Connect to a peer located at [`SocketAddr`].
-    pub async fn connect(
+    pub async fn add_peer(
         &self,
         peer: SocketAddr,
     ) -> anyhow::Result<bool, tokio::sync::oneshot::error::RecvError> {
-        if let Ok(true) = self.handle.connect(peer.ip(), peer.port()).await {
+        // If the peer is not BIP324-capable, it will fallback to unencrypted communication.
+        let v2transport = true;
+
+        if let Ok(true) = self
+            .handle
+            .add_peer(peer.ip(), peer.port(), v2transport)
+            .await
+        {
             info!("connected to {peer}");
             Ok(true)
         } else {
