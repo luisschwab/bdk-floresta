@@ -29,7 +29,7 @@ pub fn setup_logger(debug: bool) -> Result<(), fern::InitError> {
 
     let allowed_crates = ["bdk_floresta", "example", "floresta_chain", "floresta_wire"];
 
-    let filter_fn = move |metadata: &log::Metadata| {
+    let filter = move |metadata: &log::Metadata| {
         allowed_crates
             .iter()
             .any(|prefix| metadata.target().starts_with(prefix))
@@ -37,8 +37,8 @@ pub fn setup_logger(debug: bool) -> Result<(), fern::InitError> {
 
     let dispatch = Dispatch::new()
         .format(formatter(true))
-        .level(LevelFilter::Trace) // Start from most verbose...
-        .filter(Box::new(filter_fn)) // ...then restrict by module path
+        .level(LevelFilter::Trace)
+        .filter(Box::new(filter))
         .level_for(
             "bdk_floresta",
             if debug {
