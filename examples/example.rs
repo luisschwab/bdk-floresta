@@ -4,7 +4,7 @@ use anyhow::Result;
 use bitcoin::{Block, Network};
 use log::info;
 
-use bdk_floresta::builder::FlorestaClientBuilder;
+use bdk_floresta::{builder::FlorestaClientBuilder, FlorestaClient};
 use bdk_floresta::{BlockConsumer, BlockchainInterface, UpdatableChainstate};
 
 /// TODO: remove this
@@ -17,41 +17,19 @@ impl BlockConsumer for BlockPrinter {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let network = Network::Signet;
+
     let mut client = FlorestaClientBuilder::default()
         .network(Network::Signet)
         .build()
         .await?;
 
+    bootstrap_utreexo_peers(&client, &network).await;
+
     // Create the block consumer
     let block_printer = Arc::new(BlockPrinter);
     // Subscribe to new blocks.
     client.subscribe_block(block_printer);
-
-    if client.config.network == Network::Bitcoin {
-        client
-            .add_peer(SocketAddr::from_str("1.228.21.110:8333")?)
-            .await?;
-        client
-            .add_peer(SocketAddr::from_str("181.191.0.133:8333")?)
-            .await?;
-        client
-            .add_peer(SocketAddr::from_str("85.239.240.4:8333")?)
-            .await?;
-    } else if client.config.network == Network::Signet {
-        client
-            .add_peer(SocketAddr::from_str("209.126.80.42:39333")?)
-            .await?;
-        client
-            .add_peer(SocketAddr::from_str("1.228.21.110:38333")?)
-            .await?;
-        client
-            .add_peer(SocketAddr::from_str("10.21.21.106:38333")?)
-            .await?;
-    } else if client.config.network == Network::Testnet4 {
-        client
-            .add_peer(SocketAddr::from_str("85.239.240.4:48333")?)
-            .await?;
-    }
 
     let mut i = 0;
     loop {
@@ -83,4 +61,38 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Bootstrap to known Utreexo-capable peers.
+async fn bootstrap_utreexo_peers(client: &FlorestaClient, network: &Network) {
+    match network {
+        Network::Bitcoin => {
+            let _ = client
+                .add_peer(SocketAddr::from_str("1.228.21.110:8333").unwrap())
+                .await;
+            let _ = client
+                .add_peer(SocketAddr::from_str("181.191.0.133:8333").unwrap())
+                .await;
+            let _ = client
+                .add_peer(SocketAddr::from_str("85.239.240.4:8333").unwrap())
+                .await;
+        }
+        Network::Signet => {
+            let _ = client
+                .add_peer(SocketAddr::from_str("209.126.80.42:39333").unwrap())
+                .await;
+            let _ = client
+                .add_peer(SocketAddr::from_str("1.228.21.110:38333").unwrap())
+                .await;
+            let _ = client
+                .add_peer(SocketAddr::from_str("85.239.240.4:38333").unwrap())
+                .await;
+        }
+        Network::Testnet4 => {
+            let _ = client
+                .add_peer(SocketAddr::from_str("85.239.240.4:48333").unwrap())
+                .await;
+        }
+        _ => panic!("Unsupported network"),
+    }
 }
