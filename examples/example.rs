@@ -2,13 +2,10 @@ use std::{net::SocketAddr, str::FromStr, sync::Arc};
 
 use anyhow::Result;
 use bitcoin::{Block, Network};
-use floresta_chain::{
-    pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
-    BlockConsumer,
-};
 use log::info;
 
 use bdk_floresta::builder::FlorestaClientBuilder;
+use bdk_floresta::{BlockConsumer, BlockchainInterface, UpdatableChainstate};
 
 /// TODO: remove this
 struct BlockPrinter;

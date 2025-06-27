@@ -5,15 +5,16 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use floresta_chain::pruned_utreexo::BlockchainInterface;
-use floresta_chain::pruned_utreexo::UpdatableChainstate;
-use floresta_chain::{BlockConsumer, ChainState, KvChainStore};
-use floresta_wire::node_interface::NodeInterface;
-use floresta_wire::UtreexoNodeConfig;
-
+use floresta_chain::{ChainState, KvChainStore};
+use floresta_wire::{node_interface::NodeInterface, UtreexoNodeConfig};
 use log::{debug, info, warn};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+
+pub use floresta_chain::{
+    pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
+    BlockConsumer,
+};
 
 pub mod builder;
 pub mod logger;
