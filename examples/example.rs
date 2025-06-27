@@ -30,19 +30,29 @@ async fn main() -> Result<()> {
     // Subscribe to new blocks.
     client.subscribe_block(block_printer);
 
-    if client.config.network == Network::Signet {
+    if client.config.network == Network::Bitcoin {
         client
-            .connect(SocketAddr::from_str("209.126.80.42:39333")?)
+            .add_peer(SocketAddr::from_str("1.228.21.110:8333")?)
             .await?;
         client
-            .connect(SocketAddr::from_str("1.228.21.110:38333")?)
-            .await?;
-    } else if client.config.network == Network::Bitcoin {
-        client
-            .connect(SocketAddr::from_str("1.228.21.110:8333")?)
+            .add_peer(SocketAddr::from_str("181.191.0.133:8333")?)
             .await?;
         client
-            .connect(SocketAddr::from_str("181.191.0.133:8333")?)
+            .add_peer(SocketAddr::from_str("85.239.240.4:8333")?)
+            .await?;
+    } else if client.config.network == Network::Signet {
+        client
+            .add_peer(SocketAddr::from_str("209.126.80.42:39333")?)
+            .await?;
+        client
+            .add_peer(SocketAddr::from_str("1.228.21.110:38333")?)
+            .await?;
+        client
+            .add_peer(SocketAddr::from_str("10.21.21.106:38333")?)
+            .await?;
+    } else if client.config.network == Network::Testnet4 {
+        client
+            .add_peer(SocketAddr::from_str("85.239.240.4:48333")?)
             .await?;
     }
 
