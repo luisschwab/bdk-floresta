@@ -12,7 +12,11 @@ use tokio::sync::RwLock;
 use tokio::task;
 
 use floresta_chain::{
-    pruned_utreexo::UpdatableChainstate, BlockchainError, ChainParams, ChainState, KvChainStore,
+    pruned_utreexo::{
+        flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
+        UpdatableChainstate,
+    },
+    AssumeValidArg, BlockchainError, ChainParams, ChainState,
 };
 use floresta_wire::{
     address_man::AddressMan, mempool::Mempool, node::UtreexoNode, running_node::RunningNode,
@@ -84,10 +88,11 @@ impl FlorestaClientBuilder {
     pub async fn build(self) -> Result<FlorestaClient> {
         logger::setup_logger(self.debug)?;
 
-        // TODO: https://github.com/bitcoindevkit/bdk/pull/1582/
-        let chain_store = KvChainStore::new(self.config.datadir.clone()).expect("");
+        // TODO(@luisschwab): https://github.com/bitcoindevkit/bdk/pull/1582/
+        let chain_store_cfg = FlatChainStoreConfig::new(self.config.datadir.clone());
+        let chain_store = FlatChainStore::new(chain_store_cfg.clone()).expect("");
         let chain = Arc::new(
-            match ChainState::<KvChainStore>::load_chain_state(
+            match ChainState::<FlatChainStore>::load_chain_state(
                 chain_store,
                 self.config.network,
                 AssumeValidArg::Disabled,
@@ -98,12 +103,11 @@ impl FlorestaClientBuilder {
                 }
                 Err(err) => match err {
                     BlockchainError::ChainNotInitialized => {
-                        let chain_store = KvChainStore::new(self.config.datadir.to_string())
-                            .expect("Could not read DB");
+                        let chain_store =
+                            FlatChainStore::new(chain_store_cfg).expect("could not read DB");
 
                         info!("created a new chain on disk at {}", self.config.datadir);
-
-                        ChainState::<KvChainStore>::new(
+                        ChainState::<FlatChainStore>::new(
                             chain_store,
                             self.config.network,
                             AssumeValidArg::Disabled,
