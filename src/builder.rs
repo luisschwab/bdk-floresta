@@ -22,6 +22,11 @@ use floresta_wire::{
     address_man::AddressMan, mempool::Mempool, node::UtreexoNode, running_node::RunningNode,
     UtreexoNodeConfig,
 };
+use log::info;
+use rustreexo::accumulator::pollard::Pollard;
+use tokio::sync::oneshot;
+use tokio::sync::RwLock;
+use tokio::task;
 
 use crate::logger;
 use crate::FlorestaClient;
@@ -37,6 +42,7 @@ impl Default for FlorestaClientBuilder {
             ChainParams::get_assume_utreexo(Network::Bitcoin).expect("Unsupported network");
 
         Self {
+            debug: false,
             config: UtreexoNodeConfig {
                 disable_dns_seeds: false,
                 network: Network::Bitcoin,
@@ -63,6 +69,12 @@ impl FlorestaClientBuilder {
     /// Initialize a [`FlorestaClient`] with the default configuration.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Set the log-level to debug.
+    pub fn debug(mut self) -> Self {
+        self.debug = true;
+        self
     }
 
     /// Initialize a [`FlorestaClient`] with a custom [`UtreexoNodeConfig`] configuration.
