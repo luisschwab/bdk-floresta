@@ -5,7 +5,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use floresta_chain::{ChainState, KvChainStore};
+use floresta_chain::{pruned_utreexo::flat_chain_store::FlatChainStore, ChainState};
 use floresta_wire::{node_interface::NodeInterface, UtreexoNodeConfig};
 use log::{debug, info, warn};
 use tokio::sync::RwLock;
@@ -26,7 +26,7 @@ pub struct FlorestaClient {
     pub debug: bool,
     /// The [`ChainState`] implementation to be used (persistence
     /// will be shared with [`bdk_wallet::Wallet`] in the future).
-    pub chain: Arc<ChainState<KvChainStore<'static>>>,
+    pub chain: Arc<ChainState<FlatChainStore>>,
     /// The handle used to send requests and receive responses from the underlying node.
     pub handle: NodeInterface,
     /// Task handle for the underlying node.
