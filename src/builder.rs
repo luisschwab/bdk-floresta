@@ -4,13 +4,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bitcoin::Network;
-use floresta_chain::AssumeValidArg;
-use futures_channel::oneshot;
-use log::info;
-use rustreexo::accumulator::pollard::Pollard;
-use tokio::sync::RwLock;
-use tokio::task;
-
 use floresta_chain::{
     pruned_utreexo::{
         flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
@@ -60,7 +53,6 @@ impl Default for FlorestaClientBuilder {
                 max_outbound: 10,
                 max_banscore: 100,
             },
-            debug: false,
         }
     }
 }
@@ -87,12 +79,6 @@ impl FlorestaClientBuilder {
     pub fn network(mut self, network: bitcoin::Network) -> Self {
         self.config.network = network;
         self.config.datadir = format!("./data/{network}");
-        self
-    }
-
-    /// Set the log-level to debug.
-    pub fn debug(mut self) -> Self {
-        self.debug = true;
         self
     }
 
