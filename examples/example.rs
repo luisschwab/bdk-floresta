@@ -11,7 +11,7 @@ use bdk_floresta::{BlockConsumer, BlockchainInterface, UpdatableChainstate};
 struct BlockPrinter;
 impl BlockConsumer for BlockPrinter {
     fn consume_block(&self, _block: &Block, height: u32) {
-        info!("new block @ {}!", height);
+        info!("new block @ {height}!");
     }
 }
 
@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
                     if i % 20 == 0 {
                         let peers = client.handle.get_peer_info().await;
                         let addresses: Vec<String> = peers.unwrap_or_default().iter().map(|peer| peer.address.clone()).collect();
-                        info!("peers: {:?}", addresses);
+                        info!("peers: {addresses:?}");
                     }
 
                     i += 1;
