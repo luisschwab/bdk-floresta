@@ -1,6 +1,12 @@
 [package]
-name = "bdk-floresta"
+name = "bdk_floresta"
 version = "0.1.0"
 edition = "2024"
+authors = ["Luis Schwab <luisschwab@protonmail.com>"]
+description = "A Floresta-powered chain-source crate for BDK"
+license = "MIT"
+repository = "https://github.com/luisschwab/bdk-floresta"
+readme = "README.md"
+keywords = ["bitcoin", "bdk", "floresta", "utreexo"]
 
 [dependencies]
