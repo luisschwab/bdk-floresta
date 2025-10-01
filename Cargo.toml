@@ -15,3 +15,4 @@ floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1
 floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1b61ff04237cd529cb88808500d44aec1b04009" }                                  # v0.8.0
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = "0.1.41"
+tracing-subscriber = "0.3.20"
