@@ -1,12 +1,19 @@
 [package]
 name = "bdk_floresta"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 authors = ["Luis Schwab <luisschwab@protonmail.com>"]
 description = "A Floresta-powered chain-source crate for BDK"
 license = "MIT"
 repository = "https://github.com/luisschwab/bdk-floresta"
 readme = "README.md"
 keywords = ["bitcoin", "bdk", "floresta", "utreexo"]
+rust-version = "1.74.1"
 
 [dependencies]
+bdk_wallet = "2.1.0"
+floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1b61ff04237cd529cb88808500d44aec1b04009", features = ["flat-chainstore"] } # v0.8.0
+floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1b61ff04237cd529cb88808500d44aec1b04009" }                                  # v0.8.0
+tokio = { version = "1.47.1", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.20"

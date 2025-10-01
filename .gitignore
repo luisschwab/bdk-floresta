@@ -1,4 +1,9 @@
+# Cargo
 target/
+Cargo.lock
+
+# IDEs
+.vscode/
 
 NOTES.md
 
