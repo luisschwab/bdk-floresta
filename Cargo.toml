@@ -12,8 +12,10 @@ rust-version = "1.74.1"
 
 [dependencies]
 bdk_wallet = "2.2.0"
-floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1b61ff04237cd529cb88808500d44aec1b04009", features = ["flat-chainstore"] } # v0.8.0
-floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1b61ff04237cd529cb88808500d44aec1b04009" }                                  # v0.8.0
+#floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1b61ff04237cd529cb88808500d44aec1b04009", features = ["flat-chainstore"] } # v0.8.0
+#floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "f1b61ff04237cd529cb88808500d44aec1b04009" }                                  # v0.8.0
+floresta-chain = { git = "https://github.com/luisschwab/Floresta.git", branch = "feat/tracing-subscriber", features = ["flat-chainstore"] }
+floresta-wire = { git = "https://github.com/luisschwab/Floresta.git", branch = "feat/tracing-subscriber" }
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.20"
