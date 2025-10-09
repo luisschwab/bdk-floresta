@@ -1,9 +1,8 @@
-# Cargo
 target/
 Cargo.lock
 
-# IDEs
+data/
+
 .vscode/
 
 NOTES.md
-
