@@ -14,10 +14,7 @@ use floresta_chain::{
     pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError,
     ChainState,
 };
-use floresta_wire::{
-    node_interface::{NodeInterface, PeerInfo},
-    UtreexoNodeConfig,
-};
+use floresta_wire::node_interface::{NodeInterface, PeerInfo};
 #[allow(unused_imports)]
 use tokio::sync::{
     mpsc::{UnboundedReceiver, UnboundedSender},
@@ -26,17 +23,17 @@ use tokio::sync::{
 };
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
+use tracing_appender::non_blocking::WorkerGuard;
 
 pub use floresta_chain::{
     pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
     BlockConsumer,
 };
-use tracing_appender::non_blocking::WorkerGuard;
+pub use floresta_wire::UtreexoNodeConfig;
 
 use error::NodeError;
 
 pub mod builder;
-
 mod error;
 mod logger;
 
