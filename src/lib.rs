@@ -21,7 +21,7 @@ use tokio::sync::{
     RwLock,
 };
 use tokio::task::JoinHandle;
-use tracing::{debug, error, field::debug, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 pub use floresta_chain::{
     pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
@@ -29,7 +29,11 @@ pub use floresta_chain::{
 };
 use tracing_appender::non_blocking::WorkerGuard;
 
+use error::NodeError;
+
 pub mod builder;
+
+mod error;
 mod logger;
 
 pub struct FlorestaNode {
@@ -56,6 +60,7 @@ pub struct FlorestaNode {
     pub stop_signal: Arc<RwLock<bool>>,
     /// A guard for the logger thread. Must be kept alive for the lifetime of [`FlorestaNode`].
     pub logger_guard: Option<WorkerGuard>,
+    // TODO(@luisschwab): add a channel that will forward wallet updates here.
 }
 
 impl FlorestaNode {
@@ -63,18 +68,14 @@ impl FlorestaNode {
 
     /// Set the `stop_signal`, signaling [`FlorestaNode`] to perform a graceful
     /// shutdown.
-    pub async fn stop(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn stop(&mut self) {
         *self.stop_signal.write().await = true;
-
-        Ok(())
     }
 
     ///////////////////// P2P NETWORK /////////////////////
 
     /// Manually initiate a connection to a peer.
-    ///
-    /// TODO(@luisschwab): do we even need [`RecvError`]?
-    pub async fn connect_peer(&self, peer_address: &SocketAddr) -> Result<bool, RecvError> {
+    pub async fn connect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
         // Attempt to make an encrypted BIP-0324 P2P V2 connection with the
         // peer. If he does not support it, it will silently fallback to
         // unencrypted P2P V1.
@@ -91,16 +92,13 @@ impl FlorestaNode {
             }
             Err(e) => {
                 error!("network error while attempting to establish manual connection with peer {peer_address:#?}: {e}");
-                // Just return `Ok(false)`, as we shouldn't throw an `Err()` on network-related behavior.
-                Ok(false)
+                Err(NodeError::Receive(e))
             }
         }
     }
 
     /// Manually disconnect from a peer.
-    ///
-    /// TODO(@luisschwab): do we even need [`RecvError`]?
-    pub async fn disconnect_peer(&self, peer_address: &SocketAddr) -> Result<bool, RecvError> {
+    pub async fn disconnect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
         match self.node_handle.remove_peer(peer_address.ip(), peer_address.port()).await {
             Ok(true) => {
                 info!("sucessfull manual disconnection from peer {peer_address:#?}");
@@ -112,17 +110,13 @@ impl FlorestaNode {
             }
             Err(e) => {
                 error!("failed to manually disconnect from peer {peer_address:#?}: {e}");
-                // TODO(@luisschwab): This state should probably never be
-                // reached. Handle this better.
-                Err(e)
+                Err(NodeError::Receive(e))
             }
         }
     }
 
     /// Get information about peers [`FlorestaNode`] is connected to.
-    ///
-    /// TODO(@luisschwab): do we even need [`RecvError`]?
-    pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, RecvError> {
+    pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
         match self.node_handle.get_peer_info().await {
             Ok(peer_infos) => {
                 debug!("got peer infos sucesssfully");
@@ -131,16 +125,16 @@ impl FlorestaNode {
             }
             Err(e) => {
                 error!("failed to get peer infos: {e}");
-                Err(e)
+                Err(NodeError::Receive(e))
             }
         }
     }
 
     /// Ping all peers the node is currenctly connected to.
-    pub async fn ping(&self) -> Result<bool, RecvError> {
+    pub async fn ping(&self) -> Result<bool, NodeError> {
         match self.node_handle.ping().await {
             Ok(true) => {
-                debug("sucessfully sent ping to all peers");
+                debug!("sucessfully sent ping to all peers");
                 Ok(true)
             }
             Ok(false) => {
@@ -149,7 +143,7 @@ impl FlorestaNode {
             }
             Err(e) => {
                 error!("error while sending ping to all peers: {e}");
-                Ok(false)
+                Err(NodeError::Receive(e))
             }
         }
     }
@@ -182,7 +176,7 @@ impl FlorestaNode {
     // subscribe(transaction_consumer); }
 
     /// Persist the current blockchain state to disk.
-    pub fn flush(&mut self) -> Result<(), BlockchainError> {
+    pub fn flush(&mut self) -> Result<(), NodeError> {
         info!("persisting chain to disk...");
         match self.chain_state.flush() {
             Ok(_) => {
@@ -191,31 +185,29 @@ impl FlorestaNode {
             }
             Err(e) => {
                 error!("failed to persist chain to disk");
-                Err(e)
+                match e {
+                    BlockchainError::Database(e) => Err(NodeError::Database(e)),
+                    BlockchainError::Io(e) => Err(NodeError::Io(e)),
+                    e => Err(NodeError::Blockchain(e)),
+                }
             }
         }
     }
 
     /// Get the current blockchain height.
-    pub async fn get_height(&self) -> Result<u32, BlockchainError> {
-        match self.chain_state.get_height() {
-            Ok(height) => Ok(height),
-            Err(e) => {
-                error!("failed to get block height");
-                Err(e)
-            }
-        }
+    pub fn get_height(&self) -> Result<u32, NodeError> {
+        self.chain_state.get_height().map_err(|e| {
+            error!("failed to get block height");
+            NodeError::Blockchain(e)
+        })
     }
 
     /// Get the current validated blockchain height.
-    pub async fn get_validation_height(&self) -> Result<u32, BlockchainError> {
-        match self.chain_state.get_validation_index() {
-            Ok(validated_height) => Ok(validated_height),
-            Err(e) => {
-                error!("failed to get validated block height");
-                Err(e)
-            }
-        }
+    pub fn get_validation_height(&self) -> Result<u32, NodeError> {
+        self.chain_state.get_validation_index().map_err(|e| {
+            error!("failed to get validated block height");
+            NodeError::Blockchain(e)
+        })
     }
 
     // TODO(@luisschwab): implement a [`UnboundedSender`] that will fetch new
