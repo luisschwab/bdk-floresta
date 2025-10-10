@@ -98,6 +98,11 @@ impl FlorestaNode {
         Ok(())
     }
 
+    /// Check if the node should stop based on the value of `stop_signal`.
+    pub async fn should_stop(&self) -> bool {
+        *self.stop_signal.read().await
+    }
+
     ///////////////////// P2P NETWORK /////////////////////
 
     /// Manually initiate a connection to a peer.
