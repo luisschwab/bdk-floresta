@@ -28,4 +28,16 @@ pub enum NodeError {
 #[allow(unused)]
 /// [`FlorestaBuilder`] related errors.
 #[derive(Debug, Error)]
-pub enum BuilderError {}
+pub enum BuilderError {
+    #[error("failed to create the data directort: {0:?}")]
+    CreateDirectory(#[from] std::io::Error),
+
+    #[error("failed to setup the tracing subscriber logger: {0:?}")]
+    LoggerSetup(std::io::Error),
+
+    #[error("tracing subscriber logger already initialized")]
+    LoggerAlreadySetup,
+
+    #[error("failed to load or create a new chain store: {0:?}")]
+    ChainStoreInit(floresta_chain::FlatChainstoreError),
+}

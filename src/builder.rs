@@ -24,6 +24,7 @@ use tokio::{
 use tracing::{error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 
+use crate::error::BuilderError;
 use crate::logger::setup_logger;
 use crate::FlorestaNode;
 
@@ -118,14 +119,13 @@ impl FlorestaBuilder {
     }
 
     /// Build the [`FlorestaNode`] from parameters.
-    pub async fn build(self) -> Result<FlorestaNode, Box<dyn std::error::Error>> {
+    pub async fn build(self) -> Result<FlorestaNode, BuilderError> {
         // Create the data directory.
-        fs::create_dir_all(&self.config.datadir)?;
+        let _ = fs::create_dir_all(&self.config.datadir).map_err(BuilderError::CreateDirectory);
 
         // Setup the subscriber to tracing events, logging. Returns a guard
         // for the logger, which must be kept for the lifetime of [`FlorestaNode`].
-        let logger_guard: Option<WorkerGuard> =
-            setup_logger(&self.config.datadir, self.log_to_file, self.log_to_stdout, self.debug).expect("failed to setup logger");
+        let logger_guard: Option<WorkerGuard> = setup_logger(&self.config.datadir, self.log_to_file, self.log_to_stdout, self.debug)?;
 
         // Create configuration for the chain store.
         let chain_store_cfg: FlatChainStoreConfig = FlatChainStoreConfig::new(self.config.datadir.clone() + "/chaindata");
@@ -135,7 +135,7 @@ impl FlorestaBuilder {
             Ok(store) => store,
             Err(e) => {
                 error!("failed to open chain store: {:?}", e);
-                return Err(format!("failed to open chain store: {:?}", e).into());
+                return Err(BuilderError::ChainStoreInit(e));
             }
         };
 
