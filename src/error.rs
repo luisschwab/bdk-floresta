@@ -8,6 +8,10 @@ use thiserror::Error;
 /// [`FlorestaNode`] related errors.
 #[derive(Debug, Error)]
 pub enum NodeError {
+    /// Shutdown error.
+    #[error("failed to perform a clean shutdown")]
+    Shutdown,
+
     /// Sender dropped without sending.
     #[error(transparent)]
     Receive(#[from] tokio::sync::oneshot::error::RecvError),

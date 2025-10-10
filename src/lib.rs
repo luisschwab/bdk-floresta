@@ -37,6 +37,8 @@ pub mod builder;
 mod error;
 mod logger;
 
+/// TODO(@luisschwab): does all of this need to be public?
+/// TODO(@luisschwab): document this.
 pub struct FlorestaNode {
     /// Configuration parameters for [`FlorestaNode`].
     pub node_config: UtreexoNodeConfig,
@@ -70,8 +72,30 @@ impl FlorestaNode {
 
     /// Set the `stop_signal`, signaling [`FlorestaNode`] to perform a graceful
     /// shutdown.
-    pub async fn stop(&mut self) {
-        *self.stop_signal.write().await = true;
+    pub async fn shutdown(mut self) -> Result<(), NodeError> {
+        info!("shutting down");
+        if let Some(task) = self.task_handle.take() {
+            match task.await {
+                Ok(_) => info!("Node task completed successfully"),
+                Err(e) if e.is_panic() => {
+                    warn!(
+                        "node task ended with expected panic during shutdown"
+                    );
+                }
+                Err(e) => {
+                    error!("node task failed: {:?}", e);
+                    return Err(NodeError::Shutdown);
+                }
+            }
+        }
+
+        if let Some(sigint) = self.sigint_task.take() {
+            let _ = sigint.await;
+        }
+
+        info!("done");
+
+        Ok(())
     }
 
     ///////////////////// P2P NETWORK /////////////////////
