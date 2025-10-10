@@ -2,14 +2,18 @@
 
 #![doc = include_str!("../README.md")]
 
-// TODO(@luisschwab): make example documentation code (see bdk-kyoto/src/lib.rs).
+// TODO(@luisschwab): make example documentation code (see
+// bdk-kyoto/src/lib.rs).
 
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 #[allow(unused_imports)]
 use bdk_wallet::Wallet;
-use floresta_chain::{pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError, ChainState};
+use floresta_chain::{
+    pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError,
+    ChainState,
+};
 use floresta_wire::{
     node_interface::{NodeInterface, PeerInfo},
     UtreexoNodeConfig,
@@ -58,7 +62,8 @@ pub struct FlorestaNode {
     /// The `stop_signal` is continuously checked by [`FlorestaNode`].
     /// If set, a gracefull shutdown will be initiated.
     pub stop_signal: Arc<RwLock<bool>>,
-    /// A guard for the logger thread. Must be kept alive for the lifetime of [`FlorestaNode`].
+    /// A guard for the logger thread. Must be kept alive for the lifetime of
+    /// [`FlorestaNode`].
     pub logger_guard: Option<WorkerGuard>,
     // TODO(@luisschwab): add a channel that will forward wallet updates here.
 }
@@ -75,13 +80,20 @@ impl FlorestaNode {
     ///////////////////// P2P NETWORK /////////////////////
 
     /// Manually initiate a connection to a peer.
-    pub async fn connect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
+    pub async fn connect_peer(
+        &self,
+        peer_address: &SocketAddr,
+    ) -> Result<bool, NodeError> {
         // Attempt to make an encrypted BIP-0324 P2P V2 connection with the
         // peer. If he does not support it, it will silently fallback to
         // unencrypted P2P V1.
         let try_p2p_v2: bool = true;
 
-        match self.node_handle.add_peer(peer_address.ip(), peer_address.port(), try_p2p_v2).await {
+        match self
+            .node_handle
+            .add_peer(peer_address.ip(), peer_address.port(), try_p2p_v2)
+            .await
+        {
             Ok(true) => {
                 info!("manual connection established with peer {peer_address:#?} sucessfully");
                 Ok(true)
@@ -98,14 +110,23 @@ impl FlorestaNode {
     }
 
     /// Manually disconnect from a peer.
-    pub async fn disconnect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
-        match self.node_handle.remove_peer(peer_address.ip(), peer_address.port()).await {
+    pub async fn disconnect_peer(
+        &self,
+        peer_address: &SocketAddr,
+    ) -> Result<bool, NodeError> {
+        match self
+            .node_handle
+            .remove_peer(peer_address.ip(), peer_address.port())
+            .await
+        {
             Ok(true) => {
                 info!("sucessfull manual disconnection from peer {peer_address:#?}");
                 Ok(true)
             }
             Ok(false) => {
-                error!("failed to manually disconnect from peer {peer_address:#?}");
+                error!(
+                    "failed to manually disconnect from peer {peer_address:#?}"
+                );
                 Ok(false)
             }
             Err(e) => {
@@ -165,7 +186,10 @@ impl FlorestaNode {
     /// stuck for as long as you have work to do." Is processing a block
     /// into a [`ChangSet`] heavy-lifting? The actual consumer must
     /// implement the `BlockConsumer` trait.
-    pub fn block_subscriber<T: BlockConsumer + 'static>(&self, block_consumer: Arc<T>) {
+    pub fn block_subscriber<T: BlockConsumer + 'static>(
+        &self,
+        block_consumer: Arc<T>,
+    ) {
         self.chain_state.subscribe(block_consumer);
     }
 

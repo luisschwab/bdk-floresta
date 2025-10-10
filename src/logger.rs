@@ -4,20 +4,28 @@ use std::io;
 use std::io::IsTerminal;
 
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{fmt, fmt::time::ChronoLocal, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
+use tracing_subscriber::{
+    fmt, fmt::time::ChronoLocal, layer::SubscriberExt, util::SubscriberInitExt,
+    EnvFilter, Layer,
+};
 
-// TODO(@luisschwab): replace boxed error by error variant from custom `bdk-floresta` error enum.
+use crate::error::BuilderError;
+
+// TODO(@luisschwab): replace boxed error by error variant from custom
+// `bdk-floresta` error enum.
 pub fn setup_logger(
     data_dir: &str,
     log_to_file: bool,
     log_to_stdout: bool,
     debug: bool,
-) -> Result<Option<WorkerGuard>, Box<dyn std::error::Error>> {
+) -> Result<Option<WorkerGuard>, BuilderError> {
     // Get the log level from `debug`.
     let log_level = if debug { "debug" } else { "info" };
 
-    // Try to build an `EnvFilter` from the `RUST_LOG` environment variable, or fallback to `log_level`.
-    let log_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level));
+    // Try to build an `EnvFilter` from the `RUST_LOG` environment variable, or
+    // fallback to `log_level`.
+    let log_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(log_level));
 
     // TODO(@luisschwab): add `tokio-console` dev dep + feature flag
     // For the registry, also enable very verbose runtime traces so
@@ -33,7 +41,10 @@ pub fn setup_logger(
     // Validate the log file path.
     if log_to_file {
         let file_path = format!("{data_dir}/debug.log");
-        std::fs::OpenOptions::new().create(true).append(true).open(&file_path)?;
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&file_path)?;
     }
 
     // Timer for log events.
@@ -53,8 +64,10 @@ pub fn setup_logger(
     // Formatting [`Layer`] for logs destined to the log file.
     let mut guard = None;
     let fmt_layer_logfile = log_to_file.then(|| {
-        let file_appender = tracing_appender::rolling::never(data_dir, "debug.log");
-        let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
+        let file_appender =
+            tracing_appender::rolling::never(data_dir, "debug.log");
+        let (non_blocking, file_guard) =
+            tracing_appender::non_blocking(file_appender);
         guard = Some(file_guard);
         fmt::layer()
             .with_writer(non_blocking)
@@ -76,7 +89,10 @@ pub fn setup_logger(
     //let registry = registry.with(console_subscriber::spawn());
 
     // Apply the `stdout` and logfile's [`Layer`]s to the [`Registry`].
-    registry.with(fmt_layer_stdout).with(fmt_layer_logfile).init();
+    registry
+        .with(fmt_layer_stdout)
+        .with(fmt_layer_logfile)
+        .init();
 
     Ok(guard)
 }
