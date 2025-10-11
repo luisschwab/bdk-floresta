@@ -1,4 +1,5 @@
 [toolchain]
-channel = "1.74.1"
+# TODO(@luisschwab): uncomment this later
+#channel = "1.74.1"
 components = ["rustfmt", "clippy"]
 profile = "default"
