@@ -47,8 +47,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let peer_addrs: Vec<String> =
             peers.iter().map(|peer| peer.address.clone()).collect();
         info!("peers: {:?}", peer_addrs);
-
-        floresta_node.connect_peer(&bridge_alpha).await?;
     }
 
     floresta_node.shutdown().await?;

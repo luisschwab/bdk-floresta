@@ -20,7 +20,7 @@ check:
        echo "\n⚠️  Unsigned commit: bdk_floresta requires commits to be signed." || \
        true
 
-# Delete files: bitcoin, signet, testnet4, target, lockfile
+# Delete files: example, target, lockfile
 delete item="example":
     just _delete-{{ item }}
 
