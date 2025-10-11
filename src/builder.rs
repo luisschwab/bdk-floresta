@@ -69,11 +69,8 @@ impl Default for FlorestaBuilder {
         // The default behaviour for the backfill job. Default to `false`.
         let backfill_default: bool = false;
 
-        // The default user agent for P2P communication.
-        //
-        // TODO(@luisschwab): make this deterministic based on the release
-        // version + `floresta-wire` version.
-        let user_agent_default = String::from("floresta-wire");
+        // The default user agent for P2P communications.
+        let user_agent_default = env!("USER_AGENT").to_string();
 
         Self {
             assume_valid: assume_valid_default,
@@ -116,6 +113,10 @@ impl FlorestaBuilder {
     /// node?
     pub fn with_config(mut self, config: UtreexoNodeConfig) -> Self {
         self.config = config;
+
+        // Set the custom `bdk_floresta` user agent.
+        self.config.user_agent = env!("USER_AGENT").to_string();
+
         self
     }
 
