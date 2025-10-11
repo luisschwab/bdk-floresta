@@ -11,9 +11,7 @@ use tracing_subscriber::{
 
 use crate::error::BuilderError;
 
-// TODO(@luisschwab): replace boxed error by error variant from custom
-// `bdk-floresta` error enum.
-pub fn setup_logger(
+pub(crate) fn setup_logger(
     data_dir: &str,
     log_to_file: bool,
     log_to_stdout: bool,

@@ -134,7 +134,7 @@ impl FlorestaBuilder {
         // Setup the subscriber to tracing events, logging. Returns a guard
         // for the logger, which must be kept for the lifetime of
         // [`FlorestaNode`].
-        let logger_guard: Option<WorkerGuard> = setup_logger(
+        let _logger_guard: Option<WorkerGuard> = setup_logger(
             &self.config.datadir,
             self.log_to_file,
             self.log_to_stdout,
@@ -184,7 +184,7 @@ impl FlorestaBuilder {
             chain_state.clone(),
             mempool,
             None, /* TODO(@luisschwab): update this once CBF scanning is
-                   * implementing. */
+                   * implemented. */
             stop_signal.clone(),
             AddressMan::default(),
         )
@@ -225,14 +225,14 @@ impl FlorestaBuilder {
         };
 
         Ok(FlorestaNode {
-            node_config: self.config,
-            debug: self.debug,
+            _node_config: self.config,
+            _debug: self.debug,
             chain_state,
             node_handle,
             task_handle: Some(node_task),
             sigint_task: Some(sigint_task),
             stop_signal,
-            logger_guard,
+            _logger_guard,
         })
     }
 }

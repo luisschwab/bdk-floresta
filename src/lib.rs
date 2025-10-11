@@ -15,17 +15,16 @@ use floresta_chain::{
     ChainState,
 };
 use floresta_wire::node_interface::{NodeInterface, PeerInfo};
-#[allow(unused_imports)]
+#[allow(unused)]
 use tokio::sync::{
     mpsc::{UnboundedReceiver, UnboundedSender},
-    oneshot::error::RecvError,
     RwLock,
 };
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
 use tracing_appender::non_blocking::WorkerGuard;
 
-pub use floresta_chain::{
+pub(crate) use floresta_chain::{
     pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
     BlockConsumer,
 };
@@ -41,29 +40,29 @@ mod logger;
 /// TODO(@luisschwab): document this.
 pub struct FlorestaNode {
     /// Configuration parameters for [`FlorestaNode`].
-    pub node_config: UtreexoNodeConfig,
+    pub(crate) _node_config: UtreexoNodeConfig,
     /// Whether to set the log level to debug.
-    pub debug: bool,
+    pub(crate) _debug: bool,
     /// The node's chain state.
     /// TODO(@luisschwab): couple chainstate persistence with
     /// `bdk_chain::ChangeSet` (bdk#1582). Implement a custom `Anchor` with
     /// the inclusion proofs we care about.
-    pub chain_state: Arc<ChainState<FlatChainStore>>,
+    pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
     /// The `node_handle` is used to send requests and receive responses to the
     /// underlying node.
-    pub node_handle: NodeInterface,
+    pub(crate) node_handle: NodeInterface,
     /// The `task_handle` is a handle for the undelying node's tasks.
-    pub task_handle: Option<JoinHandle<()>>,
+    pub(crate) task_handle: Option<JoinHandle<()>>,
     /// The `sigint_task` listens for interrupt signals and sets
     /// `shutdown_signal` to true, signalling [`FlorestaNode`] for a gracefull
     /// shutdown.
-    pub sigint_task: Option<JoinHandle<()>>,
+    pub(crate) sigint_task: Option<JoinHandle<()>>,
     /// The `stop_signal` is continuously checked by [`FlorestaNode`].
     /// If set, a gracefull shutdown will be initiated.
-    pub stop_signal: Arc<RwLock<bool>>,
+    pub(crate) stop_signal: Arc<RwLock<bool>>,
     /// A guard for the logger thread. Must be kept alive for the lifetime of
     /// [`FlorestaNode`].
-    pub logger_guard: Option<WorkerGuard>,
+    pub(crate) _logger_guard: Option<WorkerGuard>,
     // TODO(@luisschwab): add a channel that will forward wallet updates here.
 }
 
