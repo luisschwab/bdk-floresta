@@ -35,9 +35,10 @@ use error::NodeError;
 pub mod builder;
 mod error;
 mod logger;
+mod updater;
 
-/// TODO(@luisschwab): does all of this need to be public?
-/// TODO(@luisschwab): document this.
+/// [`FlorestaNode`] represents the embedded and fully validating
+/// Compact State Node.
 pub struct FlorestaNode {
     /// Configuration parameters for [`FlorestaNode`].
     pub(crate) _node_config: UtreexoNodeConfig,
@@ -63,7 +64,12 @@ pub struct FlorestaNode {
     /// A guard for the logger thread. Must be kept alive for the lifetime of
     /// [`FlorestaNode`].
     pub(crate) _logger_guard: Option<WorkerGuard>,
-    // TODO(@luisschwab): add a channel that will forward wallet updates here.
+    /// The `Wallet` to be coupled to the [`FlorestaNode`].
+    pub wallet: Option<Arc<RwLock<Wallet>>>,
+    /// The `update_subscriber` will emit relevant updates about the wallet
+    /// that was coupled in the form of `ChangeSet`'s, as blocks are
+    /// received and validated.
+    pub update_subscriber: UnboundedReceiver<()>,
 }
 
 impl FlorestaNode {

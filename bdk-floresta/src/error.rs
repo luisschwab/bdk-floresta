@@ -44,4 +44,7 @@ pub enum BuilderError {
 
     #[error("failed to load or create a new chain store: {0:?}")]
     ChainStoreInit(floresta_chain::FlatChainstoreError),
+
+    #[error("node and wallet are not on the same network")]
+    NetworkMismatch,
 }

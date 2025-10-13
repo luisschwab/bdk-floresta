@@ -9,7 +9,8 @@ use floresta_chain::{
         flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
         UpdatableChainstate,
     },
-    AssumeUtreexoValue, AssumeValidArg, ChainParams, ChainState,
+    AssumeUtreexoValue, AssumeValidArg, BlockchainInterface, ChainParams,
+    ChainState,
 };
 use floresta_wire::{
     address_man::AddressMan,
@@ -21,16 +22,15 @@ use floresta_wire::{
     UtreexoNodeConfig,
 };
 use tokio::{
-    sync::{oneshot, Mutex, RwLock},
-    task,
-    task::JoinHandle,
+    sync::{mpsc::unbounded_channel, oneshot, Mutex, RwLock},
+    task::{self, JoinHandle},
 };
 use tracing::{error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 
-use crate::error::BuilderError;
 use crate::logger::setup_logger;
 use crate::FlorestaNode;
+use crate::{error::BuilderError, updater::WalletUpdater};
 
 /// [`FlorestaBuilder`] builds a node from the `UtreexoConfig` provided, or
 /// builds a node from default values.
@@ -143,6 +143,14 @@ impl FlorestaBuilder {
 
     /// Build the [`FlorestaNode`] from parameters.
     pub async fn build(self) -> Result<FlorestaNode, BuilderError> {
+        // Verify that `FlorestaNode`'s network matches that of the `Wallet`, if
+        // it exists.
+        if let Some(ref wallet) = self.wallet {
+            if self.config.network != wallet.network() {
+                return Err(BuilderError::NetworkMismatch);
+            }
+        }
+
         // Create the data directory.
         let _ = fs::create_dir_all(&self.config.datadir)
             .map_err(BuilderError::CreateDirectory);
@@ -240,6 +248,16 @@ impl FlorestaBuilder {
             })
         };
 
+        let (tx, rx) = unbounded_channel::<()>();
+        let wallet_arc = if let Some(wallet) = self.wallet {
+            let wallet_arc = Arc::new(RwLock::new(wallet));
+            let updater = Arc::new(WalletUpdater::new(wallet_arc.clone(), tx));
+            chain_state.subscribe(updater);
+            Some(wallet_arc)
+        } else {
+            None
+        };
+
         Ok(FlorestaNode {
             _node_config: self.config,
             _debug: self.debug,
@@ -249,6 +267,8 @@ impl FlorestaBuilder {
             sigint_task: Some(sigint_task),
             stop_signal,
             _logger_guard,
+            wallet: wallet_arc,
+            update_subscriber: rx,
         })
     }
 }
