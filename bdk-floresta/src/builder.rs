@@ -3,7 +3,7 @@
 use std::fs;
 use std::sync::Arc;
 
-use bdk_wallet::bitcoin::Network;
+use bdk_wallet::{bitcoin::Network, Wallet};
 use floresta_chain::{
     pruned_utreexo::{
         flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
@@ -36,6 +36,7 @@ use crate::FlorestaNode;
 /// builds a node from default values.
 pub struct FlorestaBuilder {
     /// What `BlockHash` should be used for AssumeValid.
+    /// This will assume all scripts up to `assume_valid` as valid.
     assume_valid: AssumeValidArg,
     /// The configuration parameters for the node.
     config: UtreexoNodeConfig,
@@ -46,6 +47,8 @@ pub struct FlorestaBuilder {
     log_to_stdout: bool,
     /// Whether to lgo to a file.
     log_to_file: bool,
+    /// The `Wallet` which the node should emit updates about.
+    wallet: Option<Wallet>,
 }
 
 impl Default for FlorestaBuilder {
@@ -100,6 +103,7 @@ impl Default for FlorestaBuilder {
             debug: false,
             log_to_stdout: true,
             log_to_file: true,
+            wallet: None,
         }
     }
 }
@@ -123,6 +127,14 @@ impl FlorestaBuilder {
         self
     }
 
+    /// Couple a `Wallet` to the [`FlorestaNode`]. It will emit updates
+    /// in the form of `ChangeSet`'s, which can then be applied to the `Wallet`.
+    pub fn with_wallet(mut self, wallet: Wallet) -> Self {
+        self.wallet = Some(wallet);
+
+        self
+    }
+
     /// Set the log level to debug.
     pub fn set_debug(mut self) -> Self {
         self.debug = true;
@@ -135,9 +147,9 @@ impl FlorestaBuilder {
         let _ = fs::create_dir_all(&self.config.datadir)
             .map_err(BuilderError::CreateDirectory);
 
-        // Setup the subscriber to tracing events, logging. Returns a guard
-        // for the logger, which must be kept for the lifetime of
-        // [`FlorestaNode`].
+        // Setup the subscriber to tracing events, logging.
+        // Returns a guard for the logger, which must be kept
+        // for the lifetime of [`FlorestaNode`].
         let _logger_guard: Option<WorkerGuard> = setup_logger(
             &self.config.datadir,
             self.log_to_file,
@@ -150,8 +162,8 @@ impl FlorestaBuilder {
             self.config.datadir.clone() + "/chaindata",
         );
 
-        // Try to load an existing chain store from disk, or create a new chain
-        // store.
+        // Try to load an existing chain store from disk,
+        // or create a new chain store.
         let chain_store: FlatChainStore =
             match FlatChainStore::new(chain_store_cfg) {
                 Ok(store) => store,

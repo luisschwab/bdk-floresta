@@ -1,6 +1,6 @@
 // SPDX-Licence-Identifier: MIT
 
-#![doc = include_str!("../README.md")]
+#![doc = include_str!("../../README.md")]
 
 // TODO(@luisschwab): make example documentation code (see
 // bdk-kyoto/src/lib.rs).
@@ -197,7 +197,9 @@ impl FlorestaNode {
     /// TODO(@luisschwab):
     /// Connect to a curated list of known Utreexo bridges
     /// for an expedited IBD experience. This is needed because
-    /// few DNS seeders index the Utreexo service bits.
+    /// few DNS seeders index the Utreexo service bits, and
+    /// discovering a bridge naturally via P2P has a low P-value
+    /// of happening naturally and in a short time frame.
     pub async fn bootstrap_bridges() {}
 
     ///////////////////// BLOCKCHAIN /////////////////////
