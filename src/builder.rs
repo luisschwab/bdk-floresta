@@ -12,11 +12,14 @@ use floresta_chain::{
     AssumeUtreexoValue, AssumeValidArg, ChainParams, ChainState,
 };
 use floresta_wire::{
-    address_man::AddressMan, mempool::Mempool, node::UtreexoNode,
-    node_interface::NodeInterface, running_node::RunningNode,
+    address_man::AddressMan,
+    mempool::Mempool,
+    node::UtreexoNode,
+    node_interface::NodeInterface,
+    running_node::RunningNode,
+    rustreexo::accumulator::{node_hash::BitcoinNodeHash, pollard::Pollard},
     UtreexoNodeConfig,
 };
-use rustreexo::accumulator::{node_hash::BitcoinNodeHash, pollard::Pollard};
 use tokio::{
     sync::{oneshot, Mutex, RwLock},
     task,
@@ -69,7 +72,7 @@ impl Default for FlorestaBuilder {
         // The default behaviour for the backfill job. Default to `false`.
         let backfill_default: bool = false;
 
-        // The default user agent for P2P communications.
+        // The default user agent for P2P communication.
         let user_agent_default = env!("USER_AGENT").to_string();
 
         Self {
