@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "bdk-floresta",
-    "examples/floresta-node",
+    "examples/floresta_wallet_sync",
 ]
 resolver = "2"
 
