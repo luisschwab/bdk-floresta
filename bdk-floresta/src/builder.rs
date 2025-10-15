@@ -29,8 +29,8 @@ use tracing::{error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 
 use crate::logger::setup_logger;
-use crate::FlorestaNode;
 use crate::{error::BuilderError, updater::WalletUpdater};
+use crate::{FlorestaNode, WalletUpdate};
 
 /// [`FlorestaBuilder`] builds a node from the `UtreexoConfig` provided, or
 /// builds a node from default values.
@@ -248,10 +248,10 @@ impl FlorestaBuilder {
             })
         };
 
-        let (tx, rx) = unbounded_channel::<()>();
+        let (update_tx, update_rx) = unbounded_channel::<WalletUpdate>();
         let wallet_arc = if let Some(wallet) = self.wallet {
             let wallet_arc = Arc::new(RwLock::new(wallet));
-            let updater = Arc::new(WalletUpdater::new(wallet_arc.clone(), tx));
+            let updater = Arc::new(WalletUpdater::new(update_tx));
             chain_state.subscribe(updater);
             Some(wallet_arc)
         } else {
@@ -268,7 +268,7 @@ impl FlorestaBuilder {
             stop_signal,
             _logger_guard,
             wallet: wallet_arc,
-            update_subscriber: rx,
+            update_subscriber: Some(update_rx),
         })
     }
 }

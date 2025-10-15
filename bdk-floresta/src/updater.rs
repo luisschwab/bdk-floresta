@@ -1,33 +1,38 @@
 // SPDX-License-Identifier: MIT
 
-use std::sync::Arc;
-
 use bdk_wallet::bitcoin::Block;
-use bdk_wallet::Wallet;
 use floresta_chain::BlockConsumer;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::{RwLock, RwLockWriteGuard};
-use tracing::error;
+use tracing::{debug, error};
 
+/// Structures that represent an update to the wallet.
+/// Currently, only `Block`s are supported.
+pub enum WalletUpdate {
+    /// A new block update, represented by a `Block` and it's height.
+    NewBlock(Block, u32),
+}
+
+/// The `WalletUpdater` sends wallet updates over the channel to a subscriber.
 pub struct WalletUpdater {
-    wallet: Arc<RwLock<Wallet>>,
-    sender: UnboundedSender<()>,
+    /// The sender which wallet updates should be forwarded by.
+    sender: UnboundedSender<WalletUpdate>,
 }
 
 impl WalletUpdater {
-    pub fn new(
-        wallet: Arc<RwLock<Wallet>>,
-        sender: UnboundedSender<()>,
-    ) -> Self {
-        Self { wallet, sender }
+    pub fn new(sender: UnboundedSender<WalletUpdate>) -> Self {
+        Self { sender }
     }
 }
 
 impl BlockConsumer for WalletUpdater {
+    /// This is unecessary, so just return `false`.
     fn wants_spent_utxos(&self) -> bool {
         false
     }
 
+    /// The action to be taken when a new `Block` is received.
+    /// In our case, the `Block` is wrapped in an `Update::Block` along with
+    /// it's height.
     fn on_block(
         &self,
         block: &Block,
@@ -39,27 +44,21 @@ impl BlockConsumer for WalletUpdater {
             >,
         >,
     ) {
-        let wallet: Arc<RwLock<Wallet>> = self.wallet.clone();
-        let block: Block = block.clone();
-        let sender: UnboundedSender<()> = self.sender.clone();
+        // Create the `Update`.
+        let update = WalletUpdate::NewBlock(block.clone(), height);
+        let update_height = height;
 
-        tokio::spawn(async move {
-            // Get a lock on the wallet.
-            let mut wallet: RwLockWriteGuard<'_, Wallet> = wallet.write().await;
-
-            // Attempt to apply the block to the wallet.
-            if let Err(e) = wallet.apply_block(&block, height) {
-                error!(
-                    "failed to apply block of height {} to the wallet: {}",
-                    height, e
+        // Send the update over the channel.
+        match self.sender.send(update) {
+            Ok(_) => {
+                debug!(
+                    "Sent block update at height {} over the channel",
+                    update_height
                 );
-                return;
             }
-
-            // Attempt to send the block over the channel.
-            if let Err(e) = sender.send(()) {
-                error!("failed to send block update over the channel: {}", e);
+            Err(e) => {
+                error!("Failed to send block update at height {} over the channel: {}", update_height, e);
             }
-        });
+        }
     }
 }

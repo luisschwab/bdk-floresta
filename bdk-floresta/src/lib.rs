@@ -2,24 +2,16 @@
 
 #![doc = include_str!("../../README.md")]
 
-// TODO(@luisschwab): make example documentation code (see
-// bdk-kyoto/src/lib.rs).
-
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-#[allow(unused_imports)]
 use bdk_wallet::Wallet;
 use floresta_chain::{
     pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError,
     ChainState,
 };
 use floresta_wire::node_interface::{NodeInterface, PeerInfo};
-#[allow(unused)]
-use tokio::sync::{
-    mpsc::{UnboundedReceiver, UnboundedSender},
-    RwLock,
-};
+use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -31,6 +23,7 @@ pub(crate) use floresta_chain::{
 pub use floresta_wire::UtreexoNodeConfig;
 
 use error::NodeError;
+pub use updater::WalletUpdate;
 
 pub mod builder;
 mod error;
@@ -66,10 +59,9 @@ pub struct FlorestaNode {
     pub(crate) _logger_guard: Option<WorkerGuard>,
     /// The `Wallet` to be coupled to the [`FlorestaNode`].
     pub wallet: Option<Arc<RwLock<Wallet>>>,
-    /// The `update_subscriber` will emit relevant updates about the wallet
-    /// that was coupled in the form of `ChangeSet`'s, as blocks are
-    /// received and validated.
-    pub update_subscriber: UnboundedReceiver<()>,
+    /// The `update_subscriber` emits relevant wallet events that can be
+    /// applied to the `Wallet`.
+    pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
 }
 
 impl FlorestaNode {
