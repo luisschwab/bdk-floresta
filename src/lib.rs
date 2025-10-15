@@ -1,25 +1,17 @@
 // SPDX-Licence-Identifier: MIT
 
-#![doc = include_str!("../../README.md")]
-
-// TODO(@luisschwab): make example documentation code (see
-// bdk-kyoto/src/lib.rs).
+#![doc = include_str!("../README.md")]
 
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-#[allow(unused_imports)]
 use bdk_wallet::Wallet;
 use floresta_chain::{
     pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError,
     ChainState,
 };
 use floresta_wire::node_interface::{NodeInterface, PeerInfo};
-#[allow(unused)]
-use tokio::sync::{
-    mpsc::{UnboundedReceiver, UnboundedSender},
-    RwLock,
-};
+use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -31,13 +23,15 @@ pub(crate) use floresta_chain::{
 pub use floresta_wire::UtreexoNodeConfig;
 
 use error::NodeError;
+pub use updater::WalletUpdate;
 
 pub mod builder;
 mod error;
 mod logger;
+mod updater;
 
-/// TODO(@luisschwab): does all of this need to be public?
-/// TODO(@luisschwab): document this.
+/// [`FlorestaNode`] represents the embedded and fully validating
+/// Compact State Node.
 pub struct FlorestaNode {
     /// Configuration parameters for [`FlorestaNode`].
     pub(crate) _node_config: UtreexoNodeConfig,
@@ -63,7 +57,11 @@ pub struct FlorestaNode {
     /// A guard for the logger thread. Must be kept alive for the lifetime of
     /// [`FlorestaNode`].
     pub(crate) _logger_guard: Option<WorkerGuard>,
-    // TODO(@luisschwab): add a channel that will forward wallet updates here.
+    /// The `Wallet` to be coupled to the [`FlorestaNode`].
+    pub wallet: Option<Arc<RwLock<Wallet>>>,
+    /// The `update_subscriber` emits relevant wallet events that can be
+    /// applied to the `Wallet`.
+    pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
 }
 
 impl FlorestaNode {
@@ -120,7 +118,7 @@ impl FlorestaNode {
             .await
         {
             Ok(true) => {
-                info!("manual connection established with peer {peer_address:#?} sucessfully");
+                debug!("manual connection established with peer {peer_address:#?} sucessfully");
                 Ok(true)
             }
             Ok(false) => {
@@ -145,7 +143,7 @@ impl FlorestaNode {
             .await
         {
             Ok(true) => {
-                info!("sucessfull manual disconnection from peer {peer_address:#?}");
+                debug!("sucessfull manual disconnection from peer {peer_address:#?}");
                 Ok(true)
             }
             Ok(false) => {

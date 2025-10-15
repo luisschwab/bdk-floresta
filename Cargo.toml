@@ -1,9 +1,31 @@
-[workspace]
-members = [
-    "bdk-floresta",
-    "examples/floresta-node",
-]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "bdk_floresta"
+version = "0.1.0"
+edition = "2021"
 authors = ["Luis Schwab <luisschwab@protonmail.com>"]
+description = "A Floresta-powered chain-source crate for BDK"
+license = "MIT"
+repository = "https://github.com/luisschwab/bdk-floresta"
+readme = "README.md"
+keywords = ["bitcoin", "bdk", "floresta", "utreexo"]
+rust-version = "1.74.1"
+
+[dependencies]
+bdk_wallet = "2.2.0"
+floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "7fedb3a94abcd524f1eb809f4eb80b70bae3e89f", features = ["flat-chainstore"] }
+floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "7fedb3a94abcd524f1eb809f4eb80b70bae3e89f" }
+thiserror = "2.0.17"
+tokio = { version = "1.47.1", features = ["full"] }
+tracing = "0.1.41"
+tracing-appender = "0.2.3"
+tracing-subscriber = { version = "0.3.20", features = ["ansi", "chrono", "env-filter"] }
+
+[build-dependencies]
+toml = "0.9.6"
+
+[dev-dependencies]
+anyhow = "1.0.100"
+
+[[example]]
+name = "block_wallet_sync"
+path = "examples/block_wallet_sync/src/main.rs"

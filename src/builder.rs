@@ -9,7 +9,8 @@ use floresta_chain::{
         flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
         UpdatableChainstate,
     },
-    AssumeUtreexoValue, AssumeValidArg, ChainParams, ChainState,
+    AssumeUtreexoValue, AssumeValidArg, BlockchainInterface, ChainParams,
+    ChainState,
 };
 use floresta_wire::{
     address_man::AddressMan,
@@ -21,23 +22,23 @@ use floresta_wire::{
     UtreexoNodeConfig,
 };
 use tokio::{
-    sync::{oneshot, Mutex, RwLock},
-    task,
-    task::JoinHandle,
+    sync::{mpsc::unbounded_channel, oneshot, Mutex, RwLock},
+    task::{self, JoinHandle},
 };
 use tracing::{error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 
-use crate::error::BuilderError;
 use crate::logger::setup_logger;
-use crate::FlorestaNode;
+use crate::{error::BuilderError, updater::WalletUpdater};
+use crate::{FlorestaNode, WalletUpdate};
 
 /// [`FlorestaBuilder`] builds a node from the `UtreexoConfig` provided, or
 /// builds a node from default values.
 pub struct FlorestaBuilder {
     /// What `BlockHash` should be used for AssumeValid.
-    /// This will assume all scripts up to `assume_valid` as valid.
-    assume_valid: AssumeValidArg,
+    /// This will assume all scripts up to block `assume_valid_blockhash`
+    /// as valid. This speeds up IBD since no script eval is done.
+    assume_valid_blockhash: AssumeValidArg,
     /// The configuration parameters for the node.
     config: UtreexoNodeConfig,
     /// Whether the log level should be set to debug.
@@ -79,7 +80,7 @@ impl Default for FlorestaBuilder {
         let user_agent_default = env!("USER_AGENT").to_string();
 
         Self {
-            assume_valid: assume_valid_default,
+            assume_valid_blockhash: assume_valid_default,
             config: UtreexoNodeConfig {
                 network: network_default,
                 pow_fraud_proofs: false,
@@ -135,6 +136,14 @@ impl FlorestaBuilder {
         self
     }
 
+    /// Set the blockhash used for assume valid. Blocks before the one set will
+    /// have their script validation skipped.
+    pub fn with_assumevalid(mut self, assume_valid: AssumeValidArg) -> Self {
+        self.assume_valid_blockhash = assume_valid;
+
+        self
+    }
+
     /// Set the log level to debug.
     pub fn set_debug(mut self) -> Self {
         self.debug = true;
@@ -143,6 +152,14 @@ impl FlorestaBuilder {
 
     /// Build the [`FlorestaNode`] from parameters.
     pub async fn build(self) -> Result<FlorestaNode, BuilderError> {
+        // Verify that `FlorestaNode`'s network matches that of the `Wallet`, if
+        // it exists.
+        if let Some(ref wallet) = self.wallet {
+            if self.config.network != wallet.network() {
+                return Err(BuilderError::NetworkMismatch);
+            }
+        }
+
         // Create the data directory.
         let _ = fs::create_dir_all(&self.config.datadir)
             .map_err(BuilderError::CreateDirectory);
@@ -178,7 +195,7 @@ impl FlorestaBuilder {
             Arc::new(ChainState::new(
                 chain_store,
                 self.config.network,
-                self.assume_valid,
+                self.assume_valid_blockhash,
             ));
 
         info!("initialized chainstore at {}", self.config.datadir);
@@ -240,6 +257,16 @@ impl FlorestaBuilder {
             })
         };
 
+        let (update_tx, update_rx) = unbounded_channel::<WalletUpdate>();
+        let wallet_arc = if let Some(wallet) = self.wallet {
+            let wallet_arc = Arc::new(RwLock::new(wallet));
+            let updater = Arc::new(WalletUpdater::new(update_tx));
+            chain_state.subscribe(updater);
+            Some(wallet_arc)
+        } else {
+            None
+        };
+
         Ok(FlorestaNode {
             _node_config: self.config,
             _debug: self.debug,
@@ -249,6 +276,8 @@ impl FlorestaBuilder {
             sigint_task: Some(sigint_task),
             stop_signal,
             _logger_guard,
+            wallet: wallet_arc,
+            update_subscriber: Some(update_rx),
         })
     }
 }

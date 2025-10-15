@@ -3,10 +3,11 @@
 use std::io;
 use std::io::IsTerminal;
 
+use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
-    fmt, fmt::time::ChronoLocal, layer::SubscriberExt, util::SubscriberInitExt,
-    EnvFilter, Layer,
+    filter::Targets, fmt, fmt::time::ChronoLocal, layer::SubscriberExt,
+    util::SubscriberInitExt, EnvFilter, Layer,
 };
 
 use crate::error::BuilderError;
@@ -18,12 +19,19 @@ pub(crate) fn setup_logger(
     debug: bool,
 ) -> Result<Option<WorkerGuard>, BuilderError> {
     // Get the log level from `debug`.
-    let log_level = if debug { "debug" } else { "info" };
+    let log_level = if debug { Level::DEBUG } else { Level::INFO };
 
     // Try to build an `EnvFilter` from the `RUST_LOG` environment variable, or
     // fallback to `log_level`.
-    let log_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(log_level));
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(log_level.to_string()));
+
+    // Apply custom log filters to different crates.
+    let targets_log_filter: Targets = Targets::new()
+        .with_target("bdk_floresta", log_level)
+        .with_target("floresta_chain", Level::WARN)
+        .with_target("floresta_wire", Level::INFO)
+        .with_default(Level::INFO);
 
     // TODO(@luisschwab): add `tokio-console` dev dep + feature flag
     // For the registry, also enable very verbose runtime traces so
@@ -34,7 +42,7 @@ pub(crate) fn setup_logger(
     // log_filter));
 
     //#[cfg(not(feature = "tokio-console"))]
-    let base_filter = log_filter.clone();
+    let base_filter = targets_log_filter.clone();
 
     // Validate the log file path.
     if log_to_file {
@@ -56,7 +64,7 @@ pub(crate) fn setup_logger(
             .with_timer(log_timer.clone())
             .with_target(true)
             .with_level(true)
-            .with_filter(log_filter.clone())
+            .with_filter(targets_log_filter.clone())
     });
 
     // Formatting [`Layer`] for logs destined to the log file.
@@ -73,7 +81,7 @@ pub(crate) fn setup_logger(
             .with_timer(log_timer)
             .with_target(true)
             .with_level(true)
-            .with_filter(log_filter.clone())
+            .with_filter(targets_log_filter.clone())
     });
 
     // Build the registry with its
@@ -88,6 +96,7 @@ pub(crate) fn setup_logger(
 
     // Apply the `stdout` and logfile's [`Layer`]s to the [`Registry`].
     registry
+        .with(env_filter)
         .with(fmt_layer_stdout)
         .with(fmt_layer_logfile)
         .init();
