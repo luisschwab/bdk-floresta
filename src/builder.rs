@@ -36,8 +36,9 @@ use crate::{FlorestaNode, WalletUpdate};
 /// builds a node from default values.
 pub struct FlorestaBuilder {
     /// What `BlockHash` should be used for AssumeValid.
-    /// This will assume all scripts up to `assume_valid` as valid.
-    assume_valid: AssumeValidArg,
+    /// This will assume all scripts up to block `assume_valid_blockhash`
+    /// as valid. This speeds up IBD since no script eval is done.
+    assume_valid_blockhash: AssumeValidArg,
     /// The configuration parameters for the node.
     config: UtreexoNodeConfig,
     /// Whether the log level should be set to debug.
@@ -79,7 +80,7 @@ impl Default for FlorestaBuilder {
         let user_agent_default = env!("USER_AGENT").to_string();
 
         Self {
-            assume_valid: assume_valid_default,
+            assume_valid_blockhash: assume_valid_default,
             config: UtreexoNodeConfig {
                 network: network_default,
                 pow_fraud_proofs: false,
@@ -135,6 +136,14 @@ impl FlorestaBuilder {
         self
     }
 
+    /// Set the blockhash used for assume valid. Blocks before the one set will
+    /// have their script validation skipped.
+    pub fn with_assumevalid(mut self, assume_valid: AssumeValidArg) -> Self {
+        self.assume_valid_blockhash = assume_valid;
+
+        self
+    }
+
     /// Set the log level to debug.
     pub fn set_debug(mut self) -> Self {
         self.debug = true;
@@ -186,7 +195,7 @@ impl FlorestaBuilder {
             Arc::new(ChainState::new(
                 chain_store,
                 self.config.network,
-                self.assume_valid,
+                self.assume_valid_blockhash,
             ));
 
         info!("initialized chainstore at {}", self.config.datadir);
