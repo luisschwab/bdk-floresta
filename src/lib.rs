@@ -1,6 +1,6 @@
 // SPDX-Licence-Identifier: MIT
 
-#![doc = include_str!("../../README.md")]
+#![doc = include_str!("../README.md")]
 
 use std::net::SocketAddr;
 use std::sync::Arc;

@@ -21,7 +21,7 @@ check:
        true
 
 # Delete files: example, target, lockfile
-delete item="example":
+delete item="examples":
     just _delete-{{ item }}
 
 # Run an example crate
@@ -32,8 +32,8 @@ example name="node":
 fmt:
     cargo +nightly fmt
 
-_delete-example:
-    rm -rf data/example-node
+_delete-examples:
+    rm -rf examples/block_wallet_sync/data
 
 _delete-target:
     rm -rf target/
