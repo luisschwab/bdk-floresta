@@ -25,7 +25,8 @@ delete item="examples":
     just _delete-{{ item }}
 
 # Run an example crate
-example name="node":
+example name="block_wallet_sync":
+    @just _delete-examples
     cargo run --example {{ name }} --release
 
 # Format code

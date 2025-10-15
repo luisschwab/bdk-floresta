@@ -118,7 +118,7 @@ impl FlorestaNode {
             .await
         {
             Ok(true) => {
-                info!("manual connection established with peer {peer_address:#?} sucessfully");
+                debug!("manual connection established with peer {peer_address:#?} sucessfully");
                 Ok(true)
             }
             Ok(false) => {
@@ -143,7 +143,7 @@ impl FlorestaNode {
             .await
         {
             Ok(true) => {
-                info!("sucessfull manual disconnection from peer {peer_address:#?}");
+                debug!("sucessfull manual disconnection from peer {peer_address:#?}");
                 Ok(true)
             }
             Ok(false) => {
