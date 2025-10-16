@@ -4,32 +4,23 @@ use std::sync::Arc;
 
 use bdk_floresta::{builder::FlorestaBuilder, UtreexoNodeConfig, WalletUpdate};
 
-use bdk_wallet::bitcoin::{BlockHash, Network};
+use bdk_wallet::bitcoin::Network;
 use bdk_wallet::Wallet;
-use floresta_chain::AssumeValidArg;
 use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
 use tracing::{error, info};
 
-const DESC_EXTERNAL: &str = "wpkh([9cee26c8/84'/1'/0']tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/0/*)";
-const DESC_INTERNAL: &str = "wpkh([9cee26c8/84'/1'/0']tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/1/*)";
-
+const NETWORK: Network = Network::Regtest;
 const DATA_DIR: &str = "./examples/block_wallet_sync/data/";
-const NETWORK: Network = Network::Signet;
+const DESC_EXTERNAL: &str = "wpkh([925d79b3/84h/1h/0h]tpubDCjEJ6uoRerKY5Wdj2bPdcBDdhgLj6M6nnFNH87gyYRY6FbUqGWQK8WpQt2vtT3xyrqirjmgCGoSaZgoGVecnYouMfXNNHZAQtekm88fE4m/0/*)";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Create a wallet.
-    let wallet: Wallet = Wallet::create(DESC_EXTERNAL, DESC_INTERNAL)
+    let wallet: Wallet = Wallet::create_single(DESC_EXTERNAL)
         .network(NETWORK)
         .create_wallet_no_persist()?;
 
-    // Block 270_000.
-    let assume_valid: AssumeValidArg =
-        AssumeValidArg::UserInput(BlockHash::from_str(
-            "00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a",
-        )?);
-
-    // Create a custom configuration for the node using `Network::Signet`.
+    // Create a custom configuration for the node.
     let node_config: UtreexoNodeConfig = UtreexoNodeConfig {
         network: NETWORK,
         datadir: format!("{}{}", DATA_DIR, NETWORK),
@@ -39,17 +30,16 @@ async fn main() -> anyhow::Result<()> {
     // Build a [`FlorestaNode`] with a custom configuration.
     let mut node = FlorestaBuilder::new()
         .with_config(node_config)
-        .with_assumevalid(assume_valid)
         .with_wallet(wallet)
         .build()
         .await?;
 
-    // For now, manually connect to known Utreexo bridges.
-    let bridge_a: SocketAddr = SocketAddr::from_str("195.26.240.213:38433")?; // LS
-    let bridge_b: SocketAddr = SocketAddr::from_str("194.163.132.180:38333")?; // DS
-    let bridge_c: SocketAddr = SocketAddr::from_str("161.97.178.61:38333")?; // DS
+    // Connect to local bridges
+    let bridge_a: SocketAddr = SocketAddr::from_str("127.0.0.1:18333")?;
     node.connect_peer(&bridge_a).await?;
+    let bridge_b: SocketAddr = SocketAddr::from_str("127.0.0.1:28333")?;
     node.connect_peer(&bridge_b).await?;
+    let bridge_c: SocketAddr = SocketAddr::from_str("127.0.0.1:38333")?;
     node.connect_peer(&bridge_c).await?;
 
     let wallet_arc: Option<Arc<RwLock<Wallet>>> = node.wallet.clone();
@@ -70,7 +60,10 @@ async fn main() -> anyhow::Result<()> {
                         let res = wallet.apply_block(&block, height);
                         match res {
                             Ok(_) => {
-                                info!("Sucessfully applied block at height {} to the wallet [ Balance: {} sats ]", height, wallet.balance().total().to_sat());
+                                info!(
+                                    "Sucessfully applied block at height {} to the wallet [ Balance: {} sats ]",
+                                    height, wallet.balance().total().to_sat()
+                                );
                             }
                             Err(e) => error!("Failed to apply block at height {} to the wallet: {}", height, e),
                         }

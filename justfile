@@ -1,7 +1,6 @@
 alias b := build
 alias c := check
 alias d := delete
-alias e := example
 alias f := fmt
 
 _default:
@@ -24,10 +23,10 @@ check:
 delete item="examples":
     just _delete-{{ item }}
 
-# Run an example crate
-example name="block_wallet_sync":
+# Run the `block_wallet_sync` example
+block_wallet_sync:
     @just _delete-examples
-    cargo run --example {{ name }} --release
+    bash examples/block_wallet_sync/runner.sh
 
 # Format code
 fmt:
@@ -41,4 +40,3 @@ _delete-target:
 
 _delete-lockfile:
     rm -f Cargo.lock
-
