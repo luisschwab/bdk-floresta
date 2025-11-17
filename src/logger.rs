@@ -30,7 +30,7 @@ pub(crate) fn setup_logger(
     let targets_log_filter: Targets = Targets::new()
         .with_target("bdk_floresta", log_level)
         .with_target("floresta_chain", Level::WARN)
-        .with_target("floresta_wire", Level::INFO)
+        .with_target("floresta_wire", Level::DEBUG)
         .with_default(Level::INFO);
 
     // TODO(@luisschwab): add `tokio-console` dev dep + feature flag
