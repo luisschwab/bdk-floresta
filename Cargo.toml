@@ -8,12 +8,11 @@ license = "MIT"
 repository = "https://github.com/luisschwab/bdk-floresta"
 readme = "README.md"
 keywords = ["bitcoin", "bdk", "floresta", "utreexo"]
-rust-version = "1.74.1"
 
 [dependencies]
 bdk_wallet = "2.2.0"
-floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "7fedb3a94abcd524f1eb809f4eb80b70bae3e89f", features = ["flat-chainstore"] }
-floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "7fedb3a94abcd524f1eb809f4eb80b70bae3e89f" }
+floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "6ec9086c0d8e439fa9be78a36b3319a599d272d3", features = ["flat-chainstore"] }
+floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "6ec9086c0d8e439fa9be78a36b3319a599d272d3" }
 thiserror = "2.0.17"
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = "0.1.41"
