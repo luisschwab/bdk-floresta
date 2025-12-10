@@ -21,6 +21,7 @@ pub(crate) use floresta_chain::{
     pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
     BlockConsumer,
 };
+pub use floresta_wire::rustreexo;
 pub use floresta_wire::UtreexoNodeConfig;
 
 use error::NodeError;
