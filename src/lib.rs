@@ -11,6 +11,7 @@ use floresta_chain::{
     ChainState,
 };
 use floresta_wire::node_interface::{NodeInterface, PeerInfo};
+use floresta_wire::rustreexo::accumulator::stump::Stump;
 use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
@@ -239,6 +240,13 @@ impl FlorestaNode {
     // transaction_consumer: Arc<T>) {     self.chain.
     // subscribe(transaction_consumer); }
 
+    /// Check wheter the node is still in Initial Block Download.
+    pub fn in_ibd(&self) -> Result<bool, NodeError> {
+        let ibd = self.chain_state.is_in_ibd();
+
+        Ok(ibd)
+    }
+
     /// Get the current blockchain height.
     pub fn get_height(&self) -> Result<u32, NodeError> {
         self.chain_state.get_height().map_err(|e| {
@@ -255,11 +263,12 @@ impl FlorestaNode {
         })
     }
 
-    // TODO(@luisschwab): implement a [`UnboundedSender`] that will fetch new
-    // blocks, convert them into a [`bdk_chain::ChangeSet`] and send them
-    // over the channel.
+    /// Get the current Utreexo accumulator state, as a [`Stump`].
+    pub fn get_accumulator(&self) -> Result<Stump, NodeError> {
+        let stump = self.chain_state.get_acc();
 
-    ///////////////////// METRICS /////////////////////
+        Ok(stump)
+    }
 
     // TODO(@luisschwab): implement methods to pull metrics from the node so
     // users have access to them.
