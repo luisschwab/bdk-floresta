@@ -10,7 +10,7 @@ use floresta_chain::{
     pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError,
     ChainState,
 };
-use floresta_wire::node_interface::{NodeInterface, PeerInfo};
+use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::rustreexo::accumulator::stump::Stump;
 use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
 use tokio::task::JoinHandle;
@@ -21,6 +21,7 @@ pub(crate) use floresta_chain::{
     pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
     BlockConsumer,
 };
+pub use floresta_wire::node_interface::PeerInfo;
 pub use floresta_wire::rustreexo;
 pub use floresta_wire::UtreexoNodeConfig;
 
