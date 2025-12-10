@@ -65,8 +65,6 @@ pub struct FlorestaNode {
 }
 
 impl FlorestaNode {
-    ///////////////////// NODE CONTROL /////////////////////
-
     /// Set the `stop_signal`, signaling [`FlorestaNode`] to perform a graceful
     /// shutdown.
     pub async fn shutdown(mut self) -> Result<(), NodeError> {
@@ -100,7 +98,24 @@ impl FlorestaNode {
         *self.stop_signal.read().await
     }
 
-    ///////////////////// P2P NETWORK /////////////////////
+    /// Persist the current blockchain state to disk.
+    pub fn flush(&mut self) -> Result<(), NodeError> {
+        info!("persisting chain to disk...");
+        match self.chain_state.flush() {
+            Ok(_) => {
+                info!("sucessfully persisted chain to disk");
+                Ok(())
+            }
+            Err(e) => {
+                error!("failed to persist chain to disk");
+                match e {
+                    BlockchainError::Database(e) => Err(NodeError::Database(e)),
+                    BlockchainError::Io(e) => Err(NodeError::Io(e)),
+                    e => Err(NodeError::Blockchain(e)),
+                }
+            }
+        }
+    }
 
     /// Manually initiate a connection to a peer.
     pub async fn connect_peer(
@@ -223,25 +238,6 @@ impl FlorestaNode {
     // pub fn transaction_subscriber<T: TransactionConsumer + 'static>(&self,
     // transaction_consumer: Arc<T>) {     self.chain.
     // subscribe(transaction_consumer); }
-
-    /// Persist the current blockchain state to disk.
-    pub fn flush(&mut self) -> Result<(), NodeError> {
-        info!("persisting chain to disk...");
-        match self.chain_state.flush() {
-            Ok(_) => {
-                info!("sucessfully persisted chain to disk");
-                Ok(())
-            }
-            Err(e) => {
-                error!("failed to persist chain to disk");
-                match e {
-                    BlockchainError::Database(e) => Err(NodeError::Database(e)),
-                    BlockchainError::Io(e) => Err(NodeError::Io(e)),
-                    e => Err(NodeError::Blockchain(e)),
-                }
-            }
-        }
-    }
 
     /// Get the current blockchain height.
     pub fn get_height(&self) -> Result<u32, NodeError> {
