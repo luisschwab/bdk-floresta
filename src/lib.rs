@@ -11,6 +11,7 @@ use floresta_chain::{
     ChainState,
 };
 use floresta_wire::node_interface::{NodeInterface, PeerInfo};
+use floresta_wire::rustreexo::accumulator::stump::Stump;
 use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
@@ -65,8 +66,6 @@ pub struct FlorestaNode {
 }
 
 impl FlorestaNode {
-    ///////////////////// NODE CONTROL /////////////////////
-
     /// Set the `stop_signal`, signaling [`FlorestaNode`] to perform a graceful
     /// shutdown.
     pub async fn shutdown(mut self) -> Result<(), NodeError> {
@@ -100,7 +99,24 @@ impl FlorestaNode {
         *self.stop_signal.read().await
     }
 
-    ///////////////////// P2P NETWORK /////////////////////
+    /// Persist the current blockchain state to disk.
+    pub fn flush(&mut self) -> Result<(), NodeError> {
+        info!("persisting chain to disk...");
+        match self.chain_state.flush() {
+            Ok(_) => {
+                info!("sucessfully persisted chain to disk");
+                Ok(())
+            }
+            Err(e) => {
+                error!("failed to persist chain to disk");
+                match e {
+                    BlockchainError::Database(e) => Err(NodeError::Database(e)),
+                    BlockchainError::Io(e) => Err(NodeError::Io(e)),
+                    e => Err(NodeError::Blockchain(e)),
+                }
+            }
+        }
+    }
 
     /// Manually initiate a connection to a peer.
     pub async fn connect_peer(
@@ -224,23 +240,11 @@ impl FlorestaNode {
     // transaction_consumer: Arc<T>) {     self.chain.
     // subscribe(transaction_consumer); }
 
-    /// Persist the current blockchain state to disk.
-    pub fn flush(&mut self) -> Result<(), NodeError> {
-        info!("persisting chain to disk...");
-        match self.chain_state.flush() {
-            Ok(_) => {
-                info!("sucessfully persisted chain to disk");
-                Ok(())
-            }
-            Err(e) => {
-                error!("failed to persist chain to disk");
-                match e {
-                    BlockchainError::Database(e) => Err(NodeError::Database(e)),
-                    BlockchainError::Io(e) => Err(NodeError::Io(e)),
-                    e => Err(NodeError::Blockchain(e)),
-                }
-            }
-        }
+    /// Check wheter the node is still in Initial Block Download.
+    pub fn in_ibd(&self) -> Result<bool, NodeError> {
+        let ibd = self.chain_state.is_in_ibd();
+
+        Ok(ibd)
     }
 
     /// Get the current blockchain height.
@@ -259,11 +263,12 @@ impl FlorestaNode {
         })
     }
 
-    // TODO(@luisschwab): implement a [`UnboundedSender`] that will fetch new
-    // blocks, convert them into a [`bdk_chain::ChangeSet`] and send them
-    // over the channel.
+    /// Get the current Utreexo accumulator state, as a [`Stump`].
+    pub fn get_accumulator(&self) -> Result<Stump, NodeError> {
+        let stump = self.chain_state.get_acc();
 
-    ///////////////////// METRICS /////////////////////
+        Ok(stump)
+    }
 
     // TODO(@luisschwab): implement methods to pull metrics from the node so
     // users have access to them.
