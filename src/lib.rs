@@ -4,6 +4,7 @@
 
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bdk_wallet::Wallet;
 use floresta_chain::{
@@ -12,6 +13,7 @@ use floresta_chain::{
 };
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::rustreexo::accumulator::stump::Stump;
+use tokio::sync::oneshot;
 use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
@@ -57,6 +59,8 @@ pub struct FlorestaNode {
     /// The `stop_signal` is continuously checked by [`FlorestaNode`].
     /// If set, a gracefull shutdown will be initiated.
     pub(crate) stop_signal: Arc<RwLock<bool>>,
+    /// A receiver for the stop notification from the `node_task`.
+    pub(crate) stop_receiver: Option<oneshot::Receiver<()>>,
     /// A guard for the logger thread. Must be kept alive for the lifetime of
     /// [`FlorestaNode`].
     pub(crate) _logger_guard: Option<WorkerGuard>,
@@ -68,49 +72,82 @@ pub struct FlorestaNode {
 }
 
 impl FlorestaNode {
-    /// Set the `stop_signal`, signaling [`FlorestaNode`] to perform a graceful
-    /// shutdown.
-    pub async fn shutdown(mut self) -> Result<(), NodeError> {
-        info!("shutting down");
-        if let Some(task) = self.task_handle.take() {
-            match task.await {
-                Ok(_) => info!("Node task completed successfully"),
-                Err(e) if e.is_panic() => {
-                    warn!(
-                        "node task ended with expected panic during shutdown"
-                    );
+    /// Set `stop_signal` to `true` to initiate a graceful shutdown.
+    async fn stop(&self) {
+        info!("Setting the stop signal to true");
+        *self.stop_signal.write().await = true;
+    }
+
+    /// Wait for the node to finish it's tasks.
+    async fn wait_shutdown(mut self) -> Result<(), NodeError> {
+        info!("Waiting for shutdown to complete");
+
+        if let Some(receiver) = self.stop_receiver.take() {
+            match tokio::time::timeout(Duration::from_secs(30), receiver).await
+            {
+                Ok(Ok(())) => {
+                    info!("Node signaled shutdown completion");
                 }
-                Err(e) => {
-                    error!("node task failed: {:?}", e);
-                    return Err(NodeError::Shutdown);
+                Ok(Err(_)) => {
+                    warn!("Node shutdown channel closed without sending");
+                }
+                Err(_) => {
+                    error!("Node shutdown notification timed out after 30s");
                 }
             }
         }
+
+        if let Some(task) = self.task_handle.take() {
+            match tokio::time::timeout(Duration::from_secs(5), task).await {
+                Ok(Ok(_)) => {
+                    info!("Node task completed successfully");
+                }
+                Ok(Err(e)) if e.is_panic() => {
+                    error!("Node task panicked during shutdown: {:?}", e);
+                    return Err(NodeError::Shutdown);
+                }
+                Ok(Err(e)) => {
+                    error!("Node task failed: {:?}", e);
+                    return Err(NodeError::Shutdown);
+                }
+                Err(_) => {
+                    warn!("Node task join timed out after 5s");
+                }
+            }
+        }
+
+        let _ = self.flush();
 
         if let Some(sigint) = self.sigint_task.take() {
             let _ = sigint.await;
         }
 
-        info!("done");
-
+        info!("Shutdown complete");
         Ok(())
     }
 
-    /// Check if the node should stop based on the value of `stop_signal`.
+    /// Convenience method: signal that the node
+    /// should stop and then wait for tasks to complete.
+    pub async fn shutdown(self) -> Result<(), NodeError> {
+        self.stop().await;
+        self.wait_shutdown().await
+    }
+
+    /// Check wheter the node should stop based on `stop_signal`'s value.
     pub async fn should_stop(&self) -> bool {
         *self.stop_signal.read().await
     }
 
-    /// Persist the current blockchain state to disk.
+    /// Flush the node's state to disk.
     pub fn flush(&mut self) -> Result<(), NodeError> {
-        info!("persisting chain to disk...");
+        info!("Flushing state to disk...");
         match self.chain_state.flush() {
             Ok(_) => {
-                info!("sucessfully persisted chain to disk");
+                info!("Successfully persisted state to disk");
                 Ok(())
             }
             Err(e) => {
-                error!("failed to persist chain to disk");
+                error!("Failed to persist chain to disk: {:?}", e);
                 match e {
                     BlockchainError::Database(e) => Err(NodeError::Database(e)),
                     BlockchainError::Io(e) => Err(NodeError::Io(e)),
@@ -136,15 +173,15 @@ impl FlorestaNode {
             .await
         {
             Ok(true) => {
-                debug!("manual connection established with peer {peer_address:#?} sucessfully");
+                debug!("Manual connection established with peer {peer_address:#?} sucessfully");
                 Ok(true)
             }
             Ok(false) => {
-                warn!("failed to establish manual connection with peer {peer_address:#?}");
+                warn!("Failed to establish manual connection with peer {peer_address:#?}");
                 Ok(false)
             }
             Err(e) => {
-                error!("network error while attempting to establish manual connection with peer {peer_address:#?}: {e}");
+                error!("Network error while attempting to establish manual connection with peer {peer_address:#?}: {e}");
                 Err(NodeError::Receive(e))
             }
         }
@@ -161,17 +198,17 @@ impl FlorestaNode {
             .await
         {
             Ok(true) => {
-                debug!("sucessfull manual disconnection from peer {peer_address:#?}");
+                debug!("Sucessfull manual disconnection from peer {peer_address:#?}");
                 Ok(true)
             }
             Ok(false) => {
                 error!(
-                    "failed to manually disconnect from peer {peer_address:#?}"
+                    "Failed to manually disconnect from peer {peer_address:#?}"
                 );
                 Ok(false)
             }
             Err(e) => {
-                error!("failed to manually disconnect from peer {peer_address:#?}: {e}");
+                error!("Failed to manually disconnect from peer {peer_address:#?}: {e}");
                 Err(NodeError::Receive(e))
             }
         }
@@ -181,12 +218,12 @@ impl FlorestaNode {
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
         match self.node_handle.get_peer_info().await {
             Ok(peer_infos) => {
-                debug!("got peer infos sucesssfully");
+                debug!("Got peer infos sucesssfully");
                 trace!("{peer_infos:#?}");
                 Ok(peer_infos)
             }
             Err(e) => {
-                error!("failed to get peer infos: {e}");
+                error!("Failed to get peer infos: {e}");
                 Err(NodeError::Receive(e))
             }
         }
@@ -196,15 +233,15 @@ impl FlorestaNode {
     pub async fn ping(&self) -> Result<bool, NodeError> {
         match self.node_handle.ping().await {
             Ok(true) => {
-                debug!("sucessfully sent ping to all peers");
+                debug!("Sucessfully sent ping to all peers");
                 Ok(true)
             }
             Ok(false) => {
-                warn!("failed to send ping to all peers");
+                warn!("Failed to send ping to all peers");
                 Ok(false)
             }
             Err(e) => {
-                error!("error while sending ping to all peers: {e}");
+                error!("Error while sending ping to all peers: {e}");
                 Err(NodeError::Receive(e))
             }
         }
@@ -227,7 +264,7 @@ impl FlorestaNode {
     /// block's data, it should pass in a vector or a channel where data can
     /// be transferred to the atual worker, otherwise chainstate will be
     /// stuck for as long as you have work to do." Is processing a block
-    /// into a [`ChangSet`] heavy-lifting? The actual consumer must
+    /// into a ChangeSet heavy-lifting? The actual consumer must
     /// implement the `BlockConsumer` trait.
     pub fn block_subscriber<T: BlockConsumer + 'static>(
         &self,
@@ -252,7 +289,7 @@ impl FlorestaNode {
     /// Get the current blockchain height.
     pub fn get_height(&self) -> Result<u32, NodeError> {
         self.chain_state.get_height().map_err(|e| {
-            error!("failed to get block height");
+            error!("Failed to get block height");
             NodeError::Blockchain(e)
         })
     }
@@ -260,7 +297,7 @@ impl FlorestaNode {
     /// Get the current validated blockchain height.
     pub fn get_validation_height(&self) -> Result<u32, NodeError> {
         self.chain_state.get_validation_index().map_err(|e| {
-            error!("failed to get validated block height");
+            error!("Failed to get validated block height");
             NodeError::Blockchain(e)
         })
     }

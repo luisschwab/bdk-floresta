@@ -29,7 +29,7 @@ pub(crate) fn setup_logger(
     // Apply custom log filters to different crates.
     let targets_log_filter: Targets = Targets::new()
         .with_target("bdk_floresta", log_level)
-        .with_target("floresta_chain", Level::WARN)
+        .with_target("floresta_chain", Level::INFO)
         .with_target("floresta_wire", Level::INFO)
         .with_default(Level::INFO);
 

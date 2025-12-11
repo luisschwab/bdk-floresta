@@ -85,7 +85,6 @@ async fn main() -> anyhow::Result<()> {
 
         // Check if the node should stop.
         if node.should_stop().await {
-            info!("Detected SIGINT, stopping node");
             break;
         }
     }
