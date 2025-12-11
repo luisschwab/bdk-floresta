@@ -5,10 +5,7 @@ use std::sync::Arc;
 
 use bdk_wallet::{bitcoin::Network, Wallet};
 use floresta_chain::{
-    pruned_utreexo::{
-        flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
-        UpdatableChainstate,
-    },
+    pruned_utreexo::flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
     AssumeUtreexoValue, AssumeValidArg, BlockchainInterface, ChainParams,
     ChainState,
 };
@@ -77,7 +74,7 @@ impl Default for FlorestaBuilder {
         let backfill_default: bool = false;
 
         // The default user agent for P2P communication.
-        let user_agent_default = env!("USER_AGENT").to_string();
+        let user_agent_default: String = env!("USER_AGENT").to_string();
 
         Self {
             assume_valid_blockhash: assume_valid_default,
@@ -185,7 +182,7 @@ impl FlorestaBuilder {
             match FlatChainStore::new(chain_store_cfg) {
                 Ok(store) => store,
                 Err(e) => {
-                    error!("failed to open chain store: {:?}", e);
+                    error!("Failed to open chain store: {:?}", e);
                     return Err(BuilderError::ChainStoreInit(e));
                 }
             };
@@ -198,13 +195,13 @@ impl FlorestaBuilder {
                 self.assume_valid_blockhash,
             ));
 
-        info!("initialized chainstore at {}", self.config.datadir);
+        info!("Initialized chainstore at {}", self.config.datadir);
 
         // Create a signal that keeps track of whether [`FlorestaNode`] should
         // stop.
         let stop_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        let (sender, _) = oneshot::channel();
+        let (sender, receiver) = oneshot::channel();
 
         // Create a `Pollard` accumulator to be used for our transaction's
         // mempool.
@@ -221,9 +218,9 @@ impl FlorestaBuilder {
             stop_signal.clone(),
             AddressMan::default(),
         )
-        .expect("failed to create node");
+        .expect("Failed to create node");
 
-        info!("crated bdk_floresta node");
+        info!("Created bdk_floresta node");
 
         // Get a handle from [`FlorestaNode`], used to send commands to it.
         let node_handle: NodeInterface = node.get_handle();
@@ -234,26 +231,16 @@ impl FlorestaBuilder {
         // Spawn a task for the SIGINT handler.
         let sigint_task: JoinHandle<()> = {
             let stop_signal: Arc<RwLock<bool>> = stop_signal.clone();
-            let chain_state: Arc<ChainState<FlatChainStore>> =
-                chain_state.clone();
 
             task::spawn(async move {
                 tokio::signal::ctrl_c()
                     .await
-                    .expect("failed to initialize SIGINT handler");
+                    .expect("Failed to initialize SIGINT handler");
 
-                info!("received SIGINT, initiating graceful shutdown");
-
-                // Flush chain to disk
-                if let Err(e) = chain_state.flush() {
-                    error!("failed to flush chain to disk: {e}");
-                } else {
-                    info!("flushed chainstate to disk");
-                }
+                info!("Received SIGINT, initiating graceful shutdown");
 
                 // Set `stop_signal` so the node does a graceful shutdown.
                 *stop_signal.write().await = true;
-                info!("stop signal set");
             })
         };
 
@@ -275,6 +262,7 @@ impl FlorestaBuilder {
             task_handle: Some(node_task),
             sigint_task: Some(sigint_task),
             stop_signal,
+            stop_receiver: Some(receiver),
             _logger_guard,
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),
