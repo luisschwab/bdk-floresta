@@ -1,8 +1,6 @@
-name: GitHub Actions Security Analysis with zizmor 🌈
+on: [push, pull_request]
 
-on:
-  pull_request:
-    branches: ["**"]
+name: Zizmor
 
 permissions: {}
 
