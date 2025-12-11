@@ -16,6 +16,7 @@ check:
     cargo +nightly fmt --all -- --check
     cargo check --workspace
     cargo clippy --all-targets -- -D warnings
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
     @[ "$(git log --pretty='format:%G?' -1 HEAD)" = "N" ] && \
        echo "\n⚠️  Unsigned commit: bdk_floresta requires commits to be signed." || \
        true
@@ -23,6 +24,10 @@ check:
 # Delete files: example, target, lockfile
 delete item="examples":
     just _delete-{{ item }}
+
+# Build `bdk_floresta`'s documentation
+doc:
+    cargo doc --no-deps --open
 
 # Run an example crate
 example name="block_wallet_sync":
@@ -41,4 +46,3 @@ _delete-target:
 
 _delete-lockfile:
     rm -f Cargo.lock
-
