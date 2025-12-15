@@ -41,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
         .with_config(node_config)
         .with_assumevalid(assume_valid)
         .with_wallet(wallet)
+        .build_logger()
         .build()
         .await?;
 

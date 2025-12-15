@@ -23,7 +23,6 @@ use tokio::{
     task::{self, JoinHandle},
 };
 use tracing::{error, info};
-use tracing_appender::non_blocking::WorkerGuard;
 
 use crate::logger::setup_logger;
 use crate::{error::BuilderError, updater::WalletUpdater};
@@ -38,6 +37,8 @@ pub struct FlorestaBuilder {
     assume_valid_blockhash: AssumeValidArg,
     /// The configuration parameters for the node.
     config: UtreexoNodeConfig,
+    /// Wheter to build the `tracing_subscriber` logger.
+    build_logger: bool,
     /// Whether the log level should be set to debug.
     /// This can be overriden by the `RUST_LOG` environment variable.
     debug: bool,
@@ -98,6 +99,7 @@ impl Default for FlorestaBuilder {
                 allow_v1_fallback: true,
                 disable_dns_seeds: false,
             },
+            build_logger: false,
             debug: false,
             log_to_stdout: true,
             log_to_file: true,
@@ -141,6 +143,13 @@ impl FlorestaBuilder {
         self
     }
 
+    /// Build the `tracing_subscriber` defined in this crate.
+    pub fn build_logger(mut self) -> Self {
+        self.build_logger = true;
+
+        self
+    }
+
     /// Set the log level to debug.
     pub fn set_debug(mut self) -> Self {
         self.debug = true;
@@ -160,15 +169,17 @@ impl FlorestaBuilder {
         // Create the data directory.
         fs::create_dir_all(&self.config.datadir)?;
 
-        // Setup the subscriber to tracing events, logging.
         // Returns a guard for the logger, which must be kept
         // for the lifetime of [`FlorestaNode`].
-        let _logger_guard: Option<WorkerGuard> = setup_logger(
-            &self.config.datadir,
-            self.log_to_file,
-            self.log_to_stdout,
-            self.debug,
-        )?;
+        let _logger_guard = match self.build_logger {
+            true => setup_logger(
+                &self.config.datadir,
+                self.log_to_file,
+                self.log_to_stdout,
+                self.debug,
+            )?,
+            false => None,
+        };
 
         // Create configuration for the chain store.
         let chain_store_cfg: FlatChainStoreConfig = FlatChainStoreConfig::new(
