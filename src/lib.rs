@@ -31,7 +31,7 @@ use error::NodeError;
 pub use updater::WalletUpdate;
 
 pub mod builder;
-mod error;
+pub mod error;
 mod logger;
 mod updater;
 
