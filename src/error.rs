@@ -3,13 +3,19 @@
 // TODO(@luisschwab): make all error variants
 // transparent once they get implemented on Floresta.
 
+use std::sync::Arc;
 use thiserror::Error;
 
+#[allow(unused)]
+use crate::builder::FlorestaBuilder;
+#[allow(unused)]
+use crate::FlorestaNode;
+
 /// [`FlorestaNode`] related errors.
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum NodeError {
     /// Shutdown error.
-    #[error("failed to perform a clean shutdown")]
+    #[error("Failed to perform a clean shutdown")]
     Shutdown,
 
     /// Sender dropped without sending.
@@ -17,34 +23,57 @@ pub enum NodeError {
     Receive(#[from] tokio::sync::oneshot::error::RecvError),
 
     /// DB error during persistence.
-    #[error("database error: {0:?}")]
-    Database(Box<dyn floresta_chain::DatabaseError>),
+    #[error("Database error: {0:?}")]
+    Database(Arc<Box<dyn floresta_chain::DatabaseError>>),
 
     /// I/O error during persistence.
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("I/O error: {0}")]
+    Io(Arc<std::io::Error>),
 
     /// Blockchain related errors.
-    #[error("blockchain error: {0:?}")]
-    Blockchain(#[from] floresta_chain::BlockchainError),
+    #[error("Blockchain error: {0:?}")]
+    Blockchain(Arc<floresta_chain::BlockchainError>),
 }
 
-#[allow(unused)]
+impl From<std::io::Error> for NodeError {
+    fn from(err: std::io::Error) -> Self {
+        NodeError::Io(Arc::new(err))
+    }
+}
+
+impl From<floresta_chain::BlockchainError> for NodeError {
+    fn from(err: floresta_chain::BlockchainError) -> Self {
+        NodeError::Blockchain(Arc::new(err))
+    }
+}
+
 /// [`FlorestaBuilder`] related errors.
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum BuilderError {
-    #[error("failed to create the data directort: {0:?}")]
-    CreateDirectory(#[from] std::io::Error),
+    #[error("Failed to create the data directory: {0:?}")]
+    CreateDirectory(Arc<std::io::Error>),
 
-    #[error("failed to setup the tracing subscriber logger: {0:?}")]
-    LoggerSetup(std::io::Error),
+    #[error("Failed to setup the tracing subscriber logger: {0:?}")]
+    LoggerSetup(Arc<std::io::Error>),
 
-    #[error("tracing subscriber logger already initialized")]
+    #[error("Tracing subscriber logger already initialized")]
     LoggerAlreadySetup,
 
-    #[error("failed to load or create a new chain store: {0:?}")]
-    ChainStoreInit(floresta_chain::FlatChainstoreError),
+    #[error("Failed to load or create a new chain store: {0:?}")]
+    ChainStoreInit(Arc<floresta_chain::FlatChainstoreError>),
 
-    #[error("node and wallet are not on the same network")]
+    #[error("Node and Wallet are not on the same network")]
     NetworkMismatch,
+}
+
+impl From<std::io::Error> for BuilderError {
+    fn from(err: std::io::Error) -> Self {
+        BuilderError::CreateDirectory(Arc::new(err))
+    }
+}
+
+impl From<floresta_chain::FlatChainstoreError> for BuilderError {
+    fn from(err: floresta_chain::FlatChainstoreError) -> Self {
+        BuilderError::ChainStoreInit(Arc::new(err))
+    }
 }

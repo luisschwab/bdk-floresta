@@ -158,8 +158,7 @@ impl FlorestaBuilder {
         }
 
         // Create the data directory.
-        let _ = fs::create_dir_all(&self.config.datadir)
-            .map_err(BuilderError::CreateDirectory);
+        fs::create_dir_all(&self.config.datadir)?;
 
         // Setup the subscriber to tracing events, logging.
         // Returns a guard for the logger, which must be kept
@@ -182,8 +181,8 @@ impl FlorestaBuilder {
             match FlatChainStore::new(chain_store_cfg) {
                 Ok(store) => store,
                 Err(e) => {
-                    error!("Failed to open chain store: {:?}", e);
-                    return Err(BuilderError::ChainStoreInit(e));
+                    error!("Failed to open flat chainstore: {:?}", e);
+                    return Err(e.into());
                 }
             };
 
