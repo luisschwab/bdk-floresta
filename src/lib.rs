@@ -119,15 +119,17 @@ impl FlorestaNode {
         let _ = self.flush();
 
         if let Some(sigint) = self.sigint_task.take() {
-            let _ = sigint.await;
+            sigint.abort();
         }
 
         info!("Shutdown complete");
         Ok(())
     }
 
-    /// Convenience method: signal that the node
-    /// should stop and then wait for tasks to complete.
+    /// Signal that [`FlorestaNode`] should stop,
+    /// and then wait for it's tasks to complete.
+    ///
+    /// This is a convenience method that bundles `stop()` and `wait_shutdown`.
     pub async fn shutdown(self) -> Result<(), NodeError> {
         self.stop().await;
         self.wait_shutdown().await
