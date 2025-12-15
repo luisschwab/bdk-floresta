@@ -141,20 +141,18 @@ impl FlorestaNode {
     /// Flush the node's state to disk.
     pub fn flush(&mut self) -> Result<(), NodeError> {
         info!("Flushing state to disk...");
-        match self.chain_state.flush() {
-            Ok(_) => {
-                info!("Successfully persisted state to disk");
-                Ok(())
-            }
-            Err(e) => {
-                error!("Failed to persist chain to disk: {:?}", e);
-                match e {
-                    BlockchainError::Database(e) => Err(NodeError::Database(e)),
-                    BlockchainError::Io(e) => Err(NodeError::Io(e)),
-                    e => Err(NodeError::Blockchain(e)),
+        self.chain_state.flush().map_err(|e| {
+            error!("Failed to persist chain to disk: {:?}", e);
+            match e {
+                BlockchainError::Database(db_err) => {
+                    NodeError::Database(Arc::new(db_err))
                 }
+                BlockchainError::Io(io_err) => NodeError::Io(Arc::new(io_err)),
+                other => NodeError::Blockchain(Arc::new(other)),
             }
-        }
+        })?;
+        info!("Successfully persisted state to disk");
+        Ok(())
     }
 
     /// Manually initiate a connection to a peer.
@@ -288,18 +286,14 @@ impl FlorestaNode {
 
     /// Get the current blockchain height.
     pub fn get_height(&self) -> Result<u32, NodeError> {
-        self.chain_state.get_height().map_err(|e| {
-            error!("Failed to get block height");
-            NodeError::Blockchain(e)
-        })
+        let height = self.chain_state.get_height()?;
+        Ok(height)
     }
 
     /// Get the current validated blockchain height.
     pub fn get_validation_height(&self) -> Result<u32, NodeError> {
-        self.chain_state.get_validation_index().map_err(|e| {
-            error!("Failed to get validated block height");
-            NodeError::Blockchain(e)
-        })
+        let height = self.chain_state.get_validation_index()?;
+        Ok(height)
     }
 
     /// Get the current Utreexo accumulator state, as a [`Stump`].
