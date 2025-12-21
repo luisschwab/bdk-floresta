@@ -13,9 +13,9 @@ fn main() {
     // Build `bdk_floresta`'s user agent in Bitcoin Core style:
     // `/bdk-floresta:X.Y.Z/floresta-wire:A.B.C/`.
     let user_agent = format!(
-        "/bdk-floresta:{}/floresta-wire:{}/",
+        "/floresta-wire:{}/bdk-floresta:{}/",
+        floresta_wire_version,
         version.replace("v", ""),
-        floresta_wire_version
     );
 
     println!("cargo:rustc-env=USER_AGENT={}", user_agent);
