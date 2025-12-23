@@ -72,7 +72,7 @@ impl Default for FlorestaBuilder {
         let data_dir_default: String = format!("./data/{}", network_default);
 
         // The default behaviour for the backfill job. Default to `false`.
-        let backfill_default: bool = false;
+        let backfill_default: bool = true;
 
         // The default user agent for P2P communication.
         let user_agent_default: String = env!("USER_AGENT").to_string();
@@ -81,11 +81,8 @@ impl Default for FlorestaBuilder {
             assume_valid_blockhash: assume_valid_default,
             config: UtreexoNodeConfig {
                 network: network_default,
-                pow_fraud_proofs: false,
-                // TODO(@luisschwab): set this to true when implementing wallet
-                // rescan with CBF.
+                pow_fraud_proofs: true,
                 compact_filters: false,
-                // TODO(@luisschwab): set a good bridge as a fixed peer?
                 fixed_peer: None,
                 max_banscore: 10,
                 max_outbound: 100,
