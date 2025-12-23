@@ -19,12 +19,17 @@ use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
 use tracing_appender::non_blocking::WorkerGuard;
 
+pub use floresta_chain::pruned_utreexo::chainparams::{
+    AssumeUtreexoValue, ChainParams,
+};
 pub(crate) use floresta_chain::{
     pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
     BlockConsumer,
 };
+pub use floresta_wire::node::{ConnectionKind, PeerStatus};
 pub use floresta_wire::node_interface::PeerInfo;
 pub use floresta_wire::rustreexo;
+pub use floresta_wire::TransportProtocol;
 pub use floresta_wire::UtreexoNodeConfig;
 
 use error::NodeError;
@@ -34,6 +39,8 @@ pub mod builder;
 pub mod error;
 mod logger;
 mod updater;
+
+const SHUTDOWN_TIMEOUT: u64 = 60;
 
 /// [`FlorestaNode`] represents the embedded and fully validating
 /// Compact State Node.
@@ -83,7 +90,11 @@ impl FlorestaNode {
         info!("Waiting for shutdown to complete");
 
         if let Some(receiver) = self.stop_receiver.take() {
-            match tokio::time::timeout(Duration::from_secs(30), receiver).await
+            match tokio::time::timeout(
+                Duration::from_secs(SHUTDOWN_TIMEOUT),
+                receiver,
+            )
+            .await
             {
                 Ok(Ok(())) => {
                     info!("Node signaled shutdown completion");
@@ -92,13 +103,18 @@ impl FlorestaNode {
                     warn!("Node shutdown channel closed without sending");
                 }
                 Err(_) => {
-                    error!("Node shutdown notification timed out after 30s");
+                    error!("Node shutdown notification timed out after {SHUTDOWN_TIMEOUT} seconds");
                 }
             }
         }
 
         if let Some(task) = self.task_handle.take() {
-            match tokio::time::timeout(Duration::from_secs(5), task).await {
+            match tokio::time::timeout(
+                Duration::from_secs(SHUTDOWN_TIMEOUT),
+                task,
+            )
+            .await
+            {
                 Ok(Ok(_)) => {
                     info!("Node task completed successfully");
                 }
@@ -111,7 +127,7 @@ impl FlorestaNode {
                     return Err(NodeError::Shutdown);
                 }
                 Err(_) => {
-                    warn!("Node task join timed out after 5s");
+                    warn!("Node task join timed out after {SHUTDOWN_TIMEOUT} seconds");
                 }
             }
         }
@@ -155,6 +171,13 @@ impl FlorestaNode {
         })?;
         info!("Successfully persisted state to disk");
         Ok(())
+    }
+
+    /// Get the [`UtreexoNodeConfig`] from the running node.
+    pub async fn get_config(&self) -> Result<UtreexoNodeConfig, NodeError> {
+        let config = self.node_handle.get_config().await?;
+
+        Ok(config)
     }
 
     /// Manually initiate a connection to a peer.
