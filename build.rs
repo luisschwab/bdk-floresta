@@ -11,7 +11,7 @@ fn main() {
         .unwrap_or_else(|| "unknown".to_string());
 
     // Build `bdk_floresta`'s user agent in Bitcoin Core style:
-    // `/bdk-floresta:X.Y.Z/floresta-wire:A.B.C/`.
+    // `/floresta-wire:A.B.C/bdk-floresta:X.Y.Z`.
     let user_agent = format!(
         "/floresta-wire:{}/bdk-floresta:{}/",
         floresta_wire_version,
