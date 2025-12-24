@@ -6,6 +6,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bdk_wallet::bitcoin::{Block, BlockHash};
 use bdk_wallet::Wallet;
 use floresta_chain::{
     pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError,
@@ -328,6 +329,20 @@ impl FlorestaNode {
         Ok(stump)
     }
 
-    // TODO(@luisschwab): implement methods to pull metrics from the node so
-    // users have access to them.
+    /// Get a [`BlockHash`] from a block height.
+    pub fn get_blockhash(&self, height: u32) -> Result<BlockHash, NodeError> {
+        let hash = self.chain_state.get_block_hash(height)?;
+
+        Ok(hash)
+    }
+
+    /// Get a [`Block`], given it's [`BlockHash`], from the network.
+    pub async fn get_block(
+        &self,
+        blockhash: BlockHash,
+    ) -> Result<Option<Block>, NodeError> {
+        let block = self.node_handle.get_block(blockhash).await?;
+
+        Ok(block)
+    }
 }
