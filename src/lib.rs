@@ -329,6 +329,13 @@ impl FlorestaNode {
         Ok(stump)
     }
 
+    /// Get a [`BlockHash`] from a block height.
+    pub fn get_blockhash(&self, height: u32) -> Result<BlockHash, NodeError> {
+        let hash = self.chain_state.get_block_hash(height)?;
+
+        Ok(hash)
+    }
+
     /// Get a [`Block`], given it's [`BlockHash`], from the network.
     pub async fn get_block(
         &self,
