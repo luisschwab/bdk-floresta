@@ -71,7 +71,7 @@ impl Default for FlorestaBuilder {
         // The default data directory for the node. Currently, `./data`.
         let data_dir_default: String = format!("./data/{}", network_default);
 
-        // The default behaviour for the backfill job. Default to `false`.
+        // The default behavior for the backfill task. Defaults to `true`.
         let backfill_default: bool = true;
 
         // The default user agent for P2P communication.
