@@ -23,10 +23,10 @@ use tracing_appender::non_blocking::WorkerGuard;
 pub use floresta_chain::pruned_utreexo::chainparams::{
     AssumeUtreexoValue, ChainParams,
 };
-pub(crate) use floresta_chain::{
-    pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
-    BlockConsumer,
+pub(crate) use floresta_chain::pruned_utreexo::{
+    BlockchainInterface, UpdatableChainstate,
 };
+pub use floresta_chain::BlockConsumer;
 pub use floresta_wire::node::{ConnectionKind, PeerStatus};
 pub use floresta_wire::node_interface::PeerInfo;
 pub use floresta_wire::rustreexo;
