@@ -5,10 +5,13 @@ use std::io::IsTerminal;
 
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{
-    filter::Targets, fmt, fmt::time::ChronoLocal, layer::SubscriberExt,
-    util::SubscriberInitExt, EnvFilter, Layer,
-};
+use tracing_subscriber::filter::Targets;
+use tracing_subscriber::fmt;
+use tracing_subscriber::fmt::time::ChronoLocal;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::Layer;
 
 use crate::error::BuilderError;
 

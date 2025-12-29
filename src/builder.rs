@@ -3,30 +3,36 @@
 use std::fs;
 use std::sync::Arc;
 
-use bdk_wallet::{bitcoin::Network, Wallet};
-use floresta_chain::{
-    pruned_utreexo::flat_chain_store::{FlatChainStore, FlatChainStoreConfig},
-    AssumeUtreexoValue, AssumeValidArg, BlockchainInterface, ChainParams,
-    ChainState,
-};
-use floresta_wire::{
-    address_man::AddressMan,
-    mempool::Mempool,
-    node::UtreexoNode,
-    node_interface::NodeInterface,
-    running_node::RunningNode,
-    rustreexo::accumulator::{node_hash::BitcoinNodeHash, pollard::Pollard},
-    UtreexoNodeConfig,
-};
-use tokio::{
-    sync::{mpsc::unbounded_channel, oneshot, Mutex, RwLock},
-    task::{self, JoinHandle},
-};
-use tracing::{error, info};
+use bdk_wallet::bitcoin::Network;
+use bdk_wallet::Wallet;
+use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
+use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
+use floresta_chain::AssumeUtreexoValue;
+use floresta_chain::AssumeValidArg;
+use floresta_chain::BlockchainInterface;
+use floresta_chain::ChainParams;
+use floresta_chain::ChainState;
+use floresta_wire::address_man::AddressMan;
+use floresta_wire::mempool::Mempool;
+use floresta_wire::node::UtreexoNode;
+use floresta_wire::node_interface::NodeInterface;
+use floresta_wire::running_node::RunningNode;
+use floresta_wire::rustreexo::accumulator::node_hash::BitcoinNodeHash;
+use floresta_wire::rustreexo::accumulator::pollard::Pollard;
+use floresta_wire::UtreexoNodeConfig;
+use tokio::sync::mpsc::unbounded_channel;
+use tokio::sync::oneshot;
+use tokio::sync::Mutex;
+use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
+use tracing::error;
+use tracing::info;
 
+use crate::error::BuilderError;
 use crate::logger::setup_logger;
-use crate::{error::BuilderError, updater::WalletUpdater};
-use crate::{FlorestaNode, WalletUpdate};
+use crate::updater::WalletUpdater;
+use crate::FlorestaNode;
+use crate::WalletUpdate;
 
 /// [`FlorestaBuilder`] builds a node from the `UtreexoConfig` provided, or
 /// builds a node from default values.
@@ -233,13 +239,13 @@ impl FlorestaBuilder {
         let node_handle: NodeInterface = node.get_handle();
 
         // Spawn a task for [`FlorestaNode`].
-        let node_task: JoinHandle<()> = task::spawn(node.run(sender));
+        let node_task: JoinHandle<()> = tokio::task::spawn(node.run(sender));
 
         // Spawn a task for the SIGINT handler.
         let sigint_task: JoinHandle<()> = {
             let stop_signal: Arc<RwLock<bool>> = stop_signal.clone();
 
-            task::spawn(async move {
+            tokio::task::spawn(async move {
                 tokio::signal::ctrl_c()
                     .await
                     .expect("Failed to initialize SIGINT handler");

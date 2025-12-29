@@ -6,34 +6,36 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use bdk_wallet::bitcoin::{Block, BlockHash};
+use bdk_wallet::bitcoin::Block;
+use bdk_wallet::bitcoin::BlockHash;
 use bdk_wallet::Wallet;
-use floresta_chain::{
-    pruned_utreexo::flat_chain_store::FlatChainStore, BlockchainError,
-    ChainState,
-};
+use error::NodeError;
+pub use floresta_chain::pruned_utreexo::chainparams::AssumeUtreexoValue;
+pub use floresta_chain::pruned_utreexo::chainparams::ChainParams;
+use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
+pub(crate) use floresta_chain::pruned_utreexo::BlockchainInterface;
+pub(crate) use floresta_chain::pruned_utreexo::UpdatableChainstate;
+pub use floresta_chain::BlockConsumer;
+use floresta_chain::BlockchainError;
+use floresta_chain::ChainState;
+pub use floresta_wire::node::ConnectionKind;
+pub use floresta_wire::node::PeerStatus;
 use floresta_wire::node_interface::NodeInterface;
-use floresta_wire::rustreexo::accumulator::stump::Stump;
-use tokio::sync::oneshot;
-use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
-use tokio::task::JoinHandle;
-use tracing::{debug, error, info, trace, warn};
-use tracing_appender::non_blocking::WorkerGuard;
-
-pub use floresta_chain::pruned_utreexo::chainparams::{
-    AssumeUtreexoValue, ChainParams,
-};
-pub(crate) use floresta_chain::{
-    pruned_utreexo::{BlockchainInterface, UpdatableChainstate},
-    BlockConsumer,
-};
-pub use floresta_wire::node::{ConnectionKind, PeerStatus};
 pub use floresta_wire::node_interface::PeerInfo;
 pub use floresta_wire::rustreexo;
+use floresta_wire::rustreexo::accumulator::stump::Stump;
 pub use floresta_wire::TransportProtocol;
 pub use floresta_wire::UtreexoNodeConfig;
-
-use error::NodeError;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::oneshot;
+use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::trace;
+use tracing::warn;
+use tracing_appender::non_blocking::WorkerGuard;
 pub use updater::WalletUpdate;
 
 pub mod builder;

@@ -2,13 +2,17 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use bdk_floresta::{builder::FlorestaBuilder, UtreexoNodeConfig, WalletUpdate};
-
-use bdk_wallet::bitcoin::{BlockHash, Network};
+use bdk_floresta::builder::FlorestaBuilder;
+use bdk_floresta::UtreexoNodeConfig;
+use bdk_floresta::WalletUpdate;
+use bdk_wallet::bitcoin::BlockHash;
+use bdk_wallet::bitcoin::Network;
 use bdk_wallet::Wallet;
 use floresta_chain::AssumeValidArg;
-use tokio::sync::{mpsc::UnboundedReceiver, RwLock};
-use tracing::{error, info};
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::RwLock;
+use tracing::error;
+use tracing::info;
 
 const DESC_EXTERNAL: &str = "wpkh([9cee26c8/84'/1'/0']tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/0/*)";
 const DESC_INTERNAL: &str = "wpkh([9cee26c8/84'/1'/0']tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/1/*)";
