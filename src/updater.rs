@@ -3,7 +3,8 @@
 use bdk_wallet::bitcoin::Block;
 use floresta_chain::BlockConsumer;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::{debug, error};
+use tracing::debug;
+use tracing::error;
 
 /// Structures that represent an update to the wallet.
 /// Currently, only `Block`s are supported.
