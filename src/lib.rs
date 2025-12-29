@@ -18,6 +18,7 @@ pub(crate) use floresta_chain::pruned_utreexo::UpdatableChainstate;
 pub use floresta_chain::BlockConsumer;
 use floresta_chain::BlockchainError;
 use floresta_chain::ChainState;
+pub use floresta_chain::UtxoData;
 pub use floresta_wire::node::ConnectionKind;
 pub use floresta_wire::node::PeerStatus;
 use floresta_wire::node_interface::NodeInterface;
