@@ -11,8 +11,9 @@ keywords = ["bitcoin", "bdk", "floresta", "utreexo"]
 
 [dependencies]
 bdk_wallet = "2.2.0"
-floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "a81d70e1dc5a666fc24e8093afac3f7aea0c6e92", features = ["flat-chainstore"] }
-floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "a81d70e1dc5a666fc24e8093afac3f7aea0c6e92" }
+floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "37608de0b602c5b369c33e63589f6aa939ebcc8f", features = ["flat-chainstore"] }
+floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "37608de0b602c5b369c33e63589f6aa939ebcc8f" }
+floresta-compact-filters = { git = "https://github.com/vinteumorg/Floresta.git", rev = "37608de0b602c5b369c33e63589f6aa939ebcc8f" }
 thiserror = "2.0.17"
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = "0.1.41"
