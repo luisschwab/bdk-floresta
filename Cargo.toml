@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["bitcoin", "bdk", "floresta", "utreexo"]
 
 [dependencies]
+bitcoin = "0.32.8"
 bdk_wallet = "2.2.0"
 floresta-chain = { git = "https://github.com/vinteumorg/Floresta.git", rev = "37608de0b602c5b369c33e63589f6aa939ebcc8f", features = ["flat-chainstore"] }
 floresta-wire = { git = "https://github.com/vinteumorg/Floresta.git", rev = "37608de0b602c5b369c33e63589f6aa939ebcc8f" }

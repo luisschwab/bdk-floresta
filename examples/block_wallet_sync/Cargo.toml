@@ -1,5 +1,5 @@
 [package]
-name = "floresta_wallet_sync"
+name = "block_wallet_sync"
 version = "0.1.0"
 edition = "2021"
 publish = false

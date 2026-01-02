@@ -3,8 +3,8 @@
 use std::fs;
 use std::sync::Arc;
 
-use bdk_wallet::bitcoin::Network;
 use bdk_wallet::Wallet;
+use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_chain::AssumeUtreexoValue;
