@@ -30,3 +30,7 @@ anyhow = "1.0.100"
 [[example]]
 name = "block_wallet_sync"
 path = "examples/block_wallet_sync/src/main.rs"
+
+[[example]]
+name = "playground"
+path = "examples/playground/src/main.rs"

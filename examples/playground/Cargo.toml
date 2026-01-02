@@ -1,0 +1,11 @@
+[package]
+name = "playground"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+anyhow = "1.0.100"
+bdk_floresta = { path = "../../bdk-floresta" }
+tokio = { version = "1.47.1", features = ["full"] }
+tracing = "0.1.41"
