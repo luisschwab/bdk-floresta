@@ -6,9 +6,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use bdk_wallet::bitcoin::Block;
-use bdk_wallet::bitcoin::BlockHash;
 use bdk_wallet::Wallet;
+use bitcoin::Block;
+use bitcoin::BlockHash;
 use error::NodeError;
 pub use floresta_chain::pruned_utreexo::chainparams::AssumeUtreexoValue;
 pub use floresta_chain::pruned_utreexo::chainparams::ChainParams;

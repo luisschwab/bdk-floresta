@@ -3,8 +3,8 @@
 use std::fs;
 use std::sync::Arc;
 
-use bdk_wallet::bitcoin::Network;
 use bdk_wallet::Wallet;
+use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_chain::AssumeUtreexoValue;
@@ -12,6 +12,8 @@ use floresta_chain::AssumeValidArg;
 use floresta_chain::BlockchainInterface;
 use floresta_chain::ChainParams;
 use floresta_chain::ChainState;
+use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
+use floresta_compact_filters::network_filters::NetworkFilters;
 use floresta_wire::address_man::AddressMan;
 use floresta_wire::mempool::Mempool;
 use floresta_wire::node::UtreexoNode;
@@ -88,7 +90,7 @@ impl Default for FlorestaBuilder {
             config: UtreexoNodeConfig {
                 network: network_default,
                 pow_fraud_proofs: true,
-                compact_filters: false,
+                compact_filters: true,
                 fixed_peer: None,
                 max_banscore: 10,
                 max_outbound: 100,
@@ -189,6 +191,14 @@ impl FlorestaBuilder {
             self.config.datadir.clone() + "/chaindata",
         );
 
+        // Create configuration for Compact Block Filters.
+        let filters_store = FlatFiltersStore::new(
+            (self.config.datadir.clone() + "/cbf").into(),
+        );
+        let filters = Arc::new(NetworkFilters::new(filters_store));
+        let filters_height = filters.get_height()?;
+        info!("Compact Block Filters loaded at height {filters_height}");
+
         // Try to load an existing chain store from disk,
         // or create a new chain store.
         let chain_store: FlatChainStore =
@@ -226,8 +236,7 @@ impl FlorestaBuilder {
             self.config.clone(),
             chain_state.clone(),
             mempool,
-            None, /* TODO(@luisschwab): update this once CBF scanning is
-                   * implemented. */
+            Some(filters),
             stop_signal.clone(),
             AddressMan::default(),
         )

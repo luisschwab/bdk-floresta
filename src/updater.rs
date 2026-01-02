@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-use bdk_wallet::bitcoin::Block;
+use bitcoin::Block;
 use floresta_chain::BlockConsumer;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::debug;

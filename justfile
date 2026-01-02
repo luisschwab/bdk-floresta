@@ -30,8 +30,7 @@ doc:
     cargo doc --no-deps --open
 
 # Run an example crate
-example name="block_wallet_sync":
-    @just _delete-examples
+example name="playground":
     cargo run --example {{ name }} --release
 
 # Format code
@@ -40,6 +39,7 @@ fmt:
 
 _delete-examples:
     rm -rf examples/block_wallet_sync/data
+    rm -rf examples/playground/data
 
 _delete-target:
     rm -rf target/
