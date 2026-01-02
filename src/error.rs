@@ -65,6 +65,10 @@ pub enum BuilderError {
 
     #[error("Node and Wallet are not on the same network")]
     NetworkMismatch,
+
+    /// Compact Block Filter related errors.
+    #[error("Compact Block Filter error: {0:?}")]
+    CompactBlockFilter(Arc<floresta_compact_filters::IterableFilterStoreError>),
 }
 
 impl From<std::io::Error> for BuilderError {
@@ -76,5 +80,11 @@ impl From<std::io::Error> for BuilderError {
 impl From<floresta_chain::FlatChainstoreError> for BuilderError {
     fn from(err: floresta_chain::FlatChainstoreError) -> Self {
         BuilderError::ChainStoreInit(Arc::new(err))
+    }
+}
+
+impl From<floresta_compact_filters::IterableFilterStoreError> for BuilderError {
+    fn from(err: floresta_compact_filters::IterableFilterStoreError) -> Self {
+        BuilderError::CompactBlockFilter(Arc::new(err))
     }
 }
