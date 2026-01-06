@@ -63,8 +63,8 @@ impl Default for FlorestaBuilder {
         // Don't use AssumeValid by default.
         let assume_valid_default: AssumeValidArg = AssumeValidArg::Disabled;
 
-        // Use `Network::Bitcoin` by default.
-        let network_default: Network = Network::Bitcoin;
+        // Use `Network::Signet` by default.
+        let network_default: Network = Network::Signet;
 
         // Get the hardcoded `AssumeUTreeXO` value from `floresta-chain`.
         // The node will begin to sync from the `assume_utreexo` height,
