@@ -33,12 +33,12 @@ use tracing::info;
 use crate::error::BuilderError;
 use crate::logger::setup_logger;
 use crate::updater::WalletUpdater;
-use crate::FlorestaNode;
+use crate::Node;
 use crate::WalletUpdate;
 
-/// [`FlorestaBuilder`] builds a node from the `UtreexoConfig` provided, or
-/// builds a node from default values.
-pub struct FlorestaBuilder {
+/// The [`Builder`] builds a [`Node`] from user-defined configuration or
+/// deafault values.
+pub struct Builder {
     /// What `BlockHash` should be used for AssumeValid.
     /// This will assume all scripts up to block `assume_valid_blockhash`
     /// as valid. This speeds up IBD since no script eval is done.
@@ -58,7 +58,7 @@ pub struct FlorestaBuilder {
     wallet: Option<Wallet>,
 }
 
-impl Default for FlorestaBuilder {
+impl Default for Builder {
     fn default() -> Self {
         // Don't use AssumeValid by default.
         let assume_valid_default: AssumeValidArg = AssumeValidArg::Disabled;
@@ -113,17 +113,17 @@ impl Default for FlorestaBuilder {
     }
 }
 
-impl FlorestaBuilder {
-    /// Instantiate a new [`FlorestaNode`] with default values.
+impl Builder {
+    /// Instantiate a new [`Node`] with default values.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Instantiate a new or set an existing [`FlorestaNode`] with a new config.
+    /// Instantiate a new or set an existing [`Node`] with a new config.
     ///
     /// TODO(@luisschwab): what happens if we set a config to an already running
     /// node?
-    pub fn with_config(mut self, config: UtreexoNodeConfig) -> Self {
+    pub fn from_config(mut self, config: UtreexoNodeConfig) -> Self {
         self.config = config;
 
         // Set the custom `bdk_floresta` user agent.
@@ -132,8 +132,8 @@ impl FlorestaBuilder {
         self
     }
 
-    /// Couple a `Wallet` to the [`FlorestaNode`]. It will emit updates
-    /// in the form of `ChangeSet`'s, which can then be applied to the `Wallet`.
+    /// Couple a [`Wallet`] to the [`Node`], such that it emits relevant updates
+    /// to it.
     pub fn with_wallet(mut self, wallet: Wallet) -> Self {
         self.wallet = Some(wallet);
 
@@ -161,8 +161,8 @@ impl FlorestaBuilder {
         self
     }
 
-    /// Build the [`FlorestaNode`] from parameters.
-    pub async fn build(self) -> Result<FlorestaNode, BuilderError> {
+    /// Build the [`Node`] from parameters.
+    pub async fn build(self) -> Result<Node, BuilderError> {
         // Verify that `FlorestaNode`'s network matches that of the `Wallet`, if
         // it exists.
         if let Some(ref wallet) = self.wallet {
@@ -276,7 +276,7 @@ impl FlorestaBuilder {
             None
         };
 
-        Ok(FlorestaNode {
+        Ok(Node {
             _node_config: self.config,
             _debug: self.debug,
             chain_state,

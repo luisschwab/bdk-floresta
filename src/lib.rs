@@ -46,10 +46,10 @@ mod updater;
 
 const SHUTDOWN_TIMEOUT: u64 = 60;
 
-/// [`FlorestaNode`] represents the embedded and fully validating
-/// Compact State Node.
-pub struct FlorestaNode {
-    /// Configuration parameters for [`FlorestaNode`].
+/// The [`Node`] represents the embedded and
+/// fully validating Compact State Node.
+pub struct Node {
+    /// Configuration parameters for [`Node`].
     pub(crate) _node_config: UtreexoNodeConfig,
     /// Whether to set the log level to debug.
     pub(crate) _debug: bool,
@@ -64,10 +64,10 @@ pub struct FlorestaNode {
     /// The `task_handle` is a handle for the undelying node's tasks.
     pub(crate) task_handle: Option<JoinHandle<()>>,
     /// The `sigint_task` listens for interrupt signals and sets
-    /// `shutdown_signal` to true, signalling [`FlorestaNode`] for a gracefull
+    /// `shutdown_signal` to true, signalling [`Node`] for a gracefull
     /// shutdown.
     pub(crate) sigint_task: Option<JoinHandle<()>>,
-    /// The `stop_signal` is continuously checked by [`FlorestaNode`].
+    /// The `stop_signal` is continuously checked by [`Node`].
     /// If set, a gracefull shutdown will be initiated.
     pub(crate) stop_signal: Arc<RwLock<bool>>,
     /// A receiver for the stop notification from the `node_task`.
@@ -75,14 +75,14 @@ pub struct FlorestaNode {
     /// A guard for the logger thread. Must be kept alive for the lifetime of
     /// [`FlorestaNode`].
     pub(crate) _logger_guard: Option<WorkerGuard>,
-    /// The `Wallet` to be coupled to the [`FlorestaNode`].
+    /// The `Wallet` to be coupled to the [`Node`].
     pub wallet: Option<Arc<RwLock<Wallet>>>,
     /// The `update_subscriber` emits relevant wallet events that can be
     /// applied to the `Wallet`.
     pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
 }
 
-impl FlorestaNode {
+impl Node {
     /// Set `stop_signal` to `true` to initiate a graceful shutdown.
     async fn stop(&self) {
         info!("Setting the stop signal to true");
@@ -146,7 +146,7 @@ impl FlorestaNode {
         Ok(())
     }
 
-    /// Signal that [`FlorestaNode`] should stop,
+    /// Signal that [`Node`] should stop,
     /// and then wait for it's tasks to complete.
     ///
     /// This is a convenience method that bundles `stop()` and `wait_shutdown`.
@@ -241,7 +241,7 @@ impl FlorestaNode {
         }
     }
 
-    /// Get information about peers [`FlorestaNode`] is connected to.
+    /// Get information about peers the [`Node`] is connected to.
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
         match self.node_handle.get_peer_info().await {
             Ok(peer_infos) => {
