@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bdk_floresta::builder::FlorestaBuilder;
+use bdk_floresta::builder::Builder;
 use bdk_floresta::UtreexoNodeConfig;
 use bitcoin::BlockHash;
 use bitcoin::Network;
@@ -24,9 +24,9 @@ async fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    // Build a [`FlorestaNode`] with a custom configuration.
-    let node = FlorestaBuilder::new()
-        .with_config(node_config)
+    // Build a [`Node`] with a custom configuration.
+    let node = Builder::new()
+        .from_config(node_config)
         .with_assumevalid(assume_valid)
         .build_logger()
         .build()

@@ -8,11 +8,11 @@ use std::sync::Arc;
 use thiserror::Error;
 
 #[allow(unused)]
-use crate::builder::FlorestaBuilder;
+use crate::builder::Builder;
 #[allow(unused)]
-use crate::FlorestaNode;
+use crate::Node;
 
-/// [`FlorestaNode`] related errors.
+/// [`Node`] related errors.
 #[derive(Clone, Debug, Error)]
 pub enum NodeError {
     /// Shutdown error.
@@ -48,7 +48,7 @@ impl From<floresta_chain::BlockchainError> for NodeError {
     }
 }
 
-/// [`FlorestaBuilder`] related errors.
+/// [`Builder`] related errors.
 #[derive(Clone, Debug, Error)]
 pub enum BuilderError {
     #[error("Failed to create the data directory: {0:?}")]

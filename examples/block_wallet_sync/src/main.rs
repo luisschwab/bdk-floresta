@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use bdk_floresta::builder::FlorestaBuilder;
+use bdk_floresta::builder::Builder;
 use bdk_floresta::UtreexoNodeConfig;
 use bdk_floresta::WalletUpdate;
 use bdk_wallet::Wallet;
@@ -41,8 +41,8 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Build a [`FlorestaNode`] with a custom configuration.
-    let mut node = FlorestaBuilder::new()
-        .with_config(node_config)
+    let mut node = Builder::new()
+        .from_config(node_config)
         .with_assumevalid(assume_valid)
         .with_wallet(wallet)
         .build_logger()
