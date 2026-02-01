@@ -242,6 +242,36 @@ impl Node {
         }
     }
 
+    /// Remove a peer from the address manager.
+    ///
+    /// Returns a `bool` indicating whether
+    /// removal was successful, or an error.
+    pub async fn remove_peer(
+        &self,
+        peer_address: &SocketAddr,
+    ) -> Result<bool, NodeError> {
+        match self
+            .node_handle
+            .remove_peer(peer_address.ip(), peer_address.port())
+            .await
+        {
+            Ok(true) => {
+                debug!("Removed address {peer_address:#?} from the address manager");
+                Ok(true)
+            }
+            Ok(false) => {
+                error!(
+                    "Failed to remove address {peer_address:#?} from the address manager"
+                );
+                Ok(false)
+            }
+            Err(e) => {
+                error!("Failed to remove address {peer_address:#?} from the address manager: {e}");
+                Err(NodeError::Receive(e))
+            }
+        }
+    }
+
     /// Get information about peers the [`Node`] is connected to.
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
         match self.node_handle.get_peer_info().await {
