@@ -214,28 +214,29 @@ impl Node {
         }
     }
 
-    /// Manually disconnect from a peer.
+    /// Disconnect from a peer.
+    ///
+    /// Returns a `bool` indicating whether
+    /// disconnection was successful, or an error.
     pub async fn disconnect_peer(
         &self,
         peer_address: &SocketAddr,
     ) -> Result<bool, NodeError> {
         match self
             .node_handle
-            .remove_peer(peer_address.ip(), peer_address.port())
+            .disconnect_peer(peer_address.ip(), peer_address.port())
             .await
         {
             Ok(true) => {
-                debug!("Sucessfull manual disconnection from peer {peer_address:#?}");
+                debug!("Disconnected from peer {peer_address:#?}");
                 Ok(true)
             }
             Ok(false) => {
-                error!(
-                    "Failed to manually disconnect from peer {peer_address:#?}"
-                );
+                error!("Failed to disconnect from peer {peer_address:#?}");
                 Ok(false)
             }
             Err(e) => {
-                error!("Failed to manually disconnect from peer {peer_address:#?}: {e}");
+                error!("Failed disconnect from peer {peer_address:#?}: {e}");
                 Err(NodeError::Receive(e))
             }
         }
