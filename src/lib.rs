@@ -214,8 +214,39 @@ impl Node {
         }
     }
 
-    /// Manually disconnect from a peer.
+    /// Disconnect from a peer.
+    ///
+    /// Returns a `bool` indicating whether
+    /// disconnection was successful, or an error.
     pub async fn disconnect_peer(
+        &self,
+        peer_address: &SocketAddr,
+    ) -> Result<bool, NodeError> {
+        match self
+            .node_handle
+            .disconnect_peer(peer_address.ip(), peer_address.port())
+            .await
+        {
+            Ok(true) => {
+                debug!("Disconnected from peer {peer_address:#?}");
+                Ok(true)
+            }
+            Ok(false) => {
+                error!("Failed to disconnect from peer {peer_address:#?}");
+                Ok(false)
+            }
+            Err(e) => {
+                error!("Failed disconnect from peer {peer_address:#?}: {e}");
+                Err(NodeError::Receive(e))
+            }
+        }
+    }
+
+    /// Remove a peer from the address manager.
+    ///
+    /// Returns a `bool` indicating whether
+    /// removal was successful, or an error.
+    pub async fn remove_peer(
         &self,
         peer_address: &SocketAddr,
     ) -> Result<bool, NodeError> {
@@ -225,17 +256,17 @@ impl Node {
             .await
         {
             Ok(true) => {
-                debug!("Sucessfull manual disconnection from peer {peer_address:#?}");
+                debug!("Removed address {peer_address:#?} from the address manager");
                 Ok(true)
             }
             Ok(false) => {
                 error!(
-                    "Failed to manually disconnect from peer {peer_address:#?}"
+                    "Failed to remove address {peer_address:#?} from the address manager"
                 );
                 Ok(false)
             }
             Err(e) => {
-                error!("Failed to manually disconnect from peer {peer_address:#?}: {e}");
+                error!("Failed to remove address {peer_address:#?} from the address manager: {e}");
                 Err(NodeError::Receive(e))
             }
         }

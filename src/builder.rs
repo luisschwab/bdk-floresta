@@ -14,11 +14,11 @@ use floresta_chain::ChainParams;
 use floresta_chain::ChainState;
 use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
 use floresta_compact_filters::network_filters::NetworkFilters;
+use floresta_mempool::Mempool;
 use floresta_wire::address_man::AddressMan;
-use floresta_wire::mempool::Mempool;
+use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
-use floresta_wire::running_node::RunningNode;
 use floresta_wire::rustreexo::accumulator::node_hash::BitcoinNodeHash;
 use floresta_wire::rustreexo::accumulator::pollard::Pollard;
 use floresta_wire::UtreexoNodeConfig;
@@ -93,8 +93,6 @@ impl Default for Builder {
                 compact_filters: true,
                 fixed_peer: None,
                 max_banscore: 10,
-                max_outbound: 100,
-                max_inflight: 100,
                 datadir: data_dir_default,
                 proxy: None,
                 assume_utreexo: Some(assume_utreexo_default),
