@@ -6,8 +6,7 @@ fn main() {
     let bdk_floresta_version = get_bdk_floresta_version();
 
     // Get floresta-wire's version from Cargo.lock or Cargo.toml.
-    let floresta_wire_version =
-        get_dependency_version("floresta-wire").unwrap();
+    let floresta_wire_version = get_dependency_version("floresta-wire").unwrap();
 
     // Build bdk_floresta's user agent in Bitcoin Core style:
     // `/floresta-wire:A.B.C/bdk-floresta:X.Y.Z`.
@@ -63,17 +62,13 @@ fn get_version_from_cargo_lock(dep_name: &str) -> Option<String> {
     for package in packages {
         if package.get("name")?.as_str()? == dep_name {
             // Check if it's a git dependency with a source field.
-            if let Some(source) = package.get("source").and_then(|s| s.as_str())
-            {
+            if let Some(source) = package.get("source").and_then(|s| s.as_str()) {
                 if source.starts_with("git+") {
                     // For git dependencies, try to extract the short commit
                     // hash. Format: git+https://github.com/...#d79e135f40515a859850dd59a6ee057f11c69128
                     if let Some(commit) = source.split('#').nth(1) {
                         // Use first 7 characters of commit hash.
-                        return Some(format!(
-                            "git-{}",
-                            &commit[..7.min(commit.len())]
-                        ));
+                        return Some(format!("git-{}", &commit[..7.min(commit.len())]));
                     }
                 }
             }
@@ -96,23 +91,14 @@ fn get_version_from_cargo_toml(dep_name: &str) -> Option<String> {
                 // Handle table format with git + rev
                 if let Some(dep_table) = dep.as_table() {
                     // If it's a git dependency, extract the commit hash.
-                    if dep_table.contains_key("git")
-                        && dep_table.contains_key("rev")
-                    {
-                        if let Some(rev) =
-                            dep_table.get("rev").and_then(|r| r.as_str())
-                        {
+                    if dep_table.contains_key("git") && dep_table.contains_key("rev") {
+                        if let Some(rev) = dep_table.get("rev").and_then(|r| r.as_str()) {
                             // Use the first 7 characters of the commit hash.
-                            return Some(format!(
-                                "git-{}",
-                                &rev[..7.min(rev.len())]
-                            ));
+                            return Some(format!("git-{}", &rev[..7.min(rev.len())]));
                         }
                     }
                     // Regular version field
-                    if let Some(version) =
-                        dep_table.get("version").and_then(|v| v.as_str())
-                    {
+                    if let Some(version) = dep_table.get("version").and_then(|v| v.as_str()) {
                         return Some(version.to_string());
                     }
                 }

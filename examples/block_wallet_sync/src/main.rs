@@ -27,10 +27,9 @@ async fn main() -> anyhow::Result<()> {
         .create_wallet_no_persist()?;
 
     // Block 270_000.
-    let assume_valid: AssumeValidArg =
-        AssumeValidArg::UserInput(BlockHash::from_str(
-            "00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a",
-        )?);
+    let assume_valid: AssumeValidArg = AssumeValidArg::UserInput(BlockHash::from_str(
+        "00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a",
+    )?);
 
     // Create a custom configuration for the node using `Network::Signet`.
     let node_config: UtreexoNodeConfig = UtreexoNodeConfig {
@@ -69,7 +68,10 @@ async fn main() -> anyhow::Result<()> {
                             Ok(_) => {
                                 info!("Sucessfully applied block at height {} to the wallet [ Balance: {} sats ]", height, wallet.balance().total().to_sat());
                             }
-                            Err(e) => error!("Failed to apply block at height {} to the wallet: {}", height, e),
+                            Err(e) => error!(
+                                "Failed to apply block at height {} to the wallet: {}",
+                                height, e
+                            ),
                         }
                     }
                 }

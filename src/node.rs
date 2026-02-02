@@ -85,16 +85,14 @@ impl Node {
     pub async fn run(&mut self) -> Result<(), NodeError> {
         // Take the [`Node`]'s inner. This asserts
         // that [`Node::run()`] can only be called once.
-        let inner_node =
-            self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
+        let inner_node = self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
 
         // Create channel for shutdown notification
         let (sender, receiver) = oneshot::channel();
         self.stop_receiver = Some(receiver);
 
         // Spawn the node task
-        let node_task: JoinHandle<()> =
-            tokio::task::spawn(inner_node.run(sender));
+        let node_task: JoinHandle<()> = tokio::task::spawn(inner_node.run(sender));
         self.task_handle = Some(node_task);
         info!("Node task spawned successfully");
 
@@ -129,12 +127,7 @@ impl Node {
         info!("Waiting for shutdown to complete");
 
         if let Some(receiver) = self.stop_receiver.take() {
-            match tokio::time::timeout(
-                Duration::from_secs(SHUTDOWN_TIMEOUT),
-                receiver,
-            )
-            .await
-            {
+            match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT), receiver).await {
                 Ok(Ok(())) => {
                     info!("Node signaled shutdown completion");
                 }
@@ -148,12 +141,7 @@ impl Node {
         }
 
         if let Some(task) = self.task_handle.take() {
-            match tokio::time::timeout(
-                Duration::from_secs(SHUTDOWN_TIMEOUT),
-                task,
-            )
-            .await
-            {
+            match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT), task).await {
                 Ok(Ok(_)) => {
                     info!("Node task completed successfully");
                 }
@@ -201,9 +189,7 @@ impl Node {
         self.chain_state.flush().map_err(|e| {
             error!("Failed to persist chain to disk: {:?}", e);
             match e {
-                BlockchainError::Database(db_err) => {
-                    NodeError::Database(Arc::new(db_err))
-                }
+                BlockchainError::Database(db_err) => NodeError::Database(Arc::new(db_err)),
                 BlockchainError::Io(io_err) => NodeError::Io(Arc::new(io_err)),
                 other => NodeError::Blockchain(Arc::new(other)),
             }
@@ -220,10 +206,7 @@ impl Node {
     }
 
     /// Manually initiate a connection to a peer.
-    pub async fn connect_peer(
-        &self,
-        peer_address: &SocketAddr,
-    ) -> Result<bool, NodeError> {
+    pub async fn connect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
         // Attempt to make an encrypted BIP-0324 P2PV2 connection with
         // the peer. If he does not support it, silently fallback to P2PV1.
         let try_p2p_v2: bool = true;
@@ -252,10 +235,7 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether
     /// disconnection was successful, or an error.
-    pub async fn disconnect_peer(
-        &self,
-        peer_address: &SocketAddr,
-    ) -> Result<bool, NodeError> {
+    pub async fn disconnect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
         match self
             .node_handle
             .disconnect_peer(peer_address.ip(), peer_address.port())
@@ -280,10 +260,7 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether
     /// removal was successful, or an error.
-    pub async fn remove_peer(
-        &self,
-        peer_address: &SocketAddr,
-    ) -> Result<bool, NodeError> {
+    pub async fn remove_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
         match self
             .node_handle
             .remove_peer(peer_address.ip(), peer_address.port())
@@ -294,9 +271,7 @@ impl Node {
                 Ok(true)
             }
             Ok(false) => {
-                error!(
-                    "Failed to remove address {peer_address:#?} from the address manager"
-                );
+                error!("Failed to remove address {peer_address:#?} from the address manager");
                 Ok(false)
             }
             Err(e) => {
@@ -358,10 +333,7 @@ impl Node {
     /// stuck for as long as you have work to do." Is processing a block
     /// into a ChangeSet heavy-lifting? The actual consumer must
     /// implement the `BlockConsumer` trait.
-    pub fn block_subscriber<T: BlockConsumer + 'static>(
-        &self,
-        block_consumer: Arc<T>,
-    ) {
+    pub fn block_subscriber<T: BlockConsumer + 'static>(&self, block_consumer: Arc<T>) {
         self.chain_state.subscribe(block_consumer);
     }
 
@@ -405,10 +377,7 @@ impl Node {
     }
 
     /// Get a [`Block`], given it's [`BlockHash`], from the network.
-    pub async fn get_block(
-        &self,
-        blockhash: BlockHash,
-    ) -> Result<Option<Block>, NodeError> {
+    pub async fn get_block(&self, blockhash: BlockHash) -> Result<Option<Block>, NodeError> {
         let block = self.node_handle.get_block(blockhash).await?;
 
         Ok(block)

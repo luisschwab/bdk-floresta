@@ -39,10 +39,7 @@ impl BlockConsumer for WalletUpdater {
         block: &Block,
         height: u32,
         _spent_utxos: Option<
-            &std::collections::HashMap<
-                bdk_wallet::bitcoin::OutPoint,
-                floresta_chain::UtxoData,
-            >,
+            &std::collections::HashMap<bdk_wallet::bitcoin::OutPoint, floresta_chain::UtxoData>,
         >,
     ) {
         // Create the `Update`.
@@ -58,7 +55,10 @@ impl BlockConsumer for WalletUpdater {
                 );
             }
             Err(e) => {
-                error!("Failed to send block update at height {} over the channel: {}", update_height, e);
+                error!(
+                    "Failed to send block update at height {} over the channel: {}",
+                    update_height, e
+                );
             }
         }
     }

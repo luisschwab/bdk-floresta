@@ -26,8 +26,8 @@ pub(crate) fn setup_logger(
 
     // Try to build an `EnvFilter` from the `RUST_LOG` environment variable, or
     // fallback to `log_level`.
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(log_level.to_string()));
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level.to_string()));
 
     // Apply custom log filters to different crates.
     let targets_log_filter: Targets = Targets::new()
@@ -73,10 +73,8 @@ pub(crate) fn setup_logger(
     // Formatting [`Layer`] for logs destined to the log file.
     let mut guard = None;
     let fmt_layer_logfile = log_to_file.then(|| {
-        let file_appender =
-            tracing_appender::rolling::never(data_dir, "debug.log");
-        let (non_blocking, file_guard) =
-            tracing_appender::non_blocking(file_appender);
+        let file_appender = tracing_appender::rolling::never(data_dir, "debug.log");
+        let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
         guard = Some(file_guard);
         fmt::layer()
             .with_writer(non_blocking)

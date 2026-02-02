@@ -186,31 +186,28 @@ impl Builder {
 
         // Try to load an existing [`FlatChainStore`]
         // from the file system, or create a new one.
-        let chain_store: FlatChainStore =
-            match FlatChainStore::new(chain_store_cfg) {
-                Ok(store) => store,
-                Err(e) => {
-                    error!("Failed to open flat chainstore: {:?}", e);
-                    return Err(e.into());
-                }
-            };
+        let chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg) {
+            Ok(store) => store,
+            Err(e) => {
+                error!("Failed to open flat chainstore: {:?}", e);
+                return Err(e.into());
+            }
+        };
 
         // Create a [`ChainState`] from the [`FlatChainStore`].
-        let chain_state: Arc<ChainState<FlatChainStore>> =
-            Arc::new(ChainState::new(
-                chain_store,
-                self.config.network,
-                self.assume_valid_blockhash,
-            ));
+        let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(ChainState::new(
+            chain_store,
+            self.config.network,
+            self.assume_valid_blockhash,
+        ));
         info!(
             "ChainState loaded from FlatChainStore at {}",
             self.config.datadir
         );
 
         // Create configuration for the [`FlatFilterStore`].
-        let flat_filters_store = FlatFiltersStore::new(
-            (self.config.datadir.clone() + "/cbf").into(),
-        );
+        let flat_filters_store =
+            FlatFiltersStore::new((self.config.datadir.clone() + "/cbf").into());
         let filters = Arc::new(NetworkFilters::new(flat_filters_store));
         info!("FilterStore loaded at height {}", filters.get_height()?);
 
@@ -221,8 +218,7 @@ impl Builder {
         // Create a [`Pollard`] accumulator
         // for the mempool and transaction cache.
         let pollard: Pollard<BitcoinNodeHash> = Pollard::new();
-        let mempool: Arc<Mutex<Mempool>> =
-            Arc::new(Mutex::new(Mempool::new(pollard, 1_000_000)));
+        let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(pollard, 1_000_000)));
 
         let node_inner = UtreexoNode::<_, RunningNode>::new(
             self.config.clone(),

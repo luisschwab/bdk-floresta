@@ -12,10 +12,9 @@ const NETWORK: Network = Network::Signet;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Block 270_000.
-    let assume_valid: AssumeValidArg =
-        AssumeValidArg::UserInput(BlockHash::from_str(
-            "00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a",
-        )?);
+    let assume_valid: AssumeValidArg = AssumeValidArg::UserInput(BlockHash::from_str(
+        "00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a",
+    )?);
 
     // Create a custom configuration for the node using `Network::Signet`.
     let node_config: UtreexoNodeConfig = UtreexoNodeConfig {
