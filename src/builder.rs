@@ -131,10 +131,9 @@ impl Builder {
         self
     }
 
-    /// Set the blockhash used for assume valid. Blocks before the one set will
-    /// have their script validation skipped.
-    pub fn with_assumevalid(mut self, assume_valid: AssumeValidArg) -> Self {
-        self.assume_valid_blockhash = assume_valid;
+    /// Skip script validation for all blocks that precede [`BlockHash`].
+    pub fn with_assumevalid(mut self, blockhash: BlockHash) -> Self {
+        self.assume_valid_arg = AssumeValidArg::UserInput(blockhash);
 
         self
     }

@@ -7,7 +7,6 @@ use bdk_floresta::WalletUpdate;
 use bdk_wallet::Wallet;
 use bitcoin::BlockHash;
 use bitcoin::Network;
-use floresta_chain::AssumeValidArg;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::RwLock;
 use tracing::error;
@@ -27,9 +26,8 @@ async fn main() -> anyhow::Result<()> {
         .create_wallet_no_persist()?;
 
     // Block 270_000.
-    let assume_valid: AssumeValidArg = AssumeValidArg::UserInput(BlockHash::from_str(
-        "00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a",
-    )?);
+    let assume_valid =
+        BlockHash::from_str("00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a")?;
 
     // Create a custom configuration for the node using `Network::Signet`.
     let node_config: UtreexoNodeConfig = UtreexoNodeConfig {
