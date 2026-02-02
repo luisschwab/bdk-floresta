@@ -2,24 +2,23 @@
 //! string based on `bdk_floresta` and `floresta-wire` versions.
 
 fn main() {
-    // Get `bdk_floresta` version.
-    let version = get_version_from_git()
-        .unwrap_or_else(|| get_version_from_manifest().unwrap());
+    // Get bdk_floresta's version.
+    let bdk_floresta_version = get_bdk_floresta_version();
 
-    // Get `floresta-wire` version from Cargo.lock or Cargo.toml.
-    let floresta_wire_version = get_dependency_version("floresta-wire")
-        .unwrap_or_else(|| "unknown".to_string());
+    // Get floresta-wire's version from Cargo.lock or Cargo.toml.
+    let floresta_wire_version =
+        get_dependency_version("floresta-wire").unwrap();
 
-    // Build `bdk_floresta`'s user agent in Bitcoin Core style:
+    // Build bdk_floresta's user agent in Bitcoin Core style:
     // `/floresta-wire:A.B.C/bdk-floresta:X.Y.Z`.
     let user_agent = format!(
         "/floresta-wire:{}/bdk-floresta:{}/",
         floresta_wire_version,
-        version.replace("v", ""),
+        bdk_floresta_version.replace("v", ""),
     );
 
     println!("cargo:rustc-env=USER_AGENT={}", user_agent);
-    println!("cargo:rustc-env=GIT_DESCRIBE={}", version);
+    println!("cargo:rustc-env=GIT_DESCRIBE={}", bdk_floresta_version);
     println!(
         "cargo:rustc-env=FLORESTA_WIRE_VERSION={}",
         floresta_wire_version
@@ -32,41 +31,26 @@ fn main() {
     println!("cargo:rerun-if-changed=Cargo.lock");
 }
 
-fn get_version_from_manifest() -> Result<String, std::io::Error> {
-    let manifest = std::fs::read_to_string("Cargo.toml")?;
+/// Get bdk_floresta's version from Cargo.toml.
+fn get_bdk_floresta_version() -> String {
+    let manifest = std::fs::read_to_string("Cargo.toml").unwrap();
     let toml: toml::Value = toml::from_str(&manifest).unwrap();
-    Ok(format!("v{}", toml["package"]["version"].as_str().unwrap()))
-}
-
-fn get_version_from_git() -> Option<String> {
-    std::process::Command::new("git")
-        .args(["describe", "--tags", "--always", "--dirty"])
-        .output()
-        .map(|output| {
-            if !output.status.success() {
-                return None;
-            }
-            let mut git_description = String::from_utf8(output.stdout).unwrap();
-            // Remove the trailing `\n`.
-            git_description.pop();
-
-            // If tags are not pulled, git will return the short commit ID.
-            if !git_description.starts_with("v") {
-                return None;
-            }
-            Some(git_description)
-        })
-        .ok()?
+    format!(
+        "v{}",
+        toml["package"]["version"]
+            .as_str()
+            .expect("Missing version in Cargo.toml")
+    )
 }
 
 fn get_dependency_version(dep_name: &str) -> Option<String> {
-    // Try Cargo.lock first...
-    if let Some(version) = get_version_from_cargo_lock(dep_name) {
+    // Try Cargo.toml first.
+    if let Some(version) = get_version_from_cargo_toml(dep_name) {
         return Some(version);
     }
 
-    // ..or fallback to Cargo.toml.
-    get_version_from_cargo_toml(dep_name)
+    // Fallback to Cargo.lock.
+    get_version_from_cargo_lock(dep_name)
 }
 
 fn get_version_from_cargo_lock(dep_name: &str) -> Option<String> {
@@ -105,16 +89,37 @@ fn get_version_from_cargo_toml(dep_name: &str) -> Option<String> {
     let manifest = std::fs::read_to_string("Cargo.toml").ok()?;
     let toml: toml::Value = toml::from_str(&manifest).ok()?;
 
-    // Check dependencies section.
-    if let Some(deps) = toml.get("dependencies") {
-        if let Some(dep) = deps.get(dep_name) {
-            // Handle both string and table formats:
-            // floresta-wire = "1.0.0"
-            // floresta-wire = { version = "1.0.0", ... }
-            if let Some(version_str) = dep.as_str() {
-                return Some(version_str.to_string());
-            } else if let Some(version) = dep.get("version") {
-                return version.as_str().map(|s| s.to_string());
+    // Check all dependency sections
+    for section in ["dependencies", "dev-dependencies", "build-dependencies"] {
+        if let Some(deps) = toml.get(section) {
+            if let Some(dep) = deps.get(dep_name) {
+                // Handle table format with git + rev
+                if let Some(dep_table) = dep.as_table() {
+                    // If it's a git dependency, extract the commit hash.
+                    if dep_table.contains_key("git")
+                        && dep_table.contains_key("rev")
+                    {
+                        if let Some(rev) =
+                            dep_table.get("rev").and_then(|r| r.as_str())
+                        {
+                            // Use the first 7 characters of the commit hash.
+                            return Some(format!(
+                                "git-{}",
+                                &rev[..7.min(rev.len())]
+                            ));
+                        }
+                    }
+                    // Regular version field
+                    if let Some(version) =
+                        dep_table.get("version").and_then(|v| v.as_str())
+                    {
+                        return Some(version.to_string());
+                    }
+                }
+                // Handle string format: floresta-wire = "1.0.0"
+                if let Some(version_str) = dep.as_str() {
+                    return Some(version_str.to_string());
+                }
             }
         }
     }
