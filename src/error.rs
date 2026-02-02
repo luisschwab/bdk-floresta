@@ -15,6 +15,10 @@ use crate::Node;
 /// [`Node`] related errors.
 #[derive(Clone, Debug, Error)]
 pub enum NodeError {
+    /// The [`Node`] is already running.
+    #[error("The node is already running")]
+    AlreadyRunning,
+
     /// Shutdown error.
     #[error("Failed to perform a clean shutdown")]
     Shutdown,

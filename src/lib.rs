@@ -19,8 +19,10 @@ pub use floresta_chain::BlockConsumer;
 use floresta_chain::BlockchainError;
 use floresta_chain::ChainState;
 pub use floresta_chain::UtxoData;
+use floresta_wire::node::running_ctx::RunningNode;
 pub use floresta_wire::node::ConnectionKind;
 pub use floresta_wire::node::PeerStatus;
+use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 pub use floresta_wire::node_interface::PeerInfo;
 pub use floresta_wire::rustreexo;
@@ -46,6 +48,9 @@ mod updater;
 
 const SHUTDOWN_TIMEOUT: u64 = 60;
 
+/// Type alias for the [`UtreexoNode`].
+type NodeInner = UtreexoNode<Arc<ChainState<FlatChainStore>>, RunningNode>;
+
 /// The [`Node`] represents the embedded and
 /// fully validating Compact State Node.
 pub struct Node {
@@ -53,10 +58,10 @@ pub struct Node {
     pub(crate) _node_config: UtreexoNodeConfig,
     /// Whether to set the log level to debug.
     pub(crate) _debug: bool,
+    /// The underlying `UtreexoNode` before it is spawned.
+    /// This is `Some` after `build()` and `None` after `run()`.
+    pub(crate) node_inner: Option<NodeInner>,
     /// The node's chain state.
-    /// TODO(@luisschwab): couple chainstate persistence with
-    /// `bdk_chain::ChangeSet` (bdk#1582). Implement a custom `Anchor` with
-    /// the inclusion proofs we care about.
     pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
     /// The `node_handle` is used to send requests and receive responses to the
     /// underlying node.
@@ -83,6 +88,46 @@ pub struct Node {
 }
 
 impl Node {
+    /// Spawn the [`Node`]'s background tasks and run it.
+    ///
+    /// This method will setup the [`Node`]'s shutdown notification channel,
+    /// spawn the [`Node`]'s tokio task, and the [`Node`]'s SIGINT handler task.
+    pub async fn run(&mut self) -> Result<(), NodeError> {
+        // Take the [`Node`]'s inner. This asserts
+        // that [`Node::run()`] can only be called once.
+        let inner_node =
+            self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
+
+        // Create channel for shutdown notification
+        let (sender, receiver) = oneshot::channel();
+        self.stop_receiver = Some(receiver);
+
+        // Spawn the node task
+        let node_task: JoinHandle<()> =
+            tokio::task::spawn(inner_node.run(sender));
+        self.task_handle = Some(node_task);
+        info!("Node task spawned successfully");
+
+        // Spawn a task for the SIGINT handler
+        let sigint_task: JoinHandle<()> = {
+            let stop_signal: Arc<RwLock<bool>> = self.stop_signal.clone();
+
+            tokio::task::spawn(async move {
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("Failed to initialize SIGINT handler");
+
+                info!("Received SIGINT, initiating graceful shutdown");
+
+                // Set `stop_signal` so the node does a graceful shutdown.
+                *stop_signal.write().await = true;
+            })
+        };
+        self.sigint_task = Some(sigint_task);
+
+        Ok(())
+    }
+
     /// Set `stop_signal` to `true` to initiate a graceful shutdown.
     async fn stop(&self) {
         info!("Setting the stop signal to true");

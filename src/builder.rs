@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: MIT
-
 use std::fs;
 use std::sync::Arc;
 
@@ -23,10 +21,8 @@ use floresta_wire::rustreexo::accumulator::node_hash::BitcoinNodeHash;
 use floresta_wire::rustreexo::accumulator::pollard::Pollard;
 use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::mpsc::unbounded_channel;
-use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
-use tokio::task::JoinHandle;
 use tracing::error;
 use tracing::info;
 
@@ -118,9 +114,6 @@ impl Builder {
     }
 
     /// Instantiate a new or set an existing [`Node`] with a new config.
-    ///
-    /// TODO(@luisschwab): what happens if we set a config to an already running
-    /// node?
     pub fn from_config(mut self, config: UtreexoNodeConfig) -> Self {
         self.config = config;
 
@@ -159,21 +152,24 @@ impl Builder {
         self
     }
 
-    /// Build the [`Node`] from parameters.
-    pub async fn build(self) -> Result<Node, BuilderError> {
-        // Verify that `FlorestaNode`'s network matches that of the `Wallet`, if
-        // it exists.
+    /// Build a [`Node`] from a [`Builder`].
+    ///
+    /// This method will setup the node's logger,
+    /// chainstate storage and filter header storage.
+    ///
+    /// To run the [`Node`], call [`Node::run()`].
+    pub fn build(self) -> Result<Node, BuilderError> {
+        // Assert that the [`Node`]'s and [`Wallet`]'s [`Network`] match.
         if let Some(ref wallet) = self.wallet {
             if self.config.network != wallet.network() {
                 return Err(BuilderError::NetworkMismatch);
             }
         }
 
-        // Create the data directory.
+        // Create the data directory for [`Node`] and [`Wallet`] data.
         fs::create_dir_all(&self.config.datadir)?;
 
-        // Returns a guard for the logger, which must be kept
-        // for the lifetime of [`FlorestaNode`].
+        // Keep a guard for the logger during the [`Node`]s lifetime.
         let _logger_guard = match self.build_logger {
             true => setup_logger(
                 &self.config.datadir,
@@ -185,20 +181,11 @@ impl Builder {
         };
 
         // Create configuration for the chain store.
-        let chain_store_cfg: FlatChainStoreConfig = FlatChainStoreConfig::new(
-            self.config.datadir.clone() + "/chaindata",
-        );
+        let chain_store_cfg: FlatChainStoreConfig =
+            FlatChainStoreConfig::new(self.config.datadir.clone() + "/chain");
 
-        // Create configuration for Compact Block Filters.
-        let filters_store = FlatFiltersStore::new(
-            (self.config.datadir.clone() + "/cbf").into(),
-        );
-        let filters = Arc::new(NetworkFilters::new(filters_store));
-        let filters_height = filters.get_height()?;
-        info!("Compact Block Filters loaded at height {filters_height}");
-
-        // Try to load an existing chain store from disk,
-        // or create a new chain store.
+        // Try to load an existing [`FlatChainStore`]
+        // from the file system, or create a new one.
         let chain_store: FlatChainStore =
             match FlatChainStore::new(chain_store_cfg) {
                 Ok(store) => store,
@@ -208,29 +195,36 @@ impl Builder {
                 }
             };
 
-        // Build the chain state.
+        // Create a [`ChainState`] from the [`FlatChainStore`].
         let chain_state: Arc<ChainState<FlatChainStore>> =
             Arc::new(ChainState::new(
                 chain_store,
                 self.config.network,
                 self.assume_valid_blockhash,
             ));
+        info!(
+            "ChainState loaded from FlatChainStore at {}",
+            self.config.datadir
+        );
 
-        info!("Initialized chainstore at {}", self.config.datadir);
+        // Create configuration for the [`FlatFilterStore`].
+        let flat_filters_store = FlatFiltersStore::new(
+            (self.config.datadir.clone() + "/cbf").into(),
+        );
+        let filters = Arc::new(NetworkFilters::new(flat_filters_store));
+        info!("FilterStore loaded at height {}", filters.get_height()?);
 
-        // Create a signal that keeps track of whether [`FlorestaNode`] should
-        // stop.
+        // Create an Arc'ed stop signal that keeps
+        // track of whether the [`Node`] should stop.
         let stop_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        let (sender, receiver) = oneshot::channel();
-
-        // Create a `Pollard` accumulator to be used for our transaction's
-        // mempool.
-        let pollard_acc: Pollard<BitcoinNodeHash> = Pollard::new();
+        // Create a [`Pollard`] accumulator
+        // for the mempool and transaction cache.
+        let pollard: Pollard<BitcoinNodeHash> = Pollard::new();
         let mempool: Arc<Mutex<Mempool>> =
-            Arc::new(Mutex::new(Mempool::new(pollard_acc, 1_000_000)));
+            Arc::new(Mutex::new(Mempool::new(pollard, 1_000_000)));
 
-        let node = UtreexoNode::<_, RunningNode>::new(
+        let node_inner = UtreexoNode::<_, RunningNode>::new(
             self.config.clone(),
             chain_state.clone(),
             mempool,
@@ -238,37 +232,20 @@ impl Builder {
             stop_signal.clone(),
             AddressMan::default(),
         )
-        .expect("Failed to create node");
+        .expect("Failed to instantiate the Node");
 
-        info!("Created bdk_floresta node");
+        // Get a handle from the [`Node`], used to interact with it.
+        let node_handle: NodeInterface = node_inner.get_handle();
 
-        // Get a handle from [`FlorestaNode`], used to send commands to it.
-        let node_handle: NodeInterface = node.get_handle();
+        info!("Node instantiated successfully");
 
-        // Spawn a task for [`FlorestaNode`].
-        let node_task: JoinHandle<()> = tokio::task::spawn(node.run(sender));
-
-        // Spawn a task for the SIGINT handler.
-        let sigint_task: JoinHandle<()> = {
-            let stop_signal: Arc<RwLock<bool>> = stop_signal.clone();
-
-            tokio::task::spawn(async move {
-                tokio::signal::ctrl_c()
-                    .await
-                    .expect("Failed to initialize SIGINT handler");
-
-                info!("Received SIGINT, initiating graceful shutdown");
-
-                // Set `stop_signal` so the node does a graceful shutdown.
-                *stop_signal.write().await = true;
-            })
-        };
-
+        // Set up the [`Wallet`]'s update channel, and it's sender and receiver.
         let (update_tx, update_rx) = unbounded_channel::<WalletUpdate>();
         let wallet_arc = if let Some(wallet) = self.wallet {
             let wallet_arc = Arc::new(RwLock::new(wallet));
             let updater = Arc::new(WalletUpdater::new(update_tx));
             chain_state.subscribe(updater);
+            info!("Wallet update subscriber set up successfully");
             Some(wallet_arc)
         } else {
             None
@@ -277,13 +254,14 @@ impl Builder {
         Ok(Node {
             _node_config: self.config,
             _debug: self.debug,
-            chain_state,
-            node_handle,
-            task_handle: Some(node_task),
-            sigint_task: Some(sigint_task),
-            stop_signal,
-            stop_receiver: Some(receiver),
             _logger_guard,
+            node_inner: Some(node_inner),
+            node_handle,
+            chain_state,
+            task_handle: None,
+            sigint_task: None,
+            stop_signal,
+            stop_receiver: None,
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),
         })
