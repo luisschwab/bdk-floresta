@@ -25,12 +25,12 @@ check:
 delete item="examples":
     just _delete-{{ item }}
 
-# Build `bdk_floresta`'s documentation
+# Build documentation
 doc:
     cargo doc --no-deps --open
 
 # Run an example crate
-example name="playground":
+example name="node":
     cargo run --example {{ name }} --release
 
 # Format code
@@ -38,8 +38,8 @@ fmt:
     cargo +nightly fmt
 
 _delete-examples:
+    rm -rf examples/node/data
     rm -rf examples/block_wallet_sync/data
-    rm -rf examples/playground/data
 
 _delete-target:
     rm -rf target/

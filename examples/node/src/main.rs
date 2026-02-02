@@ -6,7 +6,7 @@ use bitcoin::BlockHash;
 use bitcoin::Network;
 use floresta_chain::AssumeValidArg;
 
-const DATA_DIR: &str = "./examples/playground/data/";
+const DATA_DIR: &str = "./examples/node/data/";
 const NETWORK: Network = Network::Signet;
 
 #[tokio::main]
