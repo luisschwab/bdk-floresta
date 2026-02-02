@@ -1,7 +1,32 @@
+// SPDX-Licence-Identifier: MIT
+
+//! # Builder
+//!
+//! This module holds all logic needed to instantiate
+//! a [`Node`] from default or user defined values.
+//!
+//! ```rust
+//! use bdk_floresta::builder::Builder;
+//! use bdk_floresta::UtreexoNodeConfig;
+//! use bitcoin::Network;
+//!
+//! let config = UtreexoNodeConfig {
+//!     network: Network::Signet,
+//!     datadir: format!("{}{}", DATA_DIR, NETWORK),
+//!     ..Default::default(),
+//! };
+//!
+//! let mut node = Builder::new()
+//!     .from_config(config)
+//!     .build()
+//!     .unwrap();
+//! ```
+
 use std::fs;
 use std::sync::Arc;
 
 use bdk_wallet::Wallet;
+use bitcoin::BlockHash;
 use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
@@ -27,62 +52,69 @@ use tracing::error;
 use tracing::info;
 
 use crate::error::BuilderError;
-use crate::logger::setup_logger;
+use crate::logger::build_logger;
 use crate::updater::WalletUpdater;
 use crate::Node;
 use crate::WalletUpdate;
 
-/// The [`Builder`] builds a [`Node`] from user-defined configuration or
-/// deafault values.
+/// Builds a [`Node`] from default or custom parameters.
 pub struct Builder {
-    /// What `BlockHash` should be used for AssumeValid.
-    /// This will assume all scripts up to block `assume_valid_blockhash`
-    /// as valid. This speeds up IBD since no script eval is done.
-    assume_valid_blockhash: AssumeValidArg,
-    /// The configuration parameters for the node.
+    /// The [`AssumeValidArg`] defines the height where scripts
+    /// will start to be evaluated. All scripts on blocks that precede
+    /// [`AssumeValidArg`] will not be evaluated, and will be assumed as valid.
+    ///
+    /// Defaults to [`AssumeValidArg::Hardcoded`], meaning that scripts
+    /// will be evaluated from a checkpoint defined in `floresta-chain`.
+    assume_valid_arg: AssumeValidArg,
+    /// The [`UtreexoNodeConfig`] holds all configuration parameters for the [`Node`],
+    /// such as [`Network`], [`AssumeUtreexoValue`], SOCKS5 proxy, backfill and user agent.
     config: UtreexoNodeConfig,
-    /// Wheter to build the `tracing_subscriber` logger.
+    /// Whether to build the tracing subscriber logger.
+    ///
+    /// Defaults to `false`.
     build_logger: bool,
-    /// Whether the log level should be set to debug.
-    /// This can be overriden by the `RUST_LOG` environment variable.
+    /// Set the log level to DEBUG. Can be overriden by the `RUST_LOG` environment variable.
+    ///
+    /// Defaults to `false`.
     debug: bool,
-    /// Whether to log to `stdout`.
+    /// Pipe the log to standard output.
+    ///
+    /// Defaults to `true`.
     log_to_stdout: bool,
-    /// Whether to lgo to a file.
+    /// Pipe the log to a file (`data_dir/debug.log`).
+    ///
+    /// Defaults to `true`.
     log_to_file: bool,
-    /// The `Wallet` which the node should emit updates about.
+    /// A [`Wallet`] that receives updates from the [`Node`].
     wallet: Option<Wallet>,
 }
 
 impl Default for Builder {
     fn default() -> Self {
-        // Don't use AssumeValid by default.
-        let assume_valid_default: AssumeValidArg = AssumeValidArg::Disabled;
+        // Use the hardcoded value set on `floresta-wire`.
+        let assume_valid_default: AssumeValidArg = AssumeValidArg::Hardcoded;
 
-        // Use `Network::Signet` by default.
+        // Use `Network::Signet` as the default `Network` for the `Node` and `Wallet`.
         let network_default: Network = Network::Signet;
 
-        // Get the hardcoded `AssumeUTreeXO` value from `floresta-chain`.
-        // The node will begin to sync from the `assume_utreexo` height,
-        // trusting the previous chain history. If the `backfill` option
-        // is set, the node will validate the previous history in the
-        // background.
+        // Use the hardcoded `AssumeUtreexoValue` defined in `floresta-chain`.
         //
-        // Currently, only `Network::Bitcoin` is supported for AssumeUTreeXO.
+        // Currently, only `Network::Bitcoin` has an `AssumeUtreexoValue`
+        // defined, other networks will default to the genesis block.
         let assume_utreexo_default: AssumeUtreexoValue =
             ChainParams::get_assume_utreexo(network_default);
 
-        // The default data directory for the node. Currently, `./data`.
+        // The default data directory for the node.
         let data_dir_default: String = format!("./data/{}", network_default);
 
-        // The default behavior for the backfill task. Defaults to `true`.
+        // Validate blocks previous to the `AssumeUtreexoValue` height after IBD is finished.
         let backfill_default: bool = true;
 
-        // The default user agent for P2P communication.
+        // The node's user agent, derived in the `build.rs` script.
         let user_agent_default: String = env!("USER_AGENT").to_string();
 
         Self {
-            assume_valid_blockhash: assume_valid_default,
+            assume_valid_arg: assume_valid_default,
             config: UtreexoNodeConfig {
                 network: network_default,
                 pow_fraud_proofs: true,
@@ -108,23 +140,18 @@ impl Default for Builder {
 }
 
 impl Builder {
-    /// Instantiate a new [`Node`] with default values.
+    /// Instantiate a [`Builder`] with [default](Builder::default()) values.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Instantiate a new or set an existing [`Node`] with a new config.
+    /// Instantiate a [`Builder`] from
     pub fn from_config(mut self, config: UtreexoNodeConfig) -> Self {
         self.config = config;
-
-        // Set the custom `bdk_floresta` user agent.
-        self.config.user_agent = env!("USER_AGENT").to_string();
-
         self
     }
 
-    /// Couple a [`Wallet`] to the [`Node`], such that it emits relevant updates
-    /// to it.
+    /// Add a [`Wallet`] that will receive updates from the [`Node`].
     pub fn with_wallet(mut self, wallet: Wallet) -> Self {
         self.wallet = Some(wallet);
 
@@ -138,14 +165,17 @@ impl Builder {
         self
     }
 
-    /// Build the `tracing_subscriber` defined in this crate.
+    /// Build the `tracing_subscriber` logger implemented
+    /// in this crate's [logger module](crate::logger).
     pub fn build_logger(mut self) -> Self {
         self.build_logger = true;
 
         self
     }
 
-    /// Set the log level to debug.
+    /// Set the log level to DEBUG.
+    ///
+    /// This can be overriden by the `RUST_LOG` environment variable.
     pub fn set_debug(mut self) -> Self {
         self.debug = true;
         self
@@ -153,24 +183,24 @@ impl Builder {
 
     /// Build a [`Node`] from a [`Builder`].
     ///
-    /// This method will setup the node's logger,
-    /// chainstate storage and filter header storage.
+    /// This method will setup the node's chainstate and compact filter
+    /// stores, and the logger, if enabled.
     ///
-    /// To run the [`Node`], call [`Node::run()`].
+    /// It will not run the [`Node`]. To run it, call [`Node::run()`].
     pub fn build(self) -> Result<Node, BuilderError> {
-        // Assert that the [`Node`]'s and [`Wallet`]'s [`Network`] match.
+        // Assert that the node and wallet network are equal.
         if let Some(ref wallet) = self.wallet {
             if self.config.network != wallet.network() {
                 return Err(BuilderError::NetworkMismatch);
             }
         }
 
-        // Create the data directory for [`Node`] and [`Wallet`] data.
+        // Create the data directory for node and wallet data.
         fs::create_dir_all(&self.config.datadir)?;
 
-        // Keep a guard for the logger during the [`Node`]s lifetime.
+        // Keep a guard for the logger during the node's lifetime.
         let _logger_guard = match self.build_logger {
-            true => setup_logger(
+            true => build_logger(
                 &self.config.datadir,
                 self.log_to_file,
                 self.log_to_stdout,
@@ -188,7 +218,7 @@ impl Builder {
         let chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg) {
             Ok(store) => store,
             Err(e) => {
-                error!("Failed to open flat chainstore: {:?}", e);
+                error!("Failed to open FlatChainStore: {:?}", e);
                 return Err(e.into());
             }
         };
@@ -197,28 +227,27 @@ impl Builder {
         let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(ChainState::new(
             chain_store,
             self.config.network,
-            self.assume_valid_blockhash,
+            self.assume_valid_arg,
         ));
         info!(
             "ChainState loaded from FlatChainStore at {}",
             self.config.datadir
         );
 
-        // Create configuration for the [`FlatFilterStore`].
+        // Create the [`FlatFilterStore`]'s configuration.
         let flat_filters_store =
             FlatFiltersStore::new((self.config.datadir.clone() + "/cbf").into());
         let filters = Arc::new(NetworkFilters::new(flat_filters_store));
         info!("FilterStore loaded at height {}", filters.get_height()?);
 
-        // Create an Arc'ed stop signal that keeps
-        // track of whether the [`Node`] should stop.
+        // Create an Arc'ed stop signal that keeps track of whether the [`Node`] should stop.
         let stop_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        // Create a [`Pollard`] accumulator
-        // for the mempool and transaction cache.
+        // Create a [`Pollard`] accumulator for the mempool and transaction cache.
         let pollard: Pollard<BitcoinNodeHash> = Pollard::new();
         let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(pollard, 1_000_000)));
 
+        // Encapsulate the actual node as an inner of [`Node`].
         let node_inner = UtreexoNode::<_, RunningNode>::new(
             self.config.clone(),
             chain_state.clone(),
@@ -229,12 +258,11 @@ impl Builder {
         )
         .expect("Failed to instantiate the Node");
 
-        // Get a handle from the [`Node`], used to interact with it.
+        // Get a handle for the [`Node`].
+        // Used to call methods of the underlying [`UtreexoNode`].
         let node_handle: NodeInterface = node_inner.get_handle();
 
-        info!("Node instantiated successfully");
-
-        // Set up the [`Wallet`]'s update channel, and it's sender and receiver.
+        // Set up the [`Wallet`]'s update channel, sender and receiver.
         let (update_tx, update_rx) = unbounded_channel::<WalletUpdate>();
         let wallet_arc = if let Some(wallet) = self.wallet {
             let wallet_arc = Arc::new(RwLock::new(wallet));
@@ -245,6 +273,8 @@ impl Builder {
         } else {
             None
         };
+
+        info!("Node instantiated successfully");
 
         Ok(Node {
             _node_config: self.config,

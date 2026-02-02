@@ -1,6 +1,10 @@
 // SPDX-Licence-Identifier: MIT
 
-#![doc = include_str!("../README.md")]
+//! # Node
+//!
+//! This module holds all the logic needed to interact the embedded [`Node`].
+//!
+//! TODO
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -28,52 +32,50 @@ use tokio::task::JoinHandle;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
-use tracing::trace;
 use tracing::warn;
 use tracing_appender::non_blocking::WorkerGuard;
 
 use crate::error::NodeError;
 use crate::updater::WalletUpdate;
 
-/// How long to wait for the [`Node`] to shutdown before aborting, in seconds.
+/// Whether to attempt to open P2PV2 (BIP-0324) connections to peers.
+/// Will fallback to P2PV1 if the other side doesn't support it.
+const TRY_P2PV2: bool = true;
+
+/// How long to wait for the [`Node`] shutdown task before aborting, in seconds.
 const SHUTDOWN_TIMEOUT: u64 = 15;
 
-/// Type alias for the [`UtreexoNode`].
+/// Type alias for the [`Node`]'s inner [`UtreexoNode`].
 type NodeInner = UtreexoNode<Arc<ChainState<FlatChainStore>>, RunningNode>;
 
-/// The [`Node`] represents the embedded and
-/// fully validating Compact State Node.
+/// The embedded and fully-validating Compact State [`Node`].
 pub struct Node {
-    /// Configuration parameters for [`Node`].
+    /// The [`Node`]'s configuration settings.
     pub(crate) _node_config: UtreexoNodeConfig,
-    /// Whether to set the log level to debug.
+    /// Set the log level to debug, if set.
     pub(crate) _debug: bool,
-    /// The underlying `UtreexoNode` before it is spawned.
-    /// This is `Some` after `build()` and `None` after `run()`.
+    /// The inner, underlying [`UtreexoNode`].
     pub(crate) node_inner: Option<NodeInner>,
-    /// The node's chain state.
-    pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
-    /// The `node_handle` is used to send requests and receive responses to the
-    /// underlying node.
+    /// A handle used to interact with the [`UtreexoNode`].
     pub(crate) node_handle: NodeInterface,
-    /// The `task_handle` is a handle for the undelying node's tasks.
+    /// The [`Node`]'s blockchain state.
+    pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
+    /// Handle to the spawned [`Node`] task, used for graceful shutdown coordination.
     pub(crate) task_handle: Option<JoinHandle<()>>,
-    /// The `sigint_task` listens for interrupt signals and sets
-    /// `shutdown_signal` to true, signalling [`Node`] for a gracefull
-    /// shutdown.
+    /// Handle to the `SIGINT` handler task, used to detect
+    /// a `SIGINT` (CTRL-C) and set the `stop_signal` to true.
     pub(crate) sigint_task: Option<JoinHandle<()>>,
-    /// The `stop_signal` is continuously checked by [`Node`].
-    /// If set, a gracefull shutdown will be initiated.
+    /// Signal used by the [`Node`] to check if it
+    /// should stop operations and perform a graceful shutdown.
     pub(crate) stop_signal: Arc<RwLock<bool>>,
-    /// A receiver for the stop notification from the `node_task`.
+    /// Receiver for shutdown completion notification from the [`Node`]'s task.
     pub(crate) stop_receiver: Option<oneshot::Receiver<()>>,
-    /// A guard for the logger thread. Must be kept alive for the lifetime of
-    /// [`FlorestaNode`].
+    /// Guard ensuring the logger remains active for the node's lifetime.
     pub(crate) _logger_guard: Option<WorkerGuard>,
-    /// The `Wallet` to be coupled to the [`Node`].
+    /// A [`Wallet`] that will receive updates from the [`Node`].
     pub wallet: Option<Arc<RwLock<Wallet>>>,
-    /// The `update_subscriber` emits relevant wallet events that can be
-    /// applied to the `Wallet`.
+    /// Receiver for [`WalletUpdate`]s that come from
+    /// the [`Node`] and should be applied to the [`Wallet`].
     pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
 }
 
@@ -81,22 +83,21 @@ impl Node {
     /// Spawn the [`Node`]'s background tasks and run it.
     ///
     /// This method will setup the [`Node`]'s shutdown notification channel,
-    /// spawn the [`Node`]'s tokio task, and the [`Node`]'s SIGINT handler task.
+    /// spawn the [`Node`]'s tokio task, and the [`Node`]'s `SIGINT` handler task.
     pub async fn run(&mut self) -> Result<(), NodeError> {
-        // Take the [`Node`]'s inner. This asserts
-        // that [`Node::run()`] can only be called once.
+        // Take the [`Node`]'s inner. This asserts that [`Node::run()`] can only be called once.
         let inner_node = self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
 
-        // Create channel for shutdown notification
+        // Create channel for shutdown notifications.
         let (sender, receiver) = oneshot::channel();
         self.stop_receiver = Some(receiver);
 
-        // Spawn the node task
+        // Spawn the [`Node`]'s task.
         let node_task: JoinHandle<()> = tokio::task::spawn(inner_node.run(sender));
         self.task_handle = Some(node_task);
-        info!("Node task spawned successfully");
+        debug!("Node task spawned successfully");
 
-        // Spawn a task for the SIGINT handler
+        // Spawn a task for the `SIGINT` handler.
         let sigint_task: JoinHandle<()> = {
             let stop_signal: Arc<RwLock<bool>> = self.stop_signal.clone();
 
@@ -107,7 +108,7 @@ impl Node {
 
                 info!("Received SIGINT, initiating graceful shutdown");
 
-                // Set `stop_signal` so the node does a graceful shutdown.
+                // Set `stop_signal` to trigger a graceful shutdown.
                 *stop_signal.write().await = true;
             })
         };
@@ -116,16 +117,16 @@ impl Node {
         Ok(())
     }
 
-    /// Set `stop_signal` to `true` to initiate a graceful shutdown.
+    /// Set the `stop_signal` to trigger the [`Node`] for a graceful shutdown.
     async fn stop(&self) {
-        info!("Setting the stop signal to true");
+        debug!("Setting the stop signal to true");
         *self.stop_signal.write().await = true;
     }
 
-    /// Wait for the node to finish it's tasks.
+    /// Wait for the [`Node`] to finish it's shutdown routines before
     async fn wait_shutdown(mut self) -> Result<(), NodeError> {
-        info!("Waiting for shutdown to complete");
-
+        // Wait for up to `SHUTDOWN_TIMEOUT` seconds for the [`Node`]
+        // to send notification of shutdown completion through the `stop_receiver`.
         if let Some(receiver) = self.stop_receiver.take() {
             match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT), receiver).await {
                 Ok(Ok(())) => {
@@ -159,8 +160,10 @@ impl Node {
             }
         }
 
+        // Flush the chainstate to disk.
         let _ = self.flush();
 
+        // Stop the `SIGINT` listener task.
         if let Some(sigint) = self.sigint_task.take() {
             sigint.abort();
         }
@@ -169,35 +172,43 @@ impl Node {
         Ok(())
     }
 
-    /// Signal that [`Node`] should stop,
-    /// and then wait for it's tasks to complete.
-    ///
-    /// This is a convenience method that bundles `stop()` and `wait_shutdown`.
+    /// Signal the [`Node`] to perform a graceful shutdown.
     pub async fn shutdown(self) -> Result<(), NodeError> {
         self.stop().await;
         self.wait_shutdown().await
     }
 
-    /// Check wheter the node should stop based on `stop_signal`'s value.
+    /// Check if the [`Node`] should stop based on the `stop_signal`'s value.
+    ///
+    /// A separate thread should be created to continuously perform this check.
     pub async fn should_stop(&self) -> bool {
         *self.stop_signal.read().await
     }
 
-    /// Flush the node's state to disk.
+    /// Flush the [`Node`]'s state to the file system.
     pub fn flush(&mut self) -> Result<(), NodeError> {
-        info!("Flushing state to disk...");
+        debug!("Flushing state to disk...");
         self.chain_state.flush().map_err(|e| {
             error!("Failed to persist chain to disk: {:?}", e);
             match e {
-                BlockchainError::Database(db_err) => NodeError::Database(Arc::new(db_err)),
-                BlockchainError::Io(io_err) => NodeError::Io(Arc::new(io_err)),
-                other => NodeError::Blockchain(Arc::new(other)),
+                BlockchainError::Database(e) => NodeError::Persistence(Arc::new(e)),
+                BlockchainError::Io(e) => NodeError::Io(Arc::new(e)),
+                e => NodeError::Blockchain(Arc::new(e)),
             }
         })?;
-        info!("Successfully persisted state to disk");
+        debug!("Successfully persisted chain state to disk");
+
         Ok(())
     }
 
+    /// A subscriber for validated [`Block`]s.
+    ///
+    /// Implements the [`BlockConsumer`] trait from [`floresta-chain`](floresta_chain).
+    pub fn block_subscriber<T: BlockConsumer + 'static>(&self, block_consumer: Arc<T>) {
+        self.chain_state.subscribe(block_consumer);
+    }
+
+    // TODO: condense UtreexoNodeConfig into NodeConfig
     /// Get the [`UtreexoNodeConfig`] from the running node.
     pub async fn get_config(&self) -> Result<UtreexoNodeConfig, NodeError> {
         let config = self.node_handle.get_config().await?;
@@ -205,178 +216,151 @@ impl Node {
         Ok(config)
     }
 
-    /// Manually initiate a connection to a peer.
-    pub async fn connect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
-        // Attempt to make an encrypted BIP-0324 P2PV2 connection with
-        // the peer. If he does not support it, silently fallback to P2PV1.
-        let try_p2p_v2: bool = true;
-
-        match self
-            .node_handle
-            .add_peer(peer_address.ip(), peer_address.port(), try_p2p_v2)
-            .await
-        {
-            Ok(true) => {
-                debug!("Manual connection established with peer {peer_address:#?} sucessfully");
-                Ok(true)
-            }
-            Ok(false) => {
-                warn!("Failed to establish manual connection with peer {peer_address:#?}");
-                Ok(false)
-            }
-            Err(e) => {
-                error!("Network error while attempting to establish manual connection with peer {peer_address:#?}: {e}");
-                Err(NodeError::Receive(e))
-            }
-        }
-    }
-
-    /// Disconnect from a peer.
+    /// Connect to a specific peer, given it's [`SocketAddr`].
     ///
-    /// Returns a `bool` indicating whether
-    /// disconnection was successful, or an error.
-    pub async fn disconnect_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
+    /// Returns a `bool` indicating whether the connection was successfully established.
+    pub async fn connect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
         match self
             .node_handle
-            .disconnect_peer(peer_address.ip(), peer_address.port())
+            .add_peer(socket.ip(), socket.port(), TRY_P2PV2)
             .await
         {
             Ok(true) => {
-                debug!("Disconnected from peer {peer_address:#?}");
+                debug!("Manual connection established with peer {socket:#?} sucessfully");
                 Ok(true)
             }
             Ok(false) => {
-                error!("Failed to disconnect from peer {peer_address:#?}");
+                warn!("Failed to establish manual connection with peer {socket:#?}");
                 Ok(false)
             }
             Err(e) => {
-                error!("Failed disconnect from peer {peer_address:#?}: {e}");
-                Err(NodeError::Receive(e))
+                error!("Network error while attempting to establish manual connection with peer {socket:#?}: {e}");
+                Err(NodeError::Receiver(e))
             }
         }
     }
 
-    /// Remove a peer from the address manager.
+    /// Disconnect from a specific peer, given it's [`SocketAddr`].
     ///
-    /// Returns a `bool` indicating whether
-    /// removal was successful, or an error.
-    pub async fn remove_peer(&self, peer_address: &SocketAddr) -> Result<bool, NodeError> {
+    /// Returns a `bool` indicating whether the peer was successfully disconnected from.
+    pub async fn disconnect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
         match self
             .node_handle
-            .remove_peer(peer_address.ip(), peer_address.port())
+            .disconnect_peer(socket.ip(), socket.port())
             .await
         {
             Ok(true) => {
-                debug!("Removed address {peer_address:#?} from the address manager");
+                debug!("Disconnected from peer {socket:#?}");
                 Ok(true)
             }
             Ok(false) => {
-                error!("Failed to remove address {peer_address:#?} from the address manager");
+                error!("Failed to disconnect from peer {socket:#?}");
                 Ok(false)
             }
             Err(e) => {
-                error!("Failed to remove address {peer_address:#?} from the address manager: {e}");
-                Err(NodeError::Receive(e))
+                error!("Failed disconnect from peer {socket:#?}: {e}");
+                Err(NodeError::Receiver(e))
             }
         }
     }
 
-    /// Get information about peers the [`Node`] is connected to.
+    /// Remove a specific peer's address from the
+    /// [`AddressMan`](floresta_wire::p2p_wire::address_man::AddressMan), given it's [`SocketAddr`].
+    ///
+    /// Returns a `bool` indicating whether the address was successfully removed.
+    pub async fn remove_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
+        match self
+            .node_handle
+            .remove_peer(socket.ip(), socket.port())
+            .await
+        {
+            Ok(true) => {
+                debug!("Removed address {} from the address manager", socket);
+                Ok(true)
+            }
+            Ok(false) => {
+                error!(
+                    "Failed to remove address {} from the address manager",
+                    socket
+                );
+                Ok(false)
+            }
+            Err(e) => {
+                error!(
+                    "Failed to remove address {} from the address manager: {}",
+                    socket, e
+                );
+                Err(NodeError::Receiver(e))
+            }
+        }
+    }
+
+    /// Get information about peers the [`Node`] is currently connected to.
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
         match self.node_handle.get_peer_info().await {
             Ok(peer_infos) => {
-                debug!("Got peer infos sucesssfully");
-                trace!("{peer_infos:#?}");
+                debug!("Got peer information: {:?}", peer_infos);
                 Ok(peer_infos)
             }
             Err(e) => {
-                error!("Failed to get peer infos: {e}");
-                Err(NodeError::Receive(e))
+                error!("Error whilst receiving peer information: {}", e);
+                Err(NodeError::Receiver(e))
             }
         }
     }
 
-    /// Ping all peers the node is currenctly connected to.
+    /// Ping all of the [`Node`]'s peers.
     pub async fn ping(&self) -> Result<bool, NodeError> {
         match self.node_handle.ping().await {
             Ok(true) => {
-                debug!("Sucessfully sent ping to all peers");
+                debug!("Sent a ping to all peers");
                 Ok(true)
             }
             Ok(false) => {
-                warn!("Failed to send ping to all peers");
+                warn!("Failed to send a ping to all peers");
                 Ok(false)
             }
             Err(e) => {
-                error!("Error while sending ping to all peers: {e}");
-                Err(NodeError::Receive(e))
+                error!("Error whilst receiving ping response: {}", e);
+                Err(NodeError::Receiver(e))
             }
         }
     }
 
-    /// TODO(@luisschwab):
-    /// Connect to a curated list of known Utreexo bridges
-    /// for an expedited IBD experience. This is needed because
-    /// few DNS seeders index the Utreexo service bits, and
-    /// discovering a bridge naturally via P2P has a low P-value
-    /// of happening naturally and in a short time frame.
-    pub async fn bootstrap_bridges() {}
-
-    ///////////////////// BLOCKCHAIN /////////////////////
-
-    /// Create a subscriber for new blocks.
-    /// Blocks are broadcasted to the consumer as they come.
-    ///
-    /// TODO(@luisschwab): "If a module performs some heavy-lifting on the
-    /// block's data, it should pass in a vector or a channel where data can
-    /// be transferred to the atual worker, otherwise chainstate will be
-    /// stuck for as long as you have work to do." Is processing a block
-    /// into a ChangeSet heavy-lifting? The actual consumer must
-    /// implement the `BlockConsumer` trait.
-    pub fn block_subscriber<T: BlockConsumer + 'static>(&self, block_consumer: Arc<T>) {
-        self.chain_state.subscribe(block_consumer);
+    /// Check if the [`Node`] is still performing Initial Block Download.
+    pub fn in_ibd(&self) -> bool {
+        self.chain_state.is_in_ibd()
     }
 
-    // /// TODO(@luisschwab): implement a transaction subscriber on Floresta.
-    // /// Transactions are broadcasted to the consumer as they come.
-    // pub fn transaction_subscriber<T: TransactionConsumer + 'static>(&self,
-    // transaction_consumer: Arc<T>) {     self.chain.
-    // subscribe(transaction_consumer); }
-
-    /// Check wheter the node is still in Initial Block Download.
-    pub fn in_ibd(&self) -> Result<bool, NodeError> {
-        let ibd = self.chain_state.is_in_ibd();
-
-        Ok(ibd)
-    }
-
-    /// Get the current blockchain height.
+    /// Get the blockchain's tip height.
     pub fn get_height(&self) -> Result<u32, NodeError> {
         let height = self.chain_state.get_height()?;
         Ok(height)
     }
 
-    /// Get the current validated blockchain height.
+    /// Get the [`Node`]'s validation height.
     pub fn get_validation_height(&self) -> Result<u32, NodeError> {
         let height = self.chain_state.get_validation_index()?;
         Ok(height)
     }
 
-    /// Get the current Utreexo accumulator state, as a [`Stump`].
+    /// Get the [`Node`]'s current accumulator as a [`Stump`].
     pub fn get_accumulator(&self) -> Result<Stump, NodeError> {
         let stump = self.chain_state.get_acc();
-
         Ok(stump)
     }
 
-    /// Get a [`BlockHash`] from a block height.
+    /// Get the [`BlockHash`] associated with a height.
     pub fn get_blockhash(&self, height: u32) -> Result<BlockHash, NodeError> {
         let hash = self.chain_state.get_block_hash(height)?;
 
         Ok(hash)
     }
 
-    /// Get a [`Block`], given it's [`BlockHash`], from the network.
+    /// Get a [`Block`] given its [`BlockHash`].
+    ///
+    /// Since [`floresta-chain`](floresta_chain) does not
+    /// persist any [`Block`]s, these must be requested from a peer.
     pub async fn get_block(&self, blockhash: BlockHash) -> Result<Option<Block>, NodeError> {
         let block = self.node_handle.get_block(blockhash).await?;
 

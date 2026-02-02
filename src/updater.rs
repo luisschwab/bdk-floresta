@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+/// TODO
+
 use bitcoin::Block;
 use floresta_chain::BlockConsumer;
 use tokio::sync::mpsc::UnboundedSender;
@@ -7,9 +9,8 @@ use tracing::debug;
 use tracing::error;
 
 /// Structures that represent an update to the wallet.
-/// Currently, only `Block`s are supported.
 pub enum WalletUpdate {
-    /// A new block update, represented by a `Block` and it's height.
+    /// A new block update, represented by a [`Block`] and it's height.
     NewBlock(Block, u32),
 }
 
