@@ -1,4 +1,3 @@
-use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -40,36 +39,29 @@ async fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    // Build a [`FlorestaNode`] with a custom configuration.
+    // Build a [`Node`] with custom parameters.
     let mut node = Builder::new()
         .from_config(node_config)
         .with_assumevalid(assume_valid)
         .with_wallet(wallet)
         .build_logger()
-        .build()
-        .await?;
+        .build()?;
 
-    // For now, manually connect to known Utreexo bridges.
-    let bridge_a: SocketAddr = SocketAddr::from_str("195.26.240.213:38433")?; // LS
-    let bridge_b: SocketAddr = SocketAddr::from_str("194.163.132.180:38333")?; // DS
-    let bridge_c: SocketAddr = SocketAddr::from_str("161.97.178.61:38333")?; // DS
-    node.connect_peer(&bridge_a).await?;
-    node.connect_peer(&bridge_b).await?;
-    node.connect_peer(&bridge_c).await?;
+    // Spawn the [`Node`]'s background tasks and run it.
+    node.run().await?;
 
+    // Create the [`Wallet`]'s update subscriber.
     let wallet_arc: Option<Arc<RwLock<Wallet>>> = node.wallet.clone();
     let mut update_subscriber: UnboundedReceiver<WalletUpdate> = node
         .update_subscriber
         .take()
         .expect("update subscriber should be present");
 
+    // Apply [`Block`]s to the [`Wallet`] as they are validated.
     tokio::spawn(async move {
         while let Some(update) = update_subscriber.recv().await {
             if let Some(wallet) = &wallet_arc {
                 let mut wallet = wallet.write().await;
-
-                // Perform the related action on the
-                // `Wallet` based on the `WalletUpdate` variant.
                 match update {
                     WalletUpdate::NewBlock(block, height) => {
                         let res = wallet.apply_block(&block, height);
@@ -86,9 +78,9 @@ async fn main() -> anyhow::Result<()> {
     });
 
     loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-        // Check if the node should stop.
+        // Check if the [`Node`] should stop.
         if node.should_stop().await {
             break;
         }

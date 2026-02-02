@@ -24,18 +24,20 @@ async fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    // Build a [`Node`] with a custom configuration.
-    let node = Builder::new()
+    // Build a [`Node`] with custom parameters.
+    let mut node = Builder::new()
         .from_config(node_config)
         .with_assumevalid(assume_valid)
         .build_logger()
-        .build()
-        .await?;
+        .build()?;
+
+    // Spawn the [`Node`]'s background tasks and run it.
+    node.run().await?;
 
     loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-        // Check if the node should stop.
+        // Check if the [`Node`] should stop.
         if node.should_stop().await {
             break;
         }
