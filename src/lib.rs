@@ -189,9 +189,8 @@ impl Node {
         &self,
         peer_address: &SocketAddr,
     ) -> Result<bool, NodeError> {
-        // Attempt to make an encrypted BIP-0324 P2P V2 connection with the
-        // peer. If he does not support it, it will silently fallback to
-        // unencrypted P2P V1.
+        // Attempt to make an encrypted BIP-0324 P2PV2 connection with
+        // the peer. If he does not support it, silently fallback to P2PV1.
         let try_p2p_v2: bool = true;
 
         match self
