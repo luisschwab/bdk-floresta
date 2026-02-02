@@ -2,7 +2,7 @@
 
 `bdk_floresta` is a Floresta-powered chain-source crate for BDK.
 
-This crate implements a BDK [`Wallet`] tightly coupled to
+This crate implements a BDK `Wallet` tightly coupled to
 [Floresta](https://github.com/vinteumorg/Floresta), a lightweight,
 fully-validating Bitcoin client that leverages Utreexo.
 
