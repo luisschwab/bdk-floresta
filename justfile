@@ -14,7 +14,7 @@ build:
 # Check code: formatting, compilation, linting, and commit signature
 check:
     cargo +nightly fmt --all -- --check
-    cargo check --workspace
+    cargo check --workspace --all-targets
     cargo clippy --all-targets -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
     @[ "$(git log --pretty='format:%G?' -1 HEAD)" = "N" ] && \
