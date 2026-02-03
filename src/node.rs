@@ -205,7 +205,6 @@ impl Node {
     /// Get the [`Node`]'s current [`NodeConfig`].
     pub async fn get_config(&self) -> Result<NodeConfig, NodeError> {
         let config = self.config.clone();
-
         Ok(config)
     }
 

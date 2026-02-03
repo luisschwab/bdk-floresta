@@ -94,6 +94,9 @@ pub struct NodeConfig {
     /// The [`Node`] will always attempt to establish an encrypted P2PV2 connection (BIP-0324),
     /// and will fall back to P2PV1 if set to true.
     pub allow_p2pv1_fallback: bool,
+    /// The size of the [`Mempool`], in MB. If the [`Mempool`] becomes
+    /// full, transactions are dropped based on their fee rates, lowest first.
+    pub mempool_size: usize,
 }
 
 impl Default for NodeConfig {
@@ -111,6 +114,7 @@ impl Default for NodeConfig {
             socks5_proxy: None,
             disable_dns_seeds: false,
             allow_p2pv1_fallback: true,
+            mempool_size: 100,
         }
     }
 }
@@ -255,7 +259,9 @@ impl Builder {
 
         // Create a [`Pollard`] accumulator for the mempool and transaction cache.
         let pollard: Pollard<BitcoinNodeHash> = Pollard::new();
-        let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(pollard, 1_000_000)));
+        let mempool_size_bytes = 1_000_000 * self.node_configuration.mempool_size;
+        let mempool: Arc<Mutex<Mempool>> =
+            Arc::new(Mutex::new(Mempool::new(pollard, mempool_size_bytes)));
 
         // Encapsulate the actual [`UtreexoNode`] as an inner of [`Node`].
         let node_inner = UtreexoNode::<_, RunningNode>::new(
