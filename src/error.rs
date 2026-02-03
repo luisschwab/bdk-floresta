@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use thiserror::Error;
 
-/// Errors which might occur when building the [`Node`](crate::node::Node) or
-/// [logger](crate::logger::setup_logger).
+/// Errors which might occur when building the
+/// [`Node`](crate::node::Node) or [logger](crate::logger::build_logger).
 #[derive(Clone, Debug, Error)]
 pub enum BuilderError {
     #[error("Failed to create the data directory: {0:?}")]

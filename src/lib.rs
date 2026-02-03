@@ -21,15 +21,13 @@
 //! at over 11GB at the end of 2025.
 //!
 //! [`bdk_floresta`] combines the best of both worlds:
-//!  * Local Validation: a full node in every application, meaning
-//!    no address leakage to third-party API providers.
-//!  * Small Footprint: by leveraging [Utreexo] to maintain a compact
-//!    representation of the UTXO set in under 2KB, and
-//!    [Compact Block Filters] to fetch wallet updates directly from
-//!    the Bitcoin P2P network, the embedded node requires less than
-//!    200MB of extra storage to operate, making it viable to run on
-//!    a wide range of devices and applications. Every mobile wallet
-//!    can have it's own embedded node.
+//!  * Local Validation: a full node in every application, meaning no address leakage to third-party
+//!    API providers.
+//!  * Small Footprint: by leveraging [Utreexo] to maintain a compact representation of the UTXO set
+//!    in under 2KB, and [Compact Block Filters] to fetch wallet updates directly from the Bitcoin
+//!    P2P network, the embedded node requires less than 200MB of extra storage to operate, making
+//!    it viable to run on a wide range of devices and applications. Every mobile wallet can have
+//!    it's own embedded node.
 //!
 //! TODO: add examples (creating a node and requesting wallet updates via CBF).
 //!

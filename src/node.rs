@@ -24,7 +24,6 @@ use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::node_interface::PeerInfo;
 use floresta_wire::rustreexo::accumulator::stump::Stump;
-use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
 use tokio::sync::RwLock;
@@ -35,12 +34,9 @@ use tracing::info;
 use tracing::warn;
 use tracing_appender::non_blocking::WorkerGuard;
 
+use crate::builder::NodeConfig;
 use crate::error::NodeError;
 use crate::updater::WalletUpdate;
-
-/// Whether to attempt to open P2PV2 (BIP-0324) connections to peers.
-/// Will fallback to P2PV1 if the other side doesn't support it.
-const TRY_P2PV2: bool = true;
 
 /// How long to wait for the [`Node`] shutdown task before aborting, in seconds.
 const SHUTDOWN_TIMEOUT: u64 = 15;
@@ -51,9 +47,7 @@ type NodeInner = UtreexoNode<Arc<ChainState<FlatChainStore>>, RunningNode>;
 /// The embedded and fully-validating Compact State [`Node`].
 pub struct Node {
     /// The [`Node`]'s configuration settings.
-    pub(crate) _node_config: UtreexoNodeConfig,
-    /// Set the log level to debug, if set.
-    pub(crate) _debug: bool,
+    pub(crate) config: NodeConfig,
     /// The inner, underlying [`UtreexoNode`].
     pub(crate) node_inner: Option<NodeInner>,
     /// A handle used to interact with the [`UtreexoNode`].
@@ -208,10 +202,9 @@ impl Node {
         self.chain_state.subscribe(block_consumer);
     }
 
-    // TODO: condense UtreexoNodeConfig into NodeConfig
-    /// Get the [`UtreexoNodeConfig`] from the running node.
-    pub async fn get_config(&self) -> Result<UtreexoNodeConfig, NodeError> {
-        let config = self.node_handle.get_config().await?;
+    /// Get the [`Node`]'s current [`NodeConfig`].
+    pub async fn get_config(&self) -> Result<NodeConfig, NodeError> {
+        let config = self.config.clone();
 
         Ok(config)
     }
@@ -222,7 +215,7 @@ impl Node {
     pub async fn connect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
         match self
             .node_handle
-            .add_peer(socket.ip(), socket.port(), TRY_P2PV2)
+            .add_peer(socket.ip(), socket.port(), self.config.allow_p2pv1_fallback)
             .await
         {
             Ok(true) => {
@@ -265,7 +258,7 @@ impl Node {
     }
 
     /// Remove a specific peer's address from the
-    /// [`AddressMan`](floresta_wire::p2p_wire::address_man::AddressMan), given it's [`SocketAddr`].
+    /// [`AddressMan`](floresta_wire::address_man::AddressMan), given it's [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the address was successfully removed.
     pub async fn remove_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {

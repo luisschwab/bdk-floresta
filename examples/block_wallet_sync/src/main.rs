@@ -1,11 +1,10 @@
-use std::str::FromStr;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use bdk_floresta::builder::Builder;
-use bdk_floresta::UtreexoNodeConfig;
+use bdk_floresta::builder::NodeConfig;
 use bdk_floresta::WalletUpdate;
 use bdk_wallet::Wallet;
-use bitcoin::BlockHash;
 use bitcoin::Network;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::RwLock;
@@ -20,41 +19,35 @@ const NETWORK: Network = Network::Signet;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Create a wallet.
+    // Create a wallet that will receive updates from the node.
     let wallet: Wallet = Wallet::create(DESC_EXTERNAL, DESC_INTERNAL)
         .network(NETWORK)
         .create_wallet_no_persist()?;
 
-    // Block 270_000.
-    let assume_valid =
-        BlockHash::from_str("00000005162ac86112891a296941e965e257d41fb8addeabbb17c6ff88ac840a")?;
-
-    // Create a custom configuration for the node using `Network::Signet`.
-    let node_config: UtreexoNodeConfig = UtreexoNodeConfig {
+    // Define the node's configuration.
+    let config = NodeConfig {
         network: NETWORK,
-        datadir: format!("{}{}", DATA_DIR, NETWORK),
+        data_directory: PathBuf::from(format!("{}{}", DATA_DIR, NETWORK)),
         ..Default::default()
     };
 
-    // Build a [`Node`] with custom parameters.
+    // Use the builder to build the node from the configuration.
     let mut node = Builder::new()
-        .from_config(node_config)
-        .with_assumevalid(assume_valid)
+        .from_config(config)
         .with_wallet(wallet)
-        .build_logger()
         .build()?;
 
-    // Spawn the [`Node`]'s background tasks and run it.
+    // Run the node.
     node.run().await?;
 
-    // Create the [`Wallet`]'s update subscriber.
+    // Create the wallet's update subscriber.
     let wallet_arc: Option<Arc<RwLock<Wallet>>> = node.wallet.clone();
     let mut update_subscriber: UnboundedReceiver<WalletUpdate> = node
         .update_subscriber
         .take()
         .expect("update subscriber should be present");
 
-    // Apply [`Block`]s to the [`Wallet`] as they are validated.
+    // Subscribe to new blocks and apply them to the wallet.
     tokio::spawn(async move {
         while let Some(update) = update_subscriber.recv().await {
             if let Some(wallet) = &wallet_arc {
@@ -80,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-        // Check if the [`Node`] should stop.
+        // Check if the node should stop.
         if node.should_stop().await {
             break;
         }

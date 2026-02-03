@@ -18,6 +18,7 @@
 //! [`tracing-subscriber`]: https://crates.io/crates/tracing-subscriber
 
 use std::io;
+use std::path::PathBuf;
 
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -33,18 +34,34 @@ use tracing_subscriber::Registry;
 
 use crate::error::BuilderError;
 
+/// Logging related configuration.
+pub struct LoggerConfig {
+    /// Set [`bdk_floresta`](crate)'s log level.
+    pub log_level: Level,
+    /// Whether to output tracing events to standard output.
+    pub log_to_stdout: bool,
+    /// Whether to output tracing events to a file.
+    pub log_to_file: bool,
+}
+
+impl Default for LoggerConfig {
+    fn default() -> Self {
+        Self {
+            log_level: Level::INFO,
+            log_to_stdout: true,
+            log_to_file: true,
+        }
+    }
+}
+
 /// Build a logger that consumes tracing events from this crate and all underlying crates.
 pub fn build_logger(
-    data_dir: &str,
-    log_to_file: bool,
+    data_directory: &PathBuf,
     log_to_stdout: bool,
-    debug: bool,
+    log_to_file: bool,
+    log_level: Level,
 ) -> Result<Option<WorkerGuard>, BuilderError> {
-    // Set the log level to INFO. If `debug` is set, to DEBUG.
-    let log_level = if debug { Level::DEBUG } else { Level::INFO };
-
-    // Try to build an [`EnvFilter`] from the `RUST_LOG`
-    // environment variable, or fallback to `log_level`.
+    // Build an [`EnvFilter`] from the `RUST_LOG` environment variable, or fallback to `log_level`.
     let env_filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level.to_string()));
 
@@ -68,7 +85,7 @@ pub fn build_logger(
 
     // Validate the log file path.
     if log_to_file {
-        let file_path = format!("{data_dir}/debug.log");
+        let file_path = format!("{}/debug.log", data_directory.to_string_lossy());
         std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -92,7 +109,7 @@ pub fn build_logger(
     // Formatter for events destined to file.
     let mut guard = None;
     let fmt_layer_logfile = log_to_file.then(|| {
-        let file_appender = tracing_appender::rolling::never(data_dir, "debug.log");
+        let file_appender = tracing_appender::rolling::never(data_directory, "debug.log");
         let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
         guard = Some(file_guard);
         fmt::layer()

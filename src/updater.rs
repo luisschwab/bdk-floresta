@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-/// TODO
+//! TODO
 
 use bitcoin::Block;
 use floresta_chain::BlockConsumer;
@@ -10,7 +10,7 @@ use tracing::error;
 
 /// Structures that represent an update to the wallet.
 pub enum WalletUpdate {
-    /// A new block update, represented by a [`Block`] and it's height.
+    /// A new block update, represented by a `Block` and it's height.
     NewBlock(Block, u32),
 }
 
