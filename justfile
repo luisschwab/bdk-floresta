@@ -14,7 +14,7 @@ build:
 # Check code: formatting, compilation, linting, and commit signature
 check:
     cargo +nightly fmt --all -- --check
-    cargo check --workspace
+    cargo check --workspace --all-targets
     cargo clippy --all-targets -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
     @[ "$(git log --pretty='format:%G?' -1 HEAD)" = "N" ] && \
@@ -25,12 +25,12 @@ check:
 delete item="examples":
     just _delete-{{ item }}
 
-# Build `bdk_floresta`'s documentation
+# Build documentation
 doc:
     cargo doc --no-deps --open
 
 # Run an example crate
-example name="playground":
+example name="node":
     cargo run --example {{ name }} --release
 
 # Format code
@@ -38,8 +38,8 @@ fmt:
     cargo +nightly fmt
 
 _delete-examples:
+    rm -rf examples/node/data
     rm -rf examples/block_wallet_sync/data
-    rm -rf examples/playground/data
 
 _delete-target:
     rm -rf target/

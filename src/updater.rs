@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+//! TODO
+
 use bitcoin::Block;
 use floresta_chain::BlockConsumer;
 use tokio::sync::mpsc::UnboundedSender;
@@ -7,7 +9,6 @@ use tracing::debug;
 use tracing::error;
 
 /// Structures that represent an update to the wallet.
-/// Currently, only `Block`s are supported.
 pub enum WalletUpdate {
     /// A new block update, represented by a `Block` and it's height.
     NewBlock(Block, u32),
@@ -39,10 +40,7 @@ impl BlockConsumer for WalletUpdater {
         block: &Block,
         height: u32,
         _spent_utxos: Option<
-            &std::collections::HashMap<
-                bdk_wallet::bitcoin::OutPoint,
-                floresta_chain::UtxoData,
-            >,
+            &std::collections::HashMap<bdk_wallet::bitcoin::OutPoint, floresta_chain::UtxoData>,
         >,
     ) {
         // Create the `Update`.
@@ -58,7 +56,10 @@ impl BlockConsumer for WalletUpdater {
                 );
             }
             Err(e) => {
-                error!("Failed to send block update at height {} over the channel: {}", update_height, e);
+                error!(
+                    "Failed to send block update at height {} over the channel: {}",
+                    update_height, e
+                );
             }
         }
     }
