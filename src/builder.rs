@@ -53,7 +53,9 @@ use tracing::error;
 use tracing::info;
 
 use crate::error::BuilderError;
+#[cfg(feature = "logger")]
 use crate::logger::build_logger;
+#[cfg(feature = "logger")]
 use crate::logger::LoggerConfig;
 use crate::updater::WalletUpdater;
 use crate::Node;
@@ -152,23 +154,15 @@ impl From<UtreexoNodeConfig> for NodeConfig {
 }
 
 /// Builds a [`Node`] from default or custom parameters.
+#[derive(Default)]
 pub struct Builder {
     /// Configuration for building the [`Node`].
     pub node_configuration: NodeConfig,
     /// Configuration for building the tracing subscriber logger.
-    pub logger_configuration: Option<LoggerConfig>,
+    #[cfg(feature = "logger")]
+    pub logger_configuration: LoggerConfig,
     /// A [`Wallet`] that will receive updates from the [`Node`].
     pub wallet: Option<Wallet>,
-}
-
-impl Default for Builder {
-    fn default() -> Self {
-        Self {
-            node_configuration: NodeConfig::default(),
-            logger_configuration: Some(LoggerConfig::default()),
-            wallet: None,
-        }
-    }
 }
 
 impl Builder {
@@ -204,19 +198,13 @@ impl Builder {
         fs::create_dir_all(&self.node_configuration.data_directory)?;
 
         // Keep a guard for the logger during the node's lifetime.
-        let _logger_guard = self
-            .logger_configuration
-            .as_ref()
-            .map(|config| {
-                build_logger(
-                    &self.node_configuration.data_directory,
-                    config.log_to_file,
-                    config.log_to_stdout,
-                    config.log_level,
-                )
-            })
-            .transpose()?
-            .flatten();
+        #[cfg(feature = "logger")]
+        let _logger_guard = build_logger(
+            &self.node_configuration.data_directory,
+            self.logger_configuration.log_to_file,
+            self.logger_configuration.log_to_stdout,
+            self.logger_configuration.log_level,
+        )?;
 
         // Create configuration for the chain store.
         let chain_store_cfg = FlatChainStoreConfig::new(
@@ -301,6 +289,7 @@ impl Builder {
             sigint_task: None,
             stop_signal,
             stop_receiver: None,
+            #[cfg(feature = "logger")]
             _logger_guard,
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),

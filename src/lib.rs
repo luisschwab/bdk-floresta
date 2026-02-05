@@ -51,6 +51,7 @@ pub use floresta_wire::UtreexoNodeConfig;
 
 pub mod builder;
 pub mod error;
+#[cfg(feature = "logger")]
 pub mod logger;
 pub mod node;
 pub mod updater;
