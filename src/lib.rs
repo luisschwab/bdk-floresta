@@ -1,4 +1,4 @@
-// SPDX-Licence-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 //! # [`bdk_floresta`]
 //!
@@ -27,7 +27,7 @@
 //!    in under 2KB, and [Compact Block Filters] to fetch wallet updates directly from the Bitcoin
 //!    P2P network, the embedded node requires less than 200MB of extra storage to operate, making
 //!    it viable to run on a wide range of devices and applications. Every mobile wallet can have
-//!    it's own embedded node.
+//!    its own embedded node.
 //!
 //! TODO: add examples (creating a node and requesting wallet updates via CBF).
 //!

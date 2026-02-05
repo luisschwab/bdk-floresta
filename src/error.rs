@@ -1,10 +1,10 @@
-// SPDX-Licence-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 //! # Error
 //!
 //! This module holds error enums for [`Builder`](crate::builder::Builder)-related
-//! or [`Node`](crate::node::Node)-related errors, along with their
-//! `Display` and `From` implementations.
+//! or [`Node`](crate::node::Node)-related errors, along with their `Display` and
+//! `From` implementations.
 
 use std::sync::Arc;
 

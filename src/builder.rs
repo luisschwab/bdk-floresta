@@ -1,4 +1,4 @@
-// SPDX-Licence-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 //! # Builder
 //!
@@ -59,7 +59,7 @@ use crate::updater::WalletUpdater;
 use crate::Node;
 use crate::WalletUpdate;
 
-/// Configurations parameters for building a [`Node`].
+/// Configuration parameters for building a [`Node`].
 #[derive(Clone, Debug)]
 pub struct NodeConfig {
     /// The [`Network`] which to run the [`Node`] and [`Wallet`] on.
@@ -67,7 +67,7 @@ pub struct NodeConfig {
     /// The path to the directory where [`Node`] and [`Wallet`] data will be persisted to.
     pub data_directory: PathBuf,
     /// Proof-of-Work Fraud Proofs allow skipping verification of the
-    /// entire blockchains with a better trust assumption than bare SPV.
+    /// entire blockchain with a better trust assumption than bare SPV.
     pub enable_powfps: bool,
     /// Skip script evaluation and assume all as valid for all preceding blocks.
     /// If set to `None`, all scripts since the genesis block will be evaluated.
@@ -76,12 +76,12 @@ pub struct NodeConfig {
     /// See the [`ChainParams::get_assume_utreexo`](ChainParams::get_assume_utreexo)
     /// implementation for more details.
     pub assume_utreexo: bool,
-    /// Download and validate all skipped block's in the
+    /// Download and validate all skipped blocks after IBD in the
     /// background, if `AssumeValid` or `AssumeUtreexo` are enabled.
     pub perform_backfill: bool,
     /// The user agent that will be sent to peers in the `version` message.
     pub user_agent: String,
-    /// Connect to single, pre-defined peer. If set, no other P2P connections will be made.
+    /// Connect to a single, pre-defined peer. If set, no other P2P connections will be made.
     pub fixed_peer: Option<SocketAddr>,
     /// The maximum banscore a peer can reach before he is banned.
     pub max_banscore: u32,
@@ -95,7 +95,7 @@ pub struct NodeConfig {
     /// and will fall back to P2PV1 if set to true.
     pub allow_p2pv1_fallback: bool,
     /// The size of the [`Mempool`], in MB. If the [`Mempool`] becomes
-    /// full, transactions are dropped based on their fee rates, lowest first.
+    /// full, transactions are evicted based on their fee rate, lowest first.
     pub mempool_size: usize,
 }
 
@@ -248,7 +248,7 @@ impl Builder {
             self.node_configuration.data_directory.display()
         );
 
-        // Create the [`FlatFilterStore`]'s configuration.
+        // Create the [`FlatFiltersStore`]'s configuration.
         let flat_filters_store =
             FlatFiltersStore::new(self.node_configuration.data_directory.join("cbf"));
         let filters = Arc::new(NetworkFilters::new(flat_filters_store));
@@ -275,7 +275,7 @@ impl Builder {
         .expect("Failed to instantiate the Node");
 
         // Get a handle for the [`Node`].
-        // Used to call methods of the underlying [`UtreexoNode`].
+        // Used to interact with the underlying [`UtreexoNode`].
         let node_handle: NodeInterface = node_inner.get_handle();
 
         // Set up the [`Wallet`]'s update channel, sender and receiver.
