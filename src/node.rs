@@ -4,7 +4,50 @@
 //!
 //! This module holds all the logic needed to interact with the embedded [`Node`].
 //!
-//! TODO
+//! # Building, running, and interacting with a Node
+//!
+//! ```rust,no_run
+//! use bdk_floresta::builder::Builder;
+//! use bdk_floresta::builder::NodeConfig;
+//! use bitcoin::Block;
+//! use bitcoin::BlockHash;
+//! use bitcoin::Network;
+//! use floresta_wire::rustreexo::accumulator::stump::Stump;
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!     // Define configuration parameters for the node
+//!     let config = NodeConfig {
+//!         network: Network::Signet,
+//!         assume_utreexo: true,
+//!         enable_powfps: true,
+//!         perform_backfill: false,
+//!         mempool_size: 300,
+//!         ..Default::default()
+//!     };
+//!
+//!     // Build the node
+//!     let mut node = Builder::new().from_config(config).build().unwrap();
+//!
+//!     // Run the node
+//!     node.run().await.unwrap();
+//!
+//!     // Get the hash of block at height 250_000
+//!     let hash: BlockHash = node.get_blockhash(250_000).unwrap();
+//!
+//!     // Get the block at height 250_000, if it exists
+//!     let block: Option<Block> = node.get_block(hash).await.unwrap();
+//!
+//!     // Get the chain's height
+//!     let height: u32 = node.get_height().unwrap();
+//!
+//!     // Get the node's validated height
+//!     let validated_height: u32 = node.get_validation_height().unwrap();
+//!
+//!     // Get the node's current Utreexo accumulator
+//!     let stump: Stump = node.get_accumulator().unwrap();
+//! }
+//! ```
 
 use std::net::SocketAddr;
 use std::sync::Arc;

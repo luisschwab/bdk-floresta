@@ -2,25 +2,34 @@
 
 //! # Builder
 //!
-//! This module holds all logic needed to instantiate
-//! a [`Node`] from default or user defined values.
+//! This module holds all logic needed to instantiate a [`Node`]
+//! from default or user defined values, by way of the [`Builder].
 //!
-//! ```rust
+//! # Building a Node
+//!
+//! ```rust,no_run
 //! use bdk_floresta::builder::Builder;
-//! use bdk_floresta::UtreexoNodeConfig;
+//! use bdk_floresta::builder::NodeConfig;
 //! use bitcoin::Network;
 //!
-//! let config = UtreexoNodeConfig {
-//!     network: Network::Signet,
-//!     datadir: format!("{}{}", DATA_DIR, NETWORK),
-//!     ..Default::default(),
-//! };
+//! #[tokio::main]
+//! async fn main() {
+//!     // Define configuration parameters for the node
+//!     let config = NodeConfig {
+//!         network: Network::Signet,
+//!         assume_utreexo: true,
+//!         enable_powfps: true,
+//!         perform_backfill: false,
+//!         mempool_size: 300,
+//!         ..Default::default()
+//!     };
 //!
-//! let mut node = Builder::new()
-//!     .from_config(config)
-//!     .build()
-//!     .unwrap();
-//! ```
+//!     // Build the node
+//!     let mut node = Builder::new()
+//!         .from_config(config)
+//!         .build()
+//!         .unwrap();
+//! }
 
 use std::fs;
 use std::net::SocketAddr;
