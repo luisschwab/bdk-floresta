@@ -6,7 +6,8 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.100"
-bdk_floresta = { path = "../../bdk-floresta" }
+bitcoin = "0.32.8"
+bdk_floresta = { path = "../../", default-features = false, features = ["logger"] }
 bdk_wallet = "2.2.0"
-tokio = { version = "1.47.1", features = ["full"] }
+tokio = { version = "1.47.1", features = ["rt"] }
 tracing = "0.1.41"

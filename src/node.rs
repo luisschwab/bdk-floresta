@@ -32,6 +32,7 @@ use tracing::debug;
 use tracing::error;
 use tracing::info;
 use tracing::warn;
+#[cfg(feature = "logger")]
 use tracing_appender::non_blocking::WorkerGuard;
 
 use crate::builder::NodeConfig;
@@ -64,7 +65,8 @@ pub struct Node {
     pub(crate) stop_signal: Arc<RwLock<bool>>,
     /// Receiver for shutdown completion notification from the [`Node`]'s task.
     pub(crate) stop_receiver: Option<oneshot::Receiver<()>>,
-    /// Guard ensuring the logger remains active for the node's lifetime.
+    /// A guard that ensures the logger remains active for the [`Node`]'s lifetime.
+    #[cfg(feature = "logger")]
     pub(crate) _logger_guard: Option<WorkerGuard>,
     /// A [`Wallet`] that will receive updates from the [`Node`].
     pub wallet: Option<Arc<RwLock<Wallet>>>,

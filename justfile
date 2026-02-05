@@ -11,15 +11,21 @@ _default:
 build:
     cargo build
 
-# Check code: formatting, compilation, linting, and commit signature
+# Check code formatting, compilation, linting, and commit signature
 check:
     cargo +nightly fmt --all -- --check
-    cargo check --workspace --all-targets
+    just check-features
     cargo clippy --all-targets -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
     @[ "$(git log --pretty='format:%G?' -1 HEAD)" = "N" ] && \
        echo "\n⚠️  Unsigned commit: bdk_floresta requires commits to be signed." || \
        true
+
+# Check that all feature combinations compile
+check-features:
+    cargo check --no-default-features
+    cargo check --no-default-features --features logger
+    cargo check --workspace --all-targets
 
 # Delete files: example, target, lockfile
 delete item="examples":
@@ -31,7 +37,7 @@ doc:
 
 # Run an example crate
 example name="node":
-    cargo run --example {{ name }} --release
+    cargo run --release --manifest-path examples/{{ name }}/Cargo.toml
 
 # Format code
 fmt:

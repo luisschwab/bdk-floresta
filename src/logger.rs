@@ -2,7 +2,8 @@
 
 //! # Logger
 //!
-//! This module implements a basic logger using the [`tracing-subscriber`] crate.
+//! This module implements a basic logger using the
+//! [`tracing-appender`] and [`tracing-subscriber`] crates.
 //!
 //! The [`tracing`] crate is used by [`bdk_floresta`], [`floresta-chain`],
 //! [`floresta-compact-filters`], [`floresta-mempool`] and [`floresta-wire`]
@@ -10,11 +11,12 @@
 //! implement their own logger to consume these events.
 //!
 //! [`bdk_floresta`]: https://github.com/luisschwab/bdk-floresta
-//! [`floresta-chain`]: https://github.com/getfloresta/Floresta/tree/master/crates/floresta-wire
+//! [`floresta-chain`]: https://github.com/getfloresta/Floresta/tree/master/crates/floresta-chain
 //! [`floresta-compact-filters`]: https://github.com/getfloresta/Floresta/tree/master/crates/floresta-compact-filters
 //! [`floresta-mempool`]: https://github.com/getfloresta/Floresta/tree/master/crates/floresta-mempool
 //! [`floresta-wire`]: https://github.com/getfloresta/Floresta/tree/master/crates/floresta-wire
 //! [`tracing`]: https://crates.io/tracing
+//! [`tracing-appender`]: https://crates.io/crates/tracing-appender
 //! [`tracing-subscriber`]: https://crates.io/crates/tracing-subscriber
 
 use std::io;
