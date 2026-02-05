@@ -43,8 +43,6 @@ use floresta_wire::address_man::AddressMan;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
-use floresta_wire::rustreexo::accumulator::node_hash::BitcoinNodeHash;
-use floresta_wire::rustreexo::accumulator::pollard::Pollard;
 use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::Mutex;
@@ -245,11 +243,9 @@ impl Builder {
         // Create an Arc'ed stop signal that keeps track of whether the [`Node`] should stop.
         let stop_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        // Create a [`Pollard`] accumulator for the mempool and transaction cache.
-        let pollard: Pollard<BitcoinNodeHash> = Pollard::new();
+        // Create a [`Mempool`] for the [`Node`].
         let mempool_size_bytes = 1_000_000 * self.node_configuration.mempool_size;
-        let mempool: Arc<Mutex<Mempool>> =
-            Arc::new(Mutex::new(Mempool::new(pollard, mempool_size_bytes)));
+        let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(mempool_size_bytes)));
 
         // Encapsulate the actual [`UtreexoNode`] as an inner of [`Node`].
         let node_inner = UtreexoNode::<_, RunningNode>::new(
@@ -262,8 +258,7 @@ impl Builder {
         )
         .expect("Failed to instantiate the Node");
 
-        // Get a handle for the [`Node`].
-        // Used to interact with the underlying [`UtreexoNode`].
+        // Get a handle to interact with the [`Node`].
         let node_handle: NodeInterface = node_inner.get_handle();
 
         // Set up the [`Wallet`]'s update channel, sender and receiver.

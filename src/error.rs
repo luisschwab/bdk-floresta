@@ -78,6 +78,10 @@ pub enum NodeError {
     /// Blockchain related errors.
     #[error("Blockchain error: {0:?}")]
     Blockchain(Arc<floresta_chain::BlockchainError>),
+
+    /// Mempool related errors.
+    #[error("Mempool acceptance error: {0:?}")]
+    Mempool(Arc<floresta_mempool::mempool::AcceptToMempoolError>),
 }
 
 impl From<std::io::Error> for NodeError {
@@ -89,5 +93,11 @@ impl From<std::io::Error> for NodeError {
 impl From<floresta_chain::BlockchainError> for NodeError {
     fn from(err: floresta_chain::BlockchainError) -> Self {
         NodeError::Blockchain(Arc::new(err))
+    }
+}
+
+impl From<floresta_mempool::mempool::AcceptToMempoolError> for NodeError {
+    fn from(err: floresta_mempool::mempool::AcceptToMempoolError) -> Self {
+        NodeError::Mempool(Arc::new(err))
     }
 }
