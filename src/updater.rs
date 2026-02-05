@@ -2,6 +2,7 @@
 
 //! TODO
 
+//use bdk_wallet::Update;
 use bitcoin::Block;
 use floresta_chain::BlockConsumer;
 use tokio::sync::mpsc::UnboundedSender;
@@ -10,7 +11,7 @@ use tracing::error;
 
 /// Structures that represent an update to the wallet.
 pub enum WalletUpdate {
-    /// A new block update, represented by a `Block` and it's height.
+    /// A new block update, represented by a `Block` and its height.
     NewBlock(Block, u32),
 }
 
@@ -27,14 +28,13 @@ impl WalletUpdater {
 }
 
 impl BlockConsumer for WalletUpdater {
-    /// This is unecessary, so just return `false`.
     fn wants_spent_utxos(&self) -> bool {
+        // Not needed for this crate, just return false.
         false
     }
 
-    /// The action to be taken when a new `Block` is received.
-    /// In our case, the `Block` is wrapped in an `Update::Block` along with
-    /// it's height.
+    /// When the [`Node`](crate::node::Node) sends a new [`Block`], wrap it in
+    /// a [`WalletUpdate::NewBlock`] and apply it to the [`Wallet`](bdk_wallet::Wallet).
     fn on_block(
         &self,
         block: &Block,
@@ -43,7 +43,7 @@ impl BlockConsumer for WalletUpdater {
             &std::collections::HashMap<bdk_wallet::bitcoin::OutPoint, floresta_chain::UtxoData>,
         >,
     ) {
-        // Create the `Update`.
+        // Wrap the block in a wallet update.
         let update = WalletUpdate::NewBlock(block.clone(), height);
         let update_height = height;
 

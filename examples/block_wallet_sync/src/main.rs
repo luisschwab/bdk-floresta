@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
                         let res = wallet.apply_block(&block, height);
                         match res {
                             Ok(_) => {
-                                info!("Sucessfully applied block at height {} to the wallet [ Balance: {} sats ]", height, wallet.balance().total().to_sat());
+                                info!("Successfully applied block at height {} to the wallet [ Balance: {} sats ]", height, wallet.balance().total().to_sat());
                             }
                             Err(e) => error!(
                                 "Failed to apply block at height {} to the wallet: {}",

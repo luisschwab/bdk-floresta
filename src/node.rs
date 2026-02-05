@@ -1,8 +1,8 @@
-// SPDX-Licence-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 //! # Node
 //!
-//! This module holds all the logic needed to interact the embedded [`Node`].
+//! This module holds all the logic needed to interact with the embedded [`Node`].
 //!
 //! TODO
 
@@ -38,7 +38,7 @@ use crate::builder::NodeConfig;
 use crate::error::NodeError;
 use crate::updater::WalletUpdate;
 
-/// How long to wait for the [`Node`] shutdown task before aborting, in seconds.
+/// How long to wait for the [`Node`]'s shutdown task before aborting, in seconds.
 const SHUTDOWN_TIMEOUT: u64 = 15;
 
 /// Type alias for the [`Node`]'s inner [`UtreexoNode`].
@@ -111,16 +111,16 @@ impl Node {
         Ok(())
     }
 
-    /// Set the `stop_signal` to trigger the [`Node`] for a graceful shutdown.
+    /// Set the `stop_signal` to trigger a graceful shutdown.
     async fn stop(&self) {
         debug!("Setting the stop signal to true");
         *self.stop_signal.write().await = true;
     }
 
-    /// Wait for the [`Node`] to finish it's shutdown routines before
+    /// Wait for the [`Node`] to finish its routines before shutting down.
     async fn wait_shutdown(mut self) -> Result<(), NodeError> {
         // Wait for up to `SHUTDOWN_TIMEOUT` seconds for the [`Node`]
-        // to send notification of shutdown completion through the `stop_receiver`.
+        // to send a notification of shutdown completion through the `stop_receiver`.
         if let Some(receiver) = self.stop_receiver.take() {
             match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT), receiver).await {
                 Ok(Ok(())) => {
@@ -208,7 +208,7 @@ impl Node {
         Ok(config)
     }
 
-    /// Connect to a specific peer, given it's [`SocketAddr`].
+    /// Connect to a specific peer, given a [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the connection was successfully established.
     pub async fn connect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
@@ -218,7 +218,7 @@ impl Node {
             .await
         {
             Ok(true) => {
-                debug!("Manual connection established with peer {socket:#?} sucessfully");
+                debug!("Manual connection established with peer {socket:#?} successfully");
                 Ok(true)
             }
             Ok(false) => {
@@ -232,7 +232,7 @@ impl Node {
         }
     }
 
-    /// Disconnect from a specific peer, given it's [`SocketAddr`].
+    /// Disconnect from a specific peer, given its [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the peer was successfully disconnected from.
     pub async fn disconnect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
@@ -257,7 +257,7 @@ impl Node {
     }
 
     /// Remove a specific peer's address from the
-    /// [`AddressMan`](floresta_wire::address_man::AddressMan), given it's [`SocketAddr`].
+    /// [`AddressMan`](floresta_wire::address_man::AddressMan), given its [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the address was successfully removed.
     pub async fn remove_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {

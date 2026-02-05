@@ -121,16 +121,16 @@ pub fn build_logger(
             .with_filter(targets_log_filter.clone())
     });
 
-    // Build the registry with it's base filter, then attach layers to it.
+    // Build the registry with its base filter, then attach layers to it.
     let registry: Layered<Targets, Registry> = tracing_subscriber::registry().with(base_filter);
 
     // Spawn the `console_subscriber` in the background
-    // and apply it's [`Layer`] to the [`Registry`], if
+    // and apply its [`Layer`] to the [`Registry`], if
     // the `tokio-console` feature is enabled.
     //#[cfg(feature = "tokio-console")]
     //let registry = registry.with(console_subscriber::spawn());
 
-    // Apply the `stdout` and logfile's [`Layer`]s to the [`Registry`].
+    // Apply the `fmt_layer_stdout` and `fmt_layer_logfile` [`Layer`]s to the [`Registry`].
     registry
         .with(env_filter)
         .with(fmt_layer_stdout)
