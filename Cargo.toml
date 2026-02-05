@@ -28,10 +28,10 @@ toml = "0.9.6"
 [dependencies]
 bitcoin = "0.32.8"
 bdk_wallet = "2.2.0"
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "abeebe90e45e172d18c40ce1cd767ee713869773", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "abeebe90e45e172d18c40ce1cd767ee713869773" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "abeebe90e45e172d18c40ce1cd767ee713869773" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "abeebe90e45e172d18c40ce1cd767ee713869773" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
 thiserror = "2.0.17"
 tokio = { version = "1.47.1", features = ["rt", "signal", "sync", "time"] }
 tracing = "0.1.41"
