@@ -13,6 +13,8 @@ use std::time::Duration;
 use bdk_wallet::Wallet;
 use bitcoin::Block;
 use bitcoin::BlockHash;
+use bitcoin::Transaction;
+use bitcoin::Txid;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::BlockchainInterface;
 use floresta_chain::pruned_utreexo::UpdatableChainstate;
@@ -316,6 +318,26 @@ impl Node {
             }
             Err(e) => {
                 error!("Error whilst receiving ping response: {}", e);
+                Err(NodeError::Receiver(e))
+            }
+        }
+    }
+
+    /// Broadcast a [`Transaction`] to the [`Node`]'s peers.
+    ///
+    /// Returns the [`Txid`], if the broadcast was successful.
+    pub async fn broadcast_tx(&self, tx: Transaction) -> Result<Txid, NodeError> {
+        match self.node_handle.broadcast_transaction(tx).await {
+            Ok(Ok(txid)) => {
+                info!("Broadcast transaction {}", txid);
+                Ok(txid)
+            }
+            Ok(Err(e)) => {
+                error!("Invalid transaction: {}", e);
+                Err(NodeError::Mempool(e.into()))
+            }
+            Err(e) => {
+                error!("Failed to broadcast transaction: {}", e);
                 Err(NodeError::Receiver(e))
             }
         }
