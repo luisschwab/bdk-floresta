@@ -32,7 +32,7 @@
 //!     // Run the node
 //!     node.run().await.unwrap();
 //!
-//!     // Get the hash of block at height 250_000
+//!     // Get the hash of the block at height 250_000
 //!     let hash: BlockHash = node.get_blockhash(250_000).unwrap();
 //!
 //!     // Get the block at height 250_000, if it exists
