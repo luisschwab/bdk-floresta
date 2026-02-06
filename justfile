@@ -14,6 +14,7 @@ build:
 # Check code formatting, compilation, linting, and commit signature
 check:
     cargo +nightly fmt --all -- --check
+    cargo test --doc
     just check-features
     cargo clippy --all-targets -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
@@ -33,6 +34,7 @@ delete item="examples":
 
 # Build documentation
 doc:
+    cargo test --doc
     cargo doc --no-deps --open
 
 # Run an example crate
