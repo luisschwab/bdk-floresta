@@ -2,8 +2,8 @@
 
 <p>
     <a href="https://crates.io/crates/bdk_floresta"><img src="https://img.shields.io/crates/v/bdk_floresta.svg"/></a>
-    <a href="https://docs.rs/bdk_floresta"><img src="https://img.shields.io/badge/docs.rs-bdk--floresta-green"/></a>
-    <a href="https://blog.rust-lang.org/2024/09/05/Rust-1.81.0/"><img src="https://img.shields.io/badge/rustc-1.81.0%2B-lightgrey.svg"/></a>
+    <a href="https://docs.rs/bdk_floresta"><img src="https://img.shields.io/badge/docs.rs-bdk--floresta-brightgreen"/></a>
+    <a href="https://blog.rust-lang.org/2025/02/20/Rust-1.85.0/"><img src="https://img.shields.io/badge/rustc-1.85.0%2B-orange.svg"/></a>
     <a href="https://github.com/luisschwab/bdk-floresta/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-red.svg"/></a>
     <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/ci.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/ci.yml/badge.svg"></a>
 </p>
@@ -116,6 +116,10 @@ let stump: Stump = node.get_accumulator().unwrap();
 ### Wallet Synchronization
 
 TODO (needs upstream work on [`floresta-compact-filters`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-compact-filters))
+
+## Minimum Supported Rust Version
+
+This library enforces an MSRV of 1.85.0.
 
 ## License
 
