@@ -45,6 +45,12 @@ example name="node":
 fmt:
     cargo +nightly fmt
 
+# Verify the library builds with MSRV (1.85.0)
+msrv:
+    ./ci/pin-msrv.sh
+    cargo +1.85.0 build --all-features
+    cargo +1.85.0 test --all-features
+
 _delete-examples:
     rm -rf examples/node/data
     rm -rf examples/block_wallet_sync/data
