@@ -47,7 +47,7 @@ fmt:
 
 # Verify the library builds with MSRV (1.85.0)
 msrv:
-    ./ci/pin-msrv.sh
+    bash ci/pin-msrv.sh
     cargo +1.85.0 build --all-features
     cargo +1.85.0 test --all-features
 
