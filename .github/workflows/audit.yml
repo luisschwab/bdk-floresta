@@ -18,18 +18,21 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@22a6a5b0f9f487c5f5587025ae9d4a1caf2a8a78 # clippy
+      - name: Install Rust toolchain
+        run: |
+            rustup toolchain install nightly --profile minimal
+            rustup default nightly
 
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-on-failure: true
 
-      - name: install cargo-audit
-        run: cargo install cargo-audit@0.22.0 --force --locked
+      - name: Install cargo-audit
+        run: cargo install cargo-audit@0.22.1 --force --locked
 
-      - name: check for audit warnings
+      - name: Check for Audit Warnings
         run: cargo audit -D warnings
         continue-on-error: true
 
-      - name: check for vulnerabilities
+      - name: Check for Vulnerabilities
         run: cargo audit

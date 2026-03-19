@@ -12,65 +12,68 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
-      - name: checkout code
+      - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: setup rust
-        uses: dtolnay/rust-toolchain@b95584d8105b9ab200e15821fa671848cf2b7017 # nightly
-        with:
-          components: clippy, rustfmt
+      - name: Install Rust toolchains
+        run: |
+            rustup toolchain install stable --profile minimal --component clippy
+            rustup toolchain install nightly --profile minimal --component rustfmt
+            rustup default stable
 
-      - name: setup just
+      - name: Setup just
         uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
-      - name: rust cache
+      - name: Rust Cache
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
-      - name: check
+      - name: Check
         run: just check
 
   msrv:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
-      - name: checkout code
+      - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: setup rust
-        uses: dtolnay/rust-toolchain@657b32adf5134a25e57c86fb60bab6f4f8cf863f # 1.85.0
+      - name: Install Rust toolchain
+        run: |
+            rustup toolchain install stable --profile minimal
+            rustup default stable
 
-      - name: setup just
+      - name: Setup just
         uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
-      - name: rust cache
+      - name: Rust Cache
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
-      - name: msrv check
+      - name: Check MSRV
         run: just msrv
 
   doc:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: setup rust
-        uses: dtolnay/rust-toolchain@b95584d8105b9ab200e15821fa671848cf2b7017 # nightly
-        with:
-          components: clippy, rustfmt
+      - name: Install Rust toolchain
+        run: |
+            rustup toolchain install stable --profile minimal --component clippy,rustfmt
+            rustup default stable
 
-      - name: setup just
+      - name: Setup just
         uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
-      - name: rust cache
+      - name: Rust Cache
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
-      - name: doc
+      - name: Build Documentation
         run: just doc
