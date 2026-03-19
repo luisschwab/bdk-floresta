@@ -23,21 +23,21 @@ name = "node"
 path = "examples/node/src/main.rs"
 
 [build-dependencies]
-toml = "0.9.6"
+toml = { version = "1.0" }
 
 [dependencies]
-bitcoin = "0.32.8"
-bdk_wallet = "2.2.0"
+bitcoin = { version = "0.32" }
+bdk_wallet = { version = "2.3" }
 floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc", features = ["flat-chainstore"] }
 floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
 floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
 floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
-thiserror = "2.0.17"
-tokio = { version = "1.47.1", features = ["rt", "signal", "sync", "time"] }
-tracing = "0.1.41"
-tracing-appender = { version = "0.2.3", optional = true }
-tracing-subscriber = { version = "0.3.20", features = ["ansi", "chrono", "env-filter"], optional = true }
+thiserror = { version = "2.0" }
+tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
+tracing = { version = "0.1" }
+tracing-appender = { version = "0.2", optional = true }
+tracing-subscriber = { version = "0.3", features = ["ansi", "chrono", "env-filter"], optional = true }
 
 [dev-dependencies]
-anyhow = "1.0.100"
-tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
+anyhow = { version = "1.0" }
+tokio = { version = "1.47", features = ["macros", "rt-multi-thread"] }
