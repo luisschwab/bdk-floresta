@@ -3,7 +3,7 @@
 //! # Builder
 //!
 //! This module holds all logic needed to instantiate a [`Node`]
-//! from default or user defined values, by way of the [`Builder].
+//! from default or user defined values, by way of the [`Builder`].
 //!
 //! # Building a Node
 //!

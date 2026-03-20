@@ -72,7 +72,7 @@ The crates below are used to implement the `Node`:
 
 The `Builder` is used to create a new `Node` from parameters defined in `NodeConfig`.
 
-```rs
+```rust,ignore
 use bdk_floresta::builder::Builder;
 use bdk_floresta::builder::NodeConfig;
 use bitcoin::Network;
@@ -94,7 +94,7 @@ let mut node = Builder::new()
 
 After building the `Node`, you can run and interact with it:
 
-```rs
+```rust,ignore
 use bitcoin::Block;
 use bitcoin::BlockHash;
 use bitcoin::Network;
@@ -123,9 +123,11 @@ let stump: Stump = node.get_accumulator().unwrap();
 
 TODO (needs upstream work on [`floresta-compact-filters`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-compact-filters))
 
-## Minimum Supported Rust Version
+## Minimum Supported Rust Version (MSRV)
 
-This library enforces an MSRV of 1.85.0.
+This library should compile with any combination of features on Rust 1.85.0.
+
+Use `Cargo-minimal.lock` to build the MSRV by copying to `Cargo.lock` and building.
 
 ## License
 
