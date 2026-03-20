@@ -1,79 +1,43 @@
 on: [push, pull_request]
-
 name: CI
-
 env:
   CARGO_TERM_COLOR: always
-
 permissions: {}
 
 jobs:
-  check:
+  Test:
+    name: Test - ${{ matrix.toolchain }} toolchain, ${{ matrix.dep }} deps
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [stable, msrv]
+        dep: [minimal, recent]
+        exclude:
+          # Exclude MSRV toolchain + `Cargo-recent.lock`
+          - toolchain: msrv
+            dep: recent
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@64715bab0d6fa1f3ebd6f9be336c4c5089bb5eb9
+      - name: Run tests
+        run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lock-file ${{ matrix.dep }}
 
-      - name: Install Rust toolchains
-        run: |
-            rustup toolchain install stable --profile minimal --component clippy
-            rustup toolchain install nightly --profile minimal --component rustfmt
-            rustup default stable
-
-      - name: Setup just
-        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-
-      - name: Check
-        run: just check
-
-  msrv:
+  Check:
+    name: Check - ${{ matrix.task }}
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [lint, docs]
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-
-      - name: Install Rust toolchain
-        run: |
-            rustup toolchain install stable --profile minimal
-            rustup default stable
-
-      - name: Setup just
-        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-
-      - name: Check MSRV
-        run: just msrv
-
-  doc:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - name: Install Rust toolchain
-        run: |
-            rustup toolchain install stable --profile minimal --component clippy,rustfmt
-            rustup default stable
-
-      - name: Setup just
-        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-
-      - name: Build Documentation
-        run: just doc
+      - uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@64715bab0d6fa1f3ebd6f9be336c4c5089bb5eb9
+      - name: Run ${{ matrix.task }}
+        run: cargo rbmt ${{ matrix.task }}

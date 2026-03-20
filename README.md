@@ -27,14 +27,20 @@ A `justfile` is provided for convenience. Run `just` to see available commands:
 
 ```console
 % just
-bdk_floresta
-    build                  # Build `bdk_floresta` [alias: b]
+> bdk-floresta
+> A Floresta-powered chain-source crate for BDK
+
+> Available recipes:
+    build                  # Build `bdk-floresta` [alias: b]
     check                  # Check code formatting, compilation, linting, and commit signature [alias: c]
     check-features         # Check that all feature combinations compile
-    delete item="examples" # Delete files: example, target, lockfile [alias: d]
-    doc                    # Build documentation
+    delete item="example"  # Delete files: example, target, lockfiles [alias: d]
+    doc                    # Generate documentation
+    doc-open               # Generate and open documentation
     example name="node"    # Run an example crate [alias: e]
     fmt                    # Format code [alias: f]
+    lock                   # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`
+    msrv                   # Verify the library builds with MSRV (1.85.0)
 ```
 
 ## Architecture
@@ -66,7 +72,7 @@ The crates below are used to implement the `Node`:
 
 The `Builder` is used to create a new `Node` from parameters defined in `NodeConfig`.
 
-```rs
+```rust,ignore
 use bdk_floresta::builder::Builder;
 use bdk_floresta::builder::NodeConfig;
 use bitcoin::Network;
@@ -88,7 +94,7 @@ let mut node = Builder::new()
 
 After building the `Node`, you can run and interact with it:
 
-```rs
+```rust,ignore
 use bitcoin::Block;
 use bitcoin::BlockHash;
 use bitcoin::Network;
@@ -117,9 +123,11 @@ let stump: Stump = node.get_accumulator().unwrap();
 
 TODO (needs upstream work on [`floresta-compact-filters`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-compact-filters))
 
-## Minimum Supported Rust Version
+## Minimum Supported Rust Version (MSRV)
 
-This library enforces an MSRV of 1.85.0.
+This library should compile with any combination of features on Rust 1.85.0.
+
+Use `Cargo-minimal.lock` to build the MSRV by copying to `Cargo.lock` and building.
 
 ## License
 
