@@ -68,7 +68,7 @@ use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::node_interface::PeerInfo;
-use floresta_wire::rustreexo::accumulator::stump::Stump;
+use floresta_wire::rustreexo::stump::Stump;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
 use tokio::sync::RwLock;

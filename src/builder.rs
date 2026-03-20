@@ -49,6 +49,7 @@ use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
 use floresta_compact_filters::network_filters::NetworkFilters;
 use floresta_mempool::Mempool;
 use floresta_wire::address_man::AddressMan;
+use floresta_wire::address_man::ReachableNetworks;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
@@ -106,6 +107,12 @@ pub struct NodeConfig {
     /// The size of the [`Mempool`], in MB. If the [`Mempool`] becomes
     /// full, transactions are evicted based on their fee rate, lowest first.
     pub mempool_size: usize,
+    /// The maximum number of addresses held in the [`AddressMan`].
+    /// Defaults to 50_000 addresses.
+    pub address_man_size: Option<usize>,
+    /// The set of networks this node will communicate on.
+    /// Currently, only [`ReachableNetworks::IPv4`] and [`ReachableNetworks::IPv6`] are supported.
+    pub reachable_nets: Vec<ReachableNetworks>,
 }
 
 impl Default for NodeConfig {
@@ -124,6 +131,8 @@ impl Default for NodeConfig {
             disable_dns_seeds: false,
             allow_p2pv1_fallback: true,
             mempool_size: 100,
+            address_man_size: None,
+            reachable_nets: vec![ReachableNetworks::IPv4, ReachableNetworks::IPv6],
         }
     }
 }
@@ -263,7 +272,10 @@ impl Builder {
             mempool,
             Some(filters),
             stop_signal.clone(),
-            AddressMan::default(),
+            AddressMan::new(
+                self.node_configuration.address_man_size,
+                &self.node_configuration.reachable_nets,
+            ),
         )
         .expect("Failed to instantiate the Node");
 

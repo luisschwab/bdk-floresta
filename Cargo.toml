@@ -28,10 +28,10 @@ toml = { version = "1.0" }
 [dependencies]
 bitcoin = { version = "0.32.7" }
 bdk_wallet = { version = "2.3" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212" }
 thiserror = { version = "2.0" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }
@@ -56,10 +56,14 @@ rustdoc-args = ["--cfg", "docsrs"]
 stable = "1.94.0"
 nightly = "nightly-2026-03-18"
 
+# Allow packages of different versions in the dependency tree.
 [package.metadata.rbmt.lint]
 allowed_duplicates = [
     "base64",
     "bitcoin_hashes",
+    "bitcoin-consensus-encoding",
+    "bitcoin-internals",
+    "bitcoin-io",
     "getrandom",
     "hex-conservative",
     "serde_core",
