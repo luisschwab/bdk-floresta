@@ -27,14 +27,20 @@ A `justfile` is provided for convenience. Run `just` to see available commands:
 
 ```console
 % just
-bdk_floresta
-    build                  # Build `bdk_floresta` [alias: b]
+> bdk-floresta
+> A Floresta-powered chain-source crate for BDK
+
+> Available recipes:
+    build                  # Build `bdk-floresta` [alias: b]
     check                  # Check code formatting, compilation, linting, and commit signature [alias: c]
     check-features         # Check that all feature combinations compile
-    delete item="examples" # Delete files: example, target, lockfile [alias: d]
-    doc                    # Build documentation
+    delete item="example"  # Delete files: example, target, lockfiles [alias: d]
+    doc                    # Generate documentation
+    doc-open               # Generate and open documentation
     example name="node"    # Run an example crate [alias: e]
     fmt                    # Format code [alias: f]
+    lock                   # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`
+    msrv                   # Verify the library builds with MSRV (1.85.0)
 ```
 
 ## Architecture

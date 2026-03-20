@@ -5,36 +5,36 @@ alias e := example
 alias f := fmt
 
 _default:
-    @just --list --list-heading $'bdk_floresta\n'
+    @just --list --list-heading $'> bdk-floresta\n> A Floresta-powered chain-source crate for BDK\n\n> Available recipes:\n'
 
-# Build `bdk_floresta`
+# Build `bdk-floresta`
 build:
     cargo build
 
 # Check code formatting, compilation, linting, and commit signature
 check:
-    cargo +nightly fmt --all -- --check
-    cargo test --doc
-    just check-features
-    cargo clippy --all-targets -- -D warnings
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
+    cargo rbmt lint
+    cargo rbmt docs
     @[ "$(git log --pretty='format:%G?' -1 HEAD)" = "N" ] && \
        echo "\n⚠️  Unsigned commit: bdk_floresta requires commits to be signed." || \
        true
 
 # Check that all feature combinations compile
 check-features:
-    cargo check --no-default-features
-    cargo check --no-default-features --features logger
-    cargo check --workspace --all-targets
+    cargo rbmt test --toolchain stable --lock-file recent
 
-# Delete files: example, target, lockfile
-delete item="examples":
+# Delete files: example, target, lockfiles
+delete item="example":
     just _delete-{{ item }}
 
-# Build documentation
+# Generate documentation
 doc:
-    cargo test --doc
+    cargo rbmt docs
+    cargo doc --no-deps
+
+# Generate and open documentation
+doc-open: doc
+    cargo rbmt docs
     cargo doc --no-deps --open
 
 # Run an example crate
@@ -43,15 +43,17 @@ example name="node":
 
 # Format code
 fmt:
-    cargo +nightly fmt
+    cargo rbmt fmt
+
+# Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`
+lock:
+  cargo +nightly rbmt lock
 
 # Verify the library builds with MSRV (1.85.0)
 msrv:
-    bash ci/pin-msrv.sh
-    cargo +1.85.0 build --all-features
-    cargo +1.85.0 test --all-features
+    cargo rbmt test --toolchain msrv --lock-file minimal
 
-_delete-examples:
+_delete-example:
     rm -rf examples/node/data
     rm -rf examples/block_wallet_sync/data
 
@@ -60,3 +62,5 @@ _delete-target:
 
 _delete-lockfile:
     rm -f Cargo.lock
+    rm -f Cargo-recent.lock
+    rm -f Cargo-minimal.lock
