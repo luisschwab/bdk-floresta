@@ -15,9 +15,7 @@ build:
 check:
     cargo rbmt lint
     cargo rbmt docs
-    @[ "$(git log --pretty='format:%G?' -1 HEAD)" = "N" ] && \
-       echo "\n⚠️  Unsigned commit: bdk_floresta requires commits to be signed." || \
-       true
+    just _check-signatures
 
 # Check that all feature combinations compile
 check-features:
@@ -52,6 +50,18 @@ lock:
 # Verify the library builds with MSRV (1.85.0)
 msrv:
     cargo rbmt test --toolchain msrv --lock-file minimal
+
+# Checks whether all commits in this branch are signed
+_check-signatures:
+    #!/usr/bin/env bash
+    TOTAL=$(git log --pretty='format:%H' origin/master..HEAD | wc -l | tr -d ' ')
+    UNSIGNED=$(git log --pretty='format:%H %G?' origin/master..HEAD | grep " N$" | wc -l | tr -d ' ')
+    if [ "$UNSIGNED" -gt 0 ]; then
+        echo "⚠️ Unsigned commits [$UNSIGNED/$TOTAL]"
+        exit 1
+    else
+        echo "🔏 All commits are signed"
+    fi
 
 _delete-example:
     rm -rf examples/node/data
