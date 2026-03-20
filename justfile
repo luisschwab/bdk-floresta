@@ -15,11 +15,23 @@ build:
 check:
     cargo rbmt lint
     cargo rbmt docs
-    just _check-signatures
+    just check-sigs
 
 # Check that all feature combinations compile
 check-features:
     cargo rbmt test --toolchain stable --lock-file recent
+
+# Checks whether all commits in this branch are signed
+check-sigs:
+    #!/usr/bin/env bash
+    TOTAL=$(git log --pretty='tformat:%H' origin/master..HEAD | wc -l | tr -d ' ')
+    UNSIGNED=$(git log --pretty='tformat:%H %G?' origin/master..HEAD | grep " N$" | wc -l | tr -d ' ')
+    if [ "$UNSIGNED" -gt 0 ]; then
+        echo "⚠️ Unsigned commits in this branch [$UNSIGNED/$TOTAL]"
+        exit 1
+    else
+        echo "🔏 All commits in this branch are signed [$TOTAL/$TOTAL]"
+    fi
 
 # Delete files: example, target, lockfiles
 delete item="example":
@@ -50,18 +62,6 @@ lock:
 # Verify the library builds with MSRV (1.85.0)
 msrv:
     cargo rbmt test --toolchain msrv --lock-file minimal
-
-# Checks whether all commits in this branch are signed
-_check-signatures:
-    #!/usr/bin/env bash
-    TOTAL=$(git log --pretty='format:%H' origin/master..HEAD | wc -l | tr -d ' ')
-    UNSIGNED=$(git log --pretty='format:%H %G?' origin/master..HEAD | grep " N$" | wc -l | tr -d ' ')
-    if [ "$UNSIGNED" -gt 0 ]; then
-        echo "⚠️ Unsigned commits [$UNSIGNED/$TOTAL]"
-        exit 1
-    else
-        echo "🔏 All commits are signed"
-    fi
 
 _delete-example:
     rm -rf examples/node/data
