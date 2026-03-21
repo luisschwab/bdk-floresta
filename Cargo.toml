@@ -8,19 +8,11 @@ repository = "https://github.com/luisschwab/bdk-floresta"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.85.0"
+rust-version = "1.85.0" # MSRV
 
 [features]
 default = ["logger"]
 logger = ["dep:tracing-appender", "dep:tracing-subscriber"]
-
-[[example]]
-name = "block_wallet_sync"
-path = "examples/block_wallet_sync/src/main.rs"
-
-[[example]]
-name = "node"
-path = "examples/node/src/main.rs"
 
 [build-dependencies]
 toml = { version = "1.0" }
@@ -28,15 +20,16 @@ toml = { version = "1.0" }
 [dependencies]
 bitcoin = { version = "0.32.7" }
 bdk_wallet = { version = "2.3" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "87e33b0381db516ee40bfc0ce0f838137eec5dfc" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "68e5a1cd3e632f76b3dcc261053c5236201e1212" }
 thiserror = { version = "2.0" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }
 tracing-appender = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "chrono", "env-filter"], optional = true }
+tokio-util = { version = "0.7.18" }
 
 # These pins are needed for `Cargo-minimal.lock`:
 lazy_static = { version = "1.5.0" } # sharded-slab = "0.1.7"
@@ -45,7 +38,7 @@ dns-lookup = { version = "2.1.1" }
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
-anyhow = { version = "1.0" }
+anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.docs.rs]
@@ -56,10 +49,14 @@ rustdoc-args = ["--cfg", "docsrs"]
 stable = "1.94.0"
 nightly = "nightly-2026-03-18"
 
+# Allow packages of different versions in the dependency tree.
 [package.metadata.rbmt.lint]
 allowed_duplicates = [
     "base64",
     "bitcoin_hashes",
+    "bitcoin-consensus-encoding",
+    "bitcoin-internals",
+    "bitcoin-io",
     "getrandom",
     "hex-conservative",
     "serde_core",

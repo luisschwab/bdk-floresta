@@ -37,9 +37,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.0"
+version = "1.0.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9ff2deb543832ee7b1a08060c38cc6af5816e96d3fcb6fc2e99bd15634e5c7f"
+checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
 name = "arc-swap"
@@ -140,6 +140,7 @@ dependencies = [
  "thiserror",
  "time",
  "tokio",
+ "tokio-util",
  "toml",
  "tracing",
  "tracing-appender",
@@ -222,6 +223,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin-consensus-encoding"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8d7ca3dc8ff835693ad73bf1596240c06f974a31eeb3f611aaedf855f1f2725"
+dependencies = [
+ "bitcoin-internals 0.5.0",
+]
+
+[[package]]
+name = "bitcoin-consensus-encoding"
+version = "1.0.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0552d6ae8c40b323326798ea2ac86baba051250c50fc56dc38fb2465c65d990"
+dependencies = [
+ "bitcoin-internals 0.4.1",
+]
+
+[[package]]
 name = "bitcoin-internals"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -232,9 +251,18 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-internals"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b854212e29b96c8f0fe04cab11d57586c8f3257de0d146c76cb3b42b3eb9118"
+checksum = "15df5c0565e4041487788ce234397083cc0666f69c835fd4430e131f99e690a2"
+dependencies = [
+ "hex-conservative 0.3.0",
+]
+
+[[package]]
+name = "bitcoin-internals"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a30a22d1f112dde8e16be7b45c63645dc165cef254f835b3e1e9553e485cfa64"
 
 [[package]]
 name = "bitcoin-io"
@@ -248,7 +276,18 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26792cd2bf245069a1c5acb06aa7ad7abe1de69b507c90b490bca81e0665d0ee"
 dependencies = [
- "bitcoin-internals 0.4.0",
+ "bitcoin-internals 0.4.1",
+]
+
+[[package]]
+name = "bitcoin-io"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd1a5e0e2112a702941a5c82fe0a31954c2900686053c33f59af64feab61d981"
+dependencies = [
+ "bitcoin-consensus-encoding 1.0.0-rc.2",
+ "bitcoin-internals 0.4.1",
+ "bitcoin_hashes 0.18.0",
 ]
 
 [[package]]
@@ -298,6 +337,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin_hashes"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cb7fdb8e07d365e9cd16993fb3c4e04f734c66e334b9cb3c0479fa5437b0ed5"
+dependencies = [
+ "bitcoin-consensus-encoding 1.0.0-rc.2",
+ "bitcoin-internals 0.4.1",
+ "hex-conservative 0.3.0",
+]
+
+[[package]]
+name = "bitcoin_hashes"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a8a45c2b41c457a9a9e4670422fcbdf109afb3b22bc920b4045e8bdfd788a3d"
+dependencies = [
+ "bitcoin-consensus-encoding 0.1.0",
+ "bitcoin-internals 0.5.0",
+ "hex-conservative 0.3.0",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -326,9 +387,9 @@ checksum = "94f88df23a25417badc922ab0f5716cc1330e87f71ddd9203b3a3ccd9cedf75d"
 
 [[package]]
 name = "bytes"
-version = "1.2.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec8a7b6a70fde80372154c65702f00a0f56f3e1c36abbc6c440484be248856db"
+checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
 
 [[package]]
 name = "cc"
@@ -538,7 +599,7 @@ checksum = "88bffebc5d80432c9b140ee17875ff173a8ab62faad5b257da912bd2f6c1c0a1"
 [[package]]
 name = "floresta-chain"
 version = "0.4.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=87e33b0381db516ee40bfc0ce0f838137eec5dfc#87e33b0381db516ee40bfc0ce0f838137eec5dfc"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=68e5a1cd3e632f76b3dcc261053c5236201e1212#68e5a1cd3e632f76b3dcc261053c5236201e1212"
 dependencies = [
  "bitcoin",
  "floresta-common",
@@ -554,10 +615,10 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.4.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=87e33b0381db516ee40bfc0ce0f838137eec5dfc#87e33b0381db516ee40bfc0ce0f838137eec5dfc"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=68e5a1cd3e632f76b3dcc261053c5236201e1212#68e5a1cd3e632f76b3dcc261053c5236201e1212"
 dependencies = [
  "bitcoin",
- "hashbrown 0.16.0",
+ "hashbrown 0.16.1",
  "miniscript",
  "sha2",
  "spin 0.10.0",
@@ -566,7 +627,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.4.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=87e33b0381db516ee40bfc0ce0f838137eec5dfc#87e33b0381db516ee40bfc0ce0f838137eec5dfc"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=68e5a1cd3e632f76b3dcc261053c5236201e1212#68e5a1cd3e632f76b3dcc261053c5236201e1212"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -575,7 +636,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.4.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=87e33b0381db516ee40bfc0ce0f838137eec5dfc#87e33b0381db516ee40bfc0ce0f838137eec5dfc"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=68e5a1cd3e632f76b3dcc261053c5236201e1212#68e5a1cd3e632f76b3dcc261053c5236201e1212"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -588,7 +649,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.4.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=87e33b0381db516ee40bfc0ce0f838137eec5dfc#87e33b0381db516ee40bfc0ce0f838137eec5dfc"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=68e5a1cd3e632f76b3dcc261053c5236201e1212#68e5a1cd3e632f76b3dcc261053c5236201e1212"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -641,6 +702,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
 
 [[package]]
+name = "futures-core"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30f0ab78f035d7ed5d52689f4b05a56c15ad80097f1d860e644bdc9dba3831f2"
+
+[[package]]
+name = "futures-sink"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "346db18b3daf3e81f94023cd628230a01f34b1e64c5849f2a8308e678e1a21de"
+
+[[package]]
 name = "generic-array"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -690,9 +763,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5419bdc4f6a9207fbeba6d11b604d481addf78ecd10c11ad51e76c2f6482748d"
+checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 dependencies = [
  "allocator-api2",
  "equivalent",
@@ -722,6 +795,12 @@ checksum = "4afe881d0527571892c4034822e59bb10c6c991cce6abe8199b6f5cf10766f55"
 dependencies = [
  "arrayvec",
 ]
+
+[[package]]
+name = "hex-conservative"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ee770c000993d17c185713463d5ebfbd1af9afae4c17cc295640104383bfbf0"
 
 [[package]]
 name = "hex_lit"
@@ -1304,11 +1383,14 @@ dependencies = [
 
 [[package]]
 name = "rustreexo"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64bce4e1e36c12aaee94f9604187b1dbb2b826bbcb6807f757f41b1cc9946bc7"
+checksum = "8353cd48bea30340eced2a11770e47bb6b83f0e7e679742301f3332e6ec1f6ab"
 dependencies = [
- "bitcoin_hashes 0.14.0",
+ "bitcoin-io 0.3.0",
+ "bitcoin_hashes 0.20.0",
+ "hashbrown 0.16.1",
+ "hex-conservative 1.0.0",
 ]
 
 [[package]]
@@ -1631,6 +1713,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.87",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

@@ -4,32 +4,6 @@
 //!
 //! This module holds all logic needed to instantiate a [`Node`]
 //! from default or user defined values, by way of the [`Builder`].
-//!
-//! # Building a Node
-//!
-//! ```rust,no_run
-//! use bdk_floresta::builder::Builder;
-//! use bdk_floresta::builder::NodeConfig;
-//! use bitcoin::Network;
-//!
-//! #[tokio::main]
-//! async fn main() {
-//!     // Define configuration parameters for the node
-//!     let config = NodeConfig {
-//!         network: Network::Signet,
-//!         assume_utreexo: true,
-//!         enable_powfps: true,
-//!         perform_backfill: false,
-//!         mempool_size: 300,
-//!         ..Default::default()
-//!     };
-//!
-//!     // Build the node
-//!     let mut node = Builder::new()
-//!         .from_config(config)
-//!         .build()
-//!         .unwrap();
-//! }
 
 use std::fs;
 use std::net::SocketAddr;
@@ -42,6 +16,7 @@ use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_chain::AssumeValidArg;
+use floresta_chain::BlockchainError;
 use floresta_chain::BlockchainInterface;
 use floresta_chain::ChainParams;
 use floresta_chain::ChainState;
@@ -49,6 +24,7 @@ use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
 use floresta_compact_filters::network_filters::NetworkFilters;
 use floresta_mempool::Mempool;
 use floresta_wire::address_man::AddressMan;
+use floresta_wire::address_man::ReachableNetworks;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
@@ -56,14 +32,17 @@ use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 use tracing::error;
 use tracing::info;
 
 use crate::error::BuilderError;
 #[cfg(feature = "logger")]
-use crate::logger::build_logger;
+use crate::logger::start_logger;
 #[cfg(feature = "logger")]
 use crate::logger::LoggerConfig;
+#[cfg(feature = "logger")]
+use crate::logger::LOG_FILE;
 use crate::updater::WalletUpdater;
 use crate::Node;
 use crate::WalletUpdate;
@@ -106,6 +85,12 @@ pub struct NodeConfig {
     /// The size of the [`Mempool`], in MB. If the [`Mempool`] becomes
     /// full, transactions are evicted based on their fee rate, lowest first.
     pub mempool_size: usize,
+    /// The maximum number of addresses held in the [`AddressMan`].
+    /// Defaults to 50_000 addresses.
+    pub address_man_size: Option<usize>,
+    /// The set of networks this node will communicate on.
+    /// Currently, only [`ReachableNetworks::IPv4`] and [`ReachableNetworks::IPv6`] are supported.
+    pub reachable_nets: Vec<ReachableNetworks>,
 }
 
 impl Default for NodeConfig {
@@ -116,7 +101,7 @@ impl Default for NodeConfig {
             enable_powfps: true,
             assume_valid: None,
             assume_utreexo: true,
-            perform_backfill: true,
+            perform_backfill: false,
             user_agent: env!("USER_AGENT").to_string(),
             fixed_peer: None,
             max_banscore: 100,
@@ -124,6 +109,8 @@ impl Default for NodeConfig {
             disable_dns_seeds: false,
             allow_p2pv1_fallback: true,
             mempool_size: 100,
+            address_man_size: None,
+            reachable_nets: vec![ReachableNetworks::IPv4, ReachableNetworks::IPv6],
         }
     }
 }
@@ -206,14 +193,15 @@ impl Builder {
 
         // Keep a guard for the logger during the node's lifetime.
         #[cfg(feature = "logger")]
-        let _logger_guard = build_logger(
+        let _logger_guard = start_logger(
             &self.node_configuration.data_directory,
+            Some(LOG_FILE.to_string()),
             self.logger_configuration.log_to_file,
             self.logger_configuration.log_to_stdout,
             self.logger_configuration.log_level,
         )?;
 
-        // Create configuration for the chain store.
+        // Configure the [`FlatChainStore`].
         let chain_store_cfg = FlatChainStoreConfig::new(
             self.node_configuration
                 .data_directory
@@ -222,9 +210,8 @@ impl Builder {
                 .to_string(),
         );
 
-        // Try to load an existing [`FlatChainStore`]
-        // from the file system, or create a new one.
-        let chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg) {
+        // Try to load an existing [`FlatChainStore`] from the file system, or create a new one.
+        let flat_chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg.clone()) {
             Ok(store) => store,
             Err(e) => {
                 error!("Failed to open FlatChainStore: {:?}", e);
@@ -232,15 +219,24 @@ impl Builder {
             }
         };
 
-        // Create a [`ChainState`] from the [`FlatChainStore`].
-        let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(ChainState::new(
-            chain_store,
-            self.node_configuration.network,
-            AssumeValidArg::Hardcoded,
-        ));
-        info!(
-            "ChainState loaded from FlatChainStore at {}",
-            self.node_configuration.data_directory.display()
+        // Load an existing [`ChainState`] from the [`FlatChainStore`], or create a new one.
+        //
+        // TODO: unify `ChainState::new` and `ChainState::load_chain_state`
+        // upstream and change it here.
+        let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(
+            ChainState::load_chain_state(
+                flat_chain_store,
+                self.node_configuration.network,
+                AssumeValidArg::Hardcoded,
+            )
+            .or_else(|e| match e {
+                BlockchainError::ChainNotInitialized => Ok(ChainState::new(
+                    FlatChainStore::new(chain_store_cfg.clone())?,
+                    self.node_configuration.network,
+                    AssumeValidArg::Hardcoded,
+                )),
+                e => Err(BuilderError::ChainState(Arc::new(e))),
+            })?,
         );
 
         // Create the [`FlatFiltersStore`]'s configuration.
@@ -249,25 +245,28 @@ impl Builder {
         let filters = Arc::new(NetworkFilters::new(flat_filters_store));
         info!("FilterStore loaded at height {}", filters.get_height()?);
 
-        // Create an Arc'ed stop signal that keeps track of whether the [`Node`] should stop.
-        let stop_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
+        // A kill signal that keeps track of whether the [`Node`] should stop.
+        let kill_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        // Create a [`Mempool`] for the [`Node`].
+        // Create the node's mempool.
         let mempool_size_bytes = 1_000_000 * self.node_configuration.mempool_size;
         let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(mempool_size_bytes)));
 
-        // Encapsulate the actual [`UtreexoNode`] as an inner of [`Node`].
+        // Encapsulate `UtreexoNode` into an inner of `Node`.
         let node_inner = UtreexoNode::<_, RunningNode>::new(
             self.node_configuration.clone().into(),
             chain_state.clone(),
             mempool,
             Some(filters),
-            stop_signal.clone(),
-            AddressMan::default(),
+            kill_signal.clone(),
+            AddressMan::new(
+                self.node_configuration.address_man_size,
+                &self.node_configuration.reachable_nets,
+            ),
         )
-        .expect("Failed to instantiate the Node");
+        .map_err(|e| BuilderError::BuildInner(e.to_string()))?;
 
-        // Get a handle to interact with the [`Node`].
+        // Get a handle to interact with the `Node`.
         let node_handle: NodeInterface = node_inner.get_handle();
 
         // Set up the [`Wallet`]'s update channel, sender and receiver.
@@ -282,21 +281,18 @@ impl Builder {
             None
         };
 
-        info!("Node instantiated successfully");
-
         Ok(Node {
             config: self.node_configuration,
             node_inner: Some(node_inner),
-            node_handle,
             chain_state,
-            task_handle: None,
-            sigint_task: None,
-            stop_signal,
-            stop_receiver: None,
-            #[cfg(feature = "logger")]
-            _logger_guard,
+            node_handle,
+            cancellation_token: CancellationToken::new(),
+            kill_signal,
+            shutdown_task: None,
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),
+            #[cfg(feature = "logger")]
+            _logger_guard,
         })
     }
 }

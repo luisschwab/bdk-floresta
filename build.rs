@@ -1,5 +1,5 @@
-//! Generate a Bitcoin Core styled user agent
-//! string based on `bdk_floresta` and `floresta-wire` versions.
+//! Generate a Bitcoin Core styled user agent string
+//! based on `bdk_floresta` and `floresta-wire` versions.
 
 fn main() {
     // Get bdk_floresta's version.

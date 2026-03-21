@@ -14,11 +14,11 @@ jobs:
           fetch-depth: 0
       - name: Check Signature Status
         run: |
-          TOTAL=$(git log --pretty='format:%H' origin/master..HEAD | wc -l | tr -d ' ')
-          UNSIGNED=$(git log --pretty='format:%H %G?' origin/master..HEAD | grep " N$" | wc -l | tr -d ' ')
+          TOTAL=$(git log --pretty='tformat:%H' origin/master..HEAD | wc -l | tr -d ' ')
+          UNSIGNED=$(git log --pretty='tformat:%H %G?' origin/master..HEAD | grep " N$" | wc -l | tr -d ' ')
           if [ "$UNSIGNED" -gt 0 ]; then
-            echo "⚠️ Unsigned commits [$UNSIGNED/$TOTAL]"
+            echo "⚠️ Unsigned commits in this branch [$UNSIGNED/$TOTAL]"
             exit 1
           else
-            echo "🔏 All commits are signed"
+            echo "🔏 All commits in this branch are signed [$TOTAL/$TOTAL]"
           fi

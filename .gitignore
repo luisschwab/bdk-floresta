@@ -1,8 +1,5 @@
+data/
 target/
 Cargo.lock
-
-data/
-
-.vscode/
-
-NOTES.md
+*.md
+*.txt

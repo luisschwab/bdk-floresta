@@ -10,11 +10,14 @@ use std::sync::Arc;
 use thiserror::Error;
 
 /// Errors which might occur when building the
-/// [`Node`](crate::node::Node) or [logger](crate::logger::build_logger).
+/// [`Node`](crate::node::Node) or [logger](crate::logger::start_logger).
 #[derive(Clone, Debug, Error)]
 pub enum BuilderError {
     #[error("Failed to create the data directory: {0:?}")]
     CreateDirectory(Arc<std::io::Error>),
+
+    #[error("Failed to create a ChainState: {0:?}")]
+    ChainState(Arc<floresta_chain::BlockchainError>),
 
     #[error("Failed to setup the tracing subscriber logger: {0:?}")]
     LoggerSetup(Arc<std::io::Error>),
@@ -28,9 +31,11 @@ pub enum BuilderError {
     #[error("Node and Wallet are not on the same network")]
     NetworkMismatch,
 
-    /// Compact Block Filter related errors.
     #[error("Compact Block Filter error: {0:?}")]
     CompactBlockFilter(Arc<floresta_compact_filters::IterableFilterStoreError>),
+
+    #[error("Failed to build the inner node: {0}")]
+    BuildInner(String),
 }
 
 impl From<std::io::Error> for BuilderError {

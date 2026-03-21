@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use bdk_floresta::builder::Builder;
 use bdk_floresta::builder::NodeConfig;
 use bitcoin::Network;
+use tokio::runtime;
 
-const DATA_DIR: &str = "./examples/node/data/";
+const DATA_DIR: &str = "./examples/data/node/";
 const NETWORK: Network = Network::Signet;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     // Define the node's configuration.
     let config = NodeConfig {
         network: NETWORK,
@@ -16,21 +16,19 @@ async fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
+    // Build a runtime for the node to run on.
+    let rt = runtime::Builder::new_multi_thread().enable_all().build()?;
+
     // Use the builder to build the node from the configuration.
     let mut node = Builder::new().from_config(config).build()?;
 
-    // Run the node.
-    node.run().await?;
+    // Run the node inside the runtime.
+    rt.block_on(async {
+        node.run().await?;
+        node.cancelled().await;
+        anyhow::Ok(())
+    })?;
 
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-
-        // Check if the node should stop.
-        if node.should_stop().await {
-            break;
-        }
-    }
-
-    node.shutdown().await?;
+    drop(rt);
     Ok(())
 }
