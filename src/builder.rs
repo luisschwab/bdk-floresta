@@ -233,7 +233,7 @@ impl Builder {
 
         // Try to load an existing [`FlatChainStore`]
         // from the file system, or create a new one.
-        let chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg) {
+        let flat_chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg.clone()) {
             Ok(store) => store,
             Err(e) => {
                 error!("Failed to open FlatChainStore: {:?}", e);
@@ -241,15 +241,24 @@ impl Builder {
             }
         };
 
-        // Create a [`ChainState`] from the [`FlatChainStore`].
-        let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(ChainState::new(
-            chain_store,
-            self.node_configuration.network,
-            AssumeValidArg::Hardcoded,
-        ));
-        info!(
-            "ChainState loaded from FlatChainStore at {}",
-            self.node_configuration.data_directory.display()
+        // Create or load a [`ChainState`] from the [`FlatChainStore`].
+        //
+        // TODO: unify `ChainState::new` and `ChainState::load_chain_state`
+        // upstream and change it here.
+        let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(
+            ChainState::load_chain_state(
+                flat_chain_store,
+                self.node_configuration.network,
+                AssumeValidArg::Hardcoded,
+            )
+            .or_else(|e| match e {
+                BlockchainError::ChainNotInitialized => Ok(ChainState::new(
+                    FlatChainStore::new(chain_store_cfg.clone())?,
+                    self.node_configuration.network,
+                    AssumeValidArg::Hardcoded,
+                )),
+                e => Err(BuilderError::ChainState(Arc::new(e))),
+            })?,
         );
 
         // Create the [`FlatFiltersStore`]'s configuration.
