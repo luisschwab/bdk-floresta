@@ -180,6 +180,50 @@ impl Node {
         Ok(config)
     }
 
+    /// Check if the [`Node`] is still performing Initial Block Download.
+    pub fn in_ibd(&self) -> bool {
+        self.chain_state.is_in_ibd()
+    }
+
+    /// Get the height of the blockchain tip.
+    pub fn get_height(&self) -> Result<u32, NodeError> {
+        let height = self.chain_state.get_height()?;
+        Ok(height)
+    }
+
+    /// Get the [`Node`]'s validation height.
+    pub fn get_validation_height(&self) -> Result<u32, NodeError> {
+        let height = self.chain_state.get_validation_index()?;
+        Ok(height)
+    }
+
+    /// Get the [`Node`]'s current accumulator, as a [`Stump`].
+    pub fn get_accumulator(&self) -> Result<Stump, NodeError> {
+        let stump = self.chain_state.get_acc();
+        Ok(stump)
+    }
+
+    /// Get the [`BlockHash`] associated with a height.
+    pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, NodeError> {
+        let hash = self.chain_state.get_block_hash(height)?;
+
+        Ok(hash)
+    }
+
+    /// Get information about peers the [`Node`] is currently connected to.
+    pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
+        match self.node_handle.get_peer_info().await {
+            Ok(peer_infos) => {
+                debug!("Got peer information: {:?}", peer_infos);
+                Ok(peer_infos)
+            }
+            Err(e) => {
+                error!("Error whilst receiving peer information: {}", e);
+                Err(NodeError::Receiver(e))
+            }
+        }
+    }
+
     /// Connect to a specific peer, given a [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the connection was successfully established.
@@ -259,20 +303,6 @@ impl Node {
         }
     }
 
-    /// Get information about peers the [`Node`] is currently connected to.
-    pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
-        match self.node_handle.get_peer_info().await {
-            Ok(peer_infos) => {
-                debug!("Got peer information: {:?}", peer_infos);
-                Ok(peer_infos)
-            }
-            Err(e) => {
-                error!("Error whilst receiving peer information: {}", e);
-                Err(NodeError::Receiver(e))
-            }
-        }
-    }
-
     /// Ping all of the [`Node`]'s peers.
     pub async fn ping(&self) -> Result<bool, NodeError> {
         match self.node_handle.ping().await {
@@ -289,6 +319,16 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         }
+    }
+
+    /// Fetch a [`Block`] given its [`BlockHash`].
+    ///
+    /// Since [`floresta-chain`](floresta_chain) does not persist any
+    /// [`Block`]s, these must be requested over the wire from a peer.
+    pub async fn fetch_block(&self, blockhash: BlockHash) -> Result<Option<Block>, NodeError> {
+        let block = self.node_handle.get_block(blockhash).await?;
+
+        Ok(block)
     }
 
     /// Broadcast a [`Transaction`] to the [`Node`]'s peers.
@@ -309,45 +349,5 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         }
-    }
-
-    /// Check if the [`Node`] is still performing Initial Block Download.
-    pub fn in_ibd(&self) -> bool {
-        self.chain_state.is_in_ibd()
-    }
-
-    /// Get the blockchain's tip height.
-    pub fn get_height(&self) -> Result<u32, NodeError> {
-        let height = self.chain_state.get_height()?;
-        Ok(height)
-    }
-
-    /// Get the [`Node`]'s validation height.
-    pub fn get_validation_height(&self) -> Result<u32, NodeError> {
-        let height = self.chain_state.get_validation_index()?;
-        Ok(height)
-    }
-
-    /// Get the [`Node`]'s current accumulator as a [`Stump`].
-    pub fn get_accumulator(&self) -> Result<Stump, NodeError> {
-        let stump = self.chain_state.get_acc();
-        Ok(stump)
-    }
-
-    /// Get the [`BlockHash`] associated with a height.
-    pub fn get_blockhash(&self, height: u32) -> Result<BlockHash, NodeError> {
-        let hash = self.chain_state.get_block_hash(height)?;
-
-        Ok(hash)
-    }
-
-    /// Get a [`Block`] given its [`BlockHash`].
-    ///
-    /// Since [`floresta-chain`](floresta_chain) does not
-    /// persist any [`Block`]s, these must be requested from a peer.
-    pub async fn get_block(&self, blockhash: BlockHash) -> Result<Option<Block>, NodeError> {
-        let block = self.node_handle.get_block(blockhash).await?;
-
-        Ok(block)
     }
 }
