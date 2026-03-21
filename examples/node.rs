@@ -5,7 +5,7 @@ use bdk_floresta::builder::NodeConfig;
 use bitcoin::Network;
 use tokio::runtime;
 
-const DATA_DIR: &str = "./examples/node/data/";
+const DATA_DIR: &str = "./examples/data/node/";
 const NETWORK: Network = Network::Signet;
 
 fn main() -> anyhow::Result<()> {

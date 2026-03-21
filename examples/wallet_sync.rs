@@ -15,7 +15,7 @@ use tracing::info;
 const DESC_EXTERNAL: &str = "wpkh([9cee26c8/84'/1'/0']tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/0/*)";
 const DESC_INTERNAL: &str = "wpkh([9cee26c8/84'/1'/0']tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/1/*)";
 
-const DATA_DIR: &str = "./examples/block_wallet_sync/data/";
+const DATA_DIR: &str = "./examples/data/wallet_sync/";
 const NETWORK: Network = Network::Signet;
 
 fn main() -> anyhow::Result<()> {

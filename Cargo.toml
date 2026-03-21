@@ -14,14 +14,6 @@ rust-version = "1.85.0" # MSRV
 default = ["logger"]
 logger = ["dep:tracing-appender", "dep:tracing-subscriber"]
 
-[[example]]
-name = "block_wallet_sync"
-path = "examples/block_wallet_sync/src/main.rs"
-
-[[example]]
-name = "node"
-path = "examples/node/src/main.rs"
-
 [build-dependencies]
 toml = { version = "1.0" }
 
@@ -46,7 +38,7 @@ dns-lookup = { version = "2.1.1" }
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
-anyhow = { version = "1.0" }
+anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.docs.rs]

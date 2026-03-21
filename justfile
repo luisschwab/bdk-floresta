@@ -10,8 +10,7 @@ _default:
 # Build `bdk-floresta` and examples
 build:
     cargo build --release
-    cargo build --release --manifest-path examples/node/Cargo.toml
-    cargo build --release --manifest-path examples/block_wallet_sync/Cargo.toml
+    cargo build --release --examples
 
 # Check code formatting, compilation, linting, and commit signature
 check:
@@ -35,8 +34,8 @@ check-sigs:
         echo "🔏 All commits in this branch are signed [$TOTAL/$TOTAL]"
     fi
 
-# Delete files: example, target, lockfiles
-delete item="example":
+# Delete files: data, target, lockfiles
+delete item="data":
     just _delete-{{ item }}
 
 # Generate documentation
@@ -51,7 +50,7 @@ doc-open: doc
 
 # Run an example crate
 example name="node":
-    cargo run --release --manifest-path examples/{{ name }}/Cargo.toml
+    cargo run --release --example {{ name }}
 
 # Format code
 fmt:
@@ -65,14 +64,13 @@ lock:
 msrv:
     cargo rbmt test --toolchain msrv --lock-file minimal
 
-_delete-example:
-    rm -rf examples/node/data
-    rm -rf examples/block_wallet_sync/data
+_delete-data:
+    rm -rf examples/data
 
 _delete-target:
     rm -rf target/
 
-_delete-lockfile:
+_delete-lockfiles:
     rm -f Cargo.lock
     rm -f Cargo-recent.lock
     rm -f Cargo-minimal.lock
