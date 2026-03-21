@@ -38,9 +38,11 @@ use tracing::info;
 
 use crate::error::BuilderError;
 #[cfg(feature = "logger")]
-use crate::logger::build_logger;
+use crate::logger::start_logger;
 #[cfg(feature = "logger")]
 use crate::logger::LoggerConfig;
+#[cfg(feature = "logger")]
+use crate::logger::LOG_FILE;
 use crate::updater::WalletUpdater;
 use crate::Node;
 use crate::WalletUpdate;
@@ -191,8 +193,9 @@ impl Builder {
 
         // Keep a guard for the logger during the node's lifetime.
         #[cfg(feature = "logger")]
-        let _logger_guard = build_logger(
+        let _logger_guard = start_logger(
             &self.node_configuration.data_directory,
+            Some(LOG_FILE.to_string()),
             self.logger_configuration.log_to_file,
             self.logger_configuration.log_to_stdout,
             self.logger_configuration.log_level,

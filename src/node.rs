@@ -79,7 +79,7 @@ pub struct Node {
 impl Node {
     /// Spawn and run the [`Node`].
     ///
-    /// This method will spawn a task for [`NodeInner`] and the shutdown handler task.
+    /// This method will spawn a task for the inner [`UtreexoNode`] and the shutdown handler task.
     pub async fn run(&mut self) -> Result<(), NodeError> {
         // Take the inner node to make sure `Node::run()` can only be called once.
         let inner_node = self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
