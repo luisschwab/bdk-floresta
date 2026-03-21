@@ -31,16 +31,17 @@ A `justfile` is provided for convenience. Run `just` to see available commands:
 > A Floresta-powered chain-source crate for BDK
 
 > Available recipes:
-    build                  # Build `bdk-floresta` [alias: b]
-    check                  # Check code formatting, compilation, linting, and commit signature [alias: c]
-    check-features         # Check that all feature combinations compile
-    delete item="example"  # Delete files: example, target, lockfiles [alias: d]
-    doc                    # Generate documentation
-    doc-open               # Generate and open documentation
-    example name="node"    # Run an example crate [alias: e]
-    fmt                    # Format code [alias: f]
-    lock                   # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`
-    msrv                   # Verify the library builds with MSRV (1.85.0)
+    build                 # Build `bdk-floresta` and examples [alias: b]
+    check                 # Check code formatting, compilation, linting, and commit signature [alias: c]
+    check-features        # Check that all feature combinations compile
+    check-sigs            # Checks whether all commits in this branch are signed
+    delete item="example" # Delete files: example, target, lockfiles [alias: d]
+    doc                   # Generate documentation
+    doc-open              # Generate and open documentation
+    example name="node"   # Run an example crate [alias: e]
+    fmt                   # Format code [alias: f]
+    lock                  # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`
+    msrv                  # Verify the library builds with MSRV (1.85.0)
 ```
 
 ## Architecture
@@ -67,61 +68,6 @@ The crates below are used to implement the `Node`:
 - [`floresta-compact-filters`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-compact-filters):
   Implements a storage mechanism for [Compact Block Filters](https://bips.dev/158), 
   used to figure out which blocks to request from the P2P network to update the wallet.
-
-### Builder
-
-The `Builder` is used to create a new `Node` from parameters defined in `NodeConfig`.
-
-```rust,ignore
-use bdk_floresta::builder::Builder;
-use bdk_floresta::builder::NodeConfig;
-use bitcoin::Network;
-
-let config = NodeConfig {
-    network: Network::Signet,
-    assume_utreexo: true,
-    perform_backfill: false,
-    mempool_size: 100,
-    ..Default::default()
-};
-
-let mut node = Builder::new()
-    .from_config(config)
-    .build()?;
-```
-
-### Node
-
-After building the `Node`, you can run and interact with it:
-
-```rust,ignore
-use bitcoin::Block;
-use bitcoin::BlockHash;
-use bitcoin::Network;
-use floresta_wire::rustreexo::accumulator::stump::Stump;
-
-// Run the node
-node.run().await?;
-
-// Get the the hash of block at height 250_000
-let hash: BlockHash = node.get_blockhash(250_000).unwrap();
-
-// Get the block at height 250_000, if it exists
-let block: Option<Block> = node.get_block(hash).await.unwrap();
-
-// Get the chain's height
-let height: u32 = node.get_height().unwrap();
-
-// Get the node's validated height
-let validated_height: u32 = node.get_validation_height().unwrap();
-
-// Get the node's current Utreexo accumulator
-let stump: Stump = node.get_accumulator().unwrap();
-```
-
-### Wallet Synchronization
-
-TODO (needs upstream work on [`floresta-compact-filters`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-compact-filters))
 
 ## Minimum Supported Rust Version (MSRV)
 

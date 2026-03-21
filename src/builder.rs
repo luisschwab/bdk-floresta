@@ -4,32 +4,6 @@
 //!
 //! This module holds all logic needed to instantiate a [`Node`]
 //! from default or user defined values, by way of the [`Builder`].
-//!
-//! # Building a Node
-//!
-//! ```rust,no_run
-//! use bdk_floresta::builder::Builder;
-//! use bdk_floresta::builder::NodeConfig;
-//! use bitcoin::Network;
-//!
-//! #[tokio::main]
-//! async fn main() {
-//!     // Define configuration parameters for the node
-//!     let config = NodeConfig {
-//!         network: Network::Signet,
-//!         assume_utreexo: true,
-//!         enable_powfps: true,
-//!         perform_backfill: false,
-//!         mempool_size: 300,
-//!         ..Default::default()
-//!     };
-//!
-//!     // Build the node
-//!     let mut node = Builder::new()
-//!         .from_config(config)
-//!         .build()
-//!         .unwrap();
-//! }
 
 use std::fs;
 use std::net::SocketAddr;
@@ -42,6 +16,7 @@ use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_chain::AssumeValidArg;
+use floresta_chain::BlockchainError;
 use floresta_chain::BlockchainInterface;
 use floresta_chain::ChainParams;
 use floresta_chain::ChainState;
@@ -57,6 +32,7 @@ use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 use tracing::error;
 use tracing::info;
 
@@ -123,7 +99,7 @@ impl Default for NodeConfig {
             enable_powfps: true,
             assume_valid: None,
             assume_utreexo: true,
-            perform_backfill: true,
+            perform_backfill: false,
             user_agent: env!("USER_AGENT").to_string(),
             fixed_peer: None,
             max_banscore: 100,
@@ -222,7 +198,7 @@ impl Builder {
             self.logger_configuration.log_level,
         )?;
 
-        // Create configuration for the chain store.
+        // Configure the [`FlatChainStore`].
         let chain_store_cfg = FlatChainStoreConfig::new(
             self.node_configuration
                 .data_directory
@@ -231,8 +207,7 @@ impl Builder {
                 .to_string(),
         );
 
-        // Try to load an existing [`FlatChainStore`]
-        // from the file system, or create a new one.
+        // Try to load an existing [`FlatChainStore`] from the file system, or create a new one.
         let flat_chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg.clone()) {
             Ok(store) => store,
             Err(e) => {
@@ -241,7 +216,7 @@ impl Builder {
             }
         };
 
-        // Create or load a [`ChainState`] from the [`FlatChainStore`].
+        // Load an existing [`ChainState`] from the [`FlatChainStore`], or create a new one.
         //
         // TODO: unify `ChainState::new` and `ChainState::load_chain_state`
         // upstream and change it here.
@@ -267,28 +242,28 @@ impl Builder {
         let filters = Arc::new(NetworkFilters::new(flat_filters_store));
         info!("FilterStore loaded at height {}", filters.get_height()?);
 
-        // Create an Arc'ed stop signal that keeps track of whether the [`Node`] should stop.
-        let stop_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
+        // A kill signal that keeps track of whether the [`Node`] should stop.
+        let kill_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        // Create a [`Mempool`] for the [`Node`].
+        // Create the node's mempool.
         let mempool_size_bytes = 1_000_000 * self.node_configuration.mempool_size;
         let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(mempool_size_bytes)));
 
-        // Encapsulate the actual [`UtreexoNode`] as an inner of [`Node`].
+        // Encapsulate `UtreexoNode` into an inner of `Node`.
         let node_inner = UtreexoNode::<_, RunningNode>::new(
             self.node_configuration.clone().into(),
             chain_state.clone(),
             mempool,
             Some(filters),
-            stop_signal.clone(),
+            kill_signal.clone(),
             AddressMan::new(
                 self.node_configuration.address_man_size,
                 &self.node_configuration.reachable_nets,
             ),
         )
-        .expect("Failed to instantiate the Node");
+        .map_err(|e| BuilderError::BuildInner(e.to_string()))?;
 
-        // Get a handle to interact with the [`Node`].
+        // Get a handle to interact with the `Node`.
         let node_handle: NodeInterface = node_inner.get_handle();
 
         // Set up the [`Wallet`]'s update channel, sender and receiver.
@@ -303,21 +278,18 @@ impl Builder {
             None
         };
 
-        info!("Node instantiated successfully");
-
         Ok(Node {
             config: self.node_configuration,
             node_inner: Some(node_inner),
-            node_handle,
             chain_state,
-            task_handle: None,
-            sigint_task: None,
-            stop_signal,
-            stop_receiver: None,
-            #[cfg(feature = "logger")]
-            _logger_guard,
+            node_handle,
+            cancellation_token: CancellationToken::new(),
+            kill_signal,
+            shutdown_task: None,
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),
+            #[cfg(feature = "logger")]
+            _logger_guard,
         })
     }
 }

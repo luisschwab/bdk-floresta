@@ -2,52 +2,7 @@
 
 //! # Node
 //!
-//! This module holds all the logic needed to interact with the embedded [`Node`].
-//!
-//! # Building, running, and interacting with a Node
-//!
-//! ```rust,no_run
-//! use bdk_floresta::builder::Builder;
-//! use bdk_floresta::builder::NodeConfig;
-//! use bitcoin::Block;
-//! use bitcoin::BlockHash;
-//! use bitcoin::Network;
-//! use floresta_wire::rustreexo::accumulator::stump::Stump;
-//!
-//! #[tokio::main]
-//! async fn main() {
-//!     // Define configuration parameters for the node
-//!     let config = NodeConfig {
-//!         network: Network::Signet,
-//!         assume_utreexo: true,
-//!         enable_powfps: true,
-//!         perform_backfill: false,
-//!         mempool_size: 300,
-//!         ..Default::default()
-//!     };
-//!
-//!     // Build the node
-//!     let mut node = Builder::new().from_config(config).build().unwrap();
-//!
-//!     // Run the node
-//!     node.run().await.unwrap();
-//!
-//!     // Get the hash of the block at height 250_000
-//!     let hash: BlockHash = node.get_blockhash(250_000).unwrap();
-//!
-//!     // Get the block at height 250_000, if it exists
-//!     let block: Option<Block> = node.get_block(hash).await.unwrap();
-//!
-//!     // Get the chain's height
-//!     let height: u32 = node.get_height().unwrap();
-//!
-//!     // Get the node's validated height
-//!     let validated_height: u32 = node.get_validation_height().unwrap();
-//!
-//!     // Get the node's current Utreexo accumulator
-//!     let stump: Stump = node.get_accumulator().unwrap();
-//! }
-//! ```
+//! This module holds all the logic needed to interact with the [`Node`].
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -73,6 +28,7 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
@@ -84,7 +40,7 @@ use crate::builder::NodeConfig;
 use crate::error::NodeError;
 use crate::updater::WalletUpdate;
 
-/// How long to wait for the [`Node`]'s shutdown task before aborting, in seconds.
+/// Timeout for the [`Node`]'s shutdown task, in seconds.
 const SHUTDOWN_TIMEOUT: u64 = 15;
 
 /// Type alias for the [`Node`]'s inner [`UtreexoNode`].
@@ -96,149 +52,118 @@ pub struct Node {
     pub(crate) config: NodeConfig,
     /// The inner, underlying [`UtreexoNode`].
     pub(crate) node_inner: Option<NodeInner>,
-    /// A handle used to interact with the [`UtreexoNode`].
-    pub(crate) node_handle: NodeInterface,
     /// The [`Node`]'s blockchain state.
     pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
-    /// Handle to the spawned [`Node`] task, used for graceful shutdown coordination.
-    pub(crate) task_handle: Option<JoinHandle<()>>,
-    /// Handle to the `SIGINT` handler task, used to detect
-    /// a `SIGINT` (CTRL-C) and set the `stop_signal` to true.
-    pub(crate) sigint_task: Option<JoinHandle<()>>,
-    /// Signal used by the [`Node`] to check if it
-    /// should stop operations and perform a graceful shutdown.
-    pub(crate) stop_signal: Arc<RwLock<bool>>,
-    /// Receiver for shutdown completion notification from the [`Node`]'s task.
-    pub(crate) stop_receiver: Option<oneshot::Receiver<()>>,
-    /// A guard that ensures the logger remains active for the [`Node`]'s lifetime.
-    #[cfg(feature = "logger")]
-    pub(crate) _logger_guard: Option<WorkerGuard>,
+    /// A handle used to interact with the [`UtreexoNode`].
+    pub(crate) node_handle: NodeInterface,
+    /// A cancellation token used to signal shutdown to all tasks,
+    /// Triggered via `SIGINT` or [`Node::shutdown()`].
+    pub(crate) cancellation_token: CancellationToken,
+    /// A kill signal shared with the inner [`UtreexoNode`],
+    /// set to `true` to instruct it to stop processing and exit.
+    pub(crate) kill_signal: Arc<RwLock<bool>>,
+    /// Handle to the background task that drives graceful shutdown:
+    /// sets the kill signal, waits for the inner node to stop, and flushes
+    /// the chain state to disk. Awaited by [`Node::shutdown()`] and [`Node::cancelled()`].
+    pub(crate) shutdown_task: Option<JoinHandle<()>>,
     /// A [`Wallet`] that will receive updates from the [`Node`].
     pub wallet: Option<Arc<RwLock<Wallet>>>,
     /// Receiver for [`WalletUpdate`]s that come from
     /// the [`Node`] and should be applied to the [`Wallet`].
     pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
+    /// A guard that ensures the logger remains active for the [`Node`]'s lifetime.
+    #[cfg(feature = "logger")]
+    pub(crate) _logger_guard: Option<WorkerGuard>,
 }
 
 impl Node {
-    /// Spawn the [`Node`]'s background tasks and run it.
+    /// Spawn and run the [`Node`].
     ///
-    /// This method will setup the [`Node`]'s shutdown notification channel,
-    /// spawn the [`Node`]'s tokio task, and the [`Node`]'s `SIGINT` handler task.
+    /// This method will spawn a task for [`NodeInner`] and the shutdown handler task.
     pub async fn run(&mut self) -> Result<(), NodeError> {
-        // Take the [`Node`]'s inner. This asserts that [`Node::run()`] can only be called once.
+        // Take the inner node to make sure `Node::run()` can only be called once.
         let inner_node = self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
 
-        // Create channel for shutdown notifications.
-        let (sender, receiver) = oneshot::channel();
-        self.stop_receiver = Some(receiver);
+        // Create a channel to carry shutdown notifications.
+        let (node_stopped_tx, node_stopped_rx) = oneshot::channel::<()>();
+        // Spawn a task which will run the node.
+        let node_task: JoinHandle<()> = tokio::task::spawn(inner_node.run(node_stopped_tx));
 
-        // Spawn the [`Node`]'s task.
-        let node_task: JoinHandle<()> = tokio::task::spawn(inner_node.run(sender));
-        self.task_handle = Some(node_task);
-        debug!("Node task spawned successfully");
+        let cancellation_token = self.cancellation_token.clone();
+        let kill_signal = self.kill_signal.clone();
+        let chain_state = self.chain_state.clone();
 
-        // Spawn a task for the `SIGINT` handler.
-        let sigint_task: JoinHandle<()> = {
-            let stop_signal: Arc<RwLock<bool>> = self.stop_signal.clone();
+        // Spawn a task that listens for SIGINT or `Node::shutdown` and waits for tasks to complete
+        let shutdown_task = tokio::task::spawn(async move {
+            tokio::select! {
+                _ = tokio::signal::ctrl_c() => { info!("Shutting down"); }
+                _ = cancellation_token.cancelled() => { info!("Shutting down"); }
+            }
+            *kill_signal.write().await = true;
 
-            tokio::task::spawn(async move {
-                tokio::signal::ctrl_c()
-                    .await
-                    .expect("Failed to initialize SIGINT handler");
+            let timeout = Duration::from_secs(SHUTDOWN_TIMEOUT);
+            Self::await_with_timeout(node_stopped_rx, timeout).await;
+            Self::join_with_timeout(node_task, timeout).await;
 
-                info!("Received SIGINT, initiating graceful shutdown");
+            if let Err(e) = chain_state.flush() {
+                error!("Error flushing chain state to the file system: {e:?}");
+            }
 
-                // Set `stop_signal` to trigger a graceful shutdown.
-                *stop_signal.write().await = true;
-            })
-        };
-        self.sigint_task = Some(sigint_task);
+            cancellation_token.cancel();
+            info!("Shutdown complete");
+        });
 
+        self.shutdown_task = Some(shutdown_task);
         Ok(())
     }
 
-    /// Set the `stop_signal` to trigger a graceful shutdown.
-    async fn stop(&self) {
-        debug!("Setting the stop signal to true");
-        *self.stop_signal.write().await = true;
+    /// Await the [`oneshot::Receiver`] for a set timeout.
+    async fn await_with_timeout(rx: oneshot::Receiver<()>, timeout: Duration) {
+        match tokio::time::timeout(timeout, rx).await {
+            Ok(Ok(())) => {}
+            Ok(Err(_)) => warn!("Shutdown channel closed without sending"),
+            Err(_) => error!("Shutdown channel timed out after {SHUTDOWN_TIMEOUT} seconds"),
+        }
     }
 
-    /// Wait for the [`Node`] to finish its routines before shutting down.
-    async fn wait_shutdown(mut self) -> Result<(), NodeError> {
-        // Wait for up to `SHUTDOWN_TIMEOUT` seconds for the [`Node`]
-        // to send a notification of shutdown completion through the `stop_receiver`.
-        if let Some(receiver) = self.stop_receiver.take() {
-            match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT), receiver).await {
-                Ok(Ok(())) => {
-                    info!("Node signaled shutdown completion");
-                }
-                Ok(Err(_)) => {
-                    warn!("Node shutdown channel closed without sending");
-                }
-                Err(_) => {
-                    error!("Node shutdown notification timed out after {SHUTDOWN_TIMEOUT} seconds");
-                }
-            }
+    /// Await the [`JoinHandle`] task for a timeout.
+    async fn join_with_timeout(task: JoinHandle<()>, timeout: Duration) {
+        match tokio::time::timeout(timeout, task).await {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => error!("Node task failed during shutdown: {e:?}"),
+            Err(_) => warn!("Node task join timed out after {SHUTDOWN_TIMEOUT} seconds"),
         }
+    }
 
-        if let Some(task) = self.task_handle.take() {
-            match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT), task).await {
-                Ok(Ok(_)) => {
-                    info!("Node task completed successfully");
-                }
-                Ok(Err(e)) if e.is_panic() => {
-                    error!("Node task panicked during shutdown: {:?}", e);
-                    return Err(NodeError::Shutdown);
-                }
-                Ok(Err(e)) => {
-                    error!("Node task failed: {:?}", e);
-                    return Err(NodeError::Shutdown);
-                }
-                Err(_) => {
-                    warn!("Node task join timed out after {SHUTDOWN_TIMEOUT} seconds");
-                }
-            }
+    /// Programatically request the [node](`Node`) to shutdown.
+    pub async fn shutdown(&mut self) -> Result<(), NodeError> {
+        self.cancellation_token.cancel();
+        if let Some(task) = self.shutdown_task.take() {
+            let _ = task.await;
         }
-
-        // Flush the chainstate to disk.
-        let _ = self.flush();
-
-        // Stop the `SIGINT` listener task.
-        if let Some(sigint) = self.sigint_task.take() {
-            sigint.abort();
-        }
-
-        info!("Shutdown complete");
         Ok(())
     }
 
-    /// Signal the [`Node`] to perform a graceful shutdown.
-    pub async fn shutdown(self) -> Result<(), NodeError> {
-        self.stop().await;
-        self.wait_shutdown().await
-    }
-
-    /// Check if the [`Node`] should stop based on the `stop_signal`'s value.
+    /// Suspend the caller until the [`Node`] has completed shutdown.
     ///
-    /// A separate thread should be created to continuously perform this check.
-    pub async fn should_stop(&self) -> bool {
-        *self.stop_signal.read().await
+    /// Shutdown must be triggered externally, either by
+    /// sending `SIGINT` or by calling [`Node::shutdown()`].
+    pub async fn cancelled(&mut self) {
+        if let Some(task) = self.shutdown_task.take() {
+            let _ = task.await;
+        }
     }
 
-    /// Flush the [`Node`]'s state to the file system.
+    /// Flush the [`Node`]'s [chainstate](ChainState) to the file system.
     pub fn flush(&mut self) -> Result<(), NodeError> {
-        debug!("Flushing state to disk...");
         self.chain_state.flush().map_err(|e| {
-            error!("Failed to persist chain to disk: {:?}", e);
+            error!("Error flushing chain state to the file system: {e:?}");
             match e {
                 BlockchainError::Database(e) => NodeError::Persistence(Arc::new(e)),
                 BlockchainError::Io(e) => NodeError::Io(Arc::new(e)),
                 e => NodeError::Blockchain(Arc::new(e)),
             }
         })?;
-        debug!("Successfully persisted chain state to disk");
-
         Ok(())
     }
 

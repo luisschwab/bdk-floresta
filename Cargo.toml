@@ -8,7 +8,7 @@ repository = "https://github.com/luisschwab/bdk-floresta"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.85.0"
+rust-version = "1.85.0" # MSRV
 
 [features]
 default = ["logger"]
@@ -37,6 +37,7 @@ tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }
 tracing-appender = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "chrono", "env-filter"], optional = true }
+tokio-util = { version = "0.7.18" }
 
 # These pins are needed for `Cargo-minimal.lock`:
 lazy_static = { version = "1.5.0" } # sharded-slab = "0.1.7"

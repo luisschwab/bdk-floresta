@@ -33,6 +33,9 @@ pub enum BuilderError {
 
     #[error("Compact Block Filter error: {0:?}")]
     CompactBlockFilter(Arc<floresta_compact_filters::IterableFilterStoreError>),
+
+    #[error("Failed to build the inner node: {0}")]
+    BuildInner(String),
 }
 
 impl From<std::io::Error> for BuilderError {

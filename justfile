@@ -7,9 +7,11 @@ alias f := fmt
 _default:
     @just --list --list-heading $'> bdk-floresta\n> A Floresta-powered chain-source crate for BDK\n\n> Available recipes:\n'
 
-# Build `bdk-floresta`
+# Build `bdk-floresta` and examples
 build:
-    cargo build
+    cargo build --release
+    cargo build --release --manifest-path examples/node/Cargo.toml
+    cargo build --release --manifest-path examples/block_wallet_sync/Cargo.toml
 
 # Check code formatting, compilation, linting, and commit signature
 check:
