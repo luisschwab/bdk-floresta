@@ -25,6 +25,7 @@ use floresta_compact_filters::network_filters::NetworkFilters;
 use floresta_mempool::Mempool;
 use floresta_wire::address_man::AddressMan;
 use floresta_wire::address_man::ReachableNetworks;
+use floresta_wire::address_man::SUPPORTED_NETWORKS;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
@@ -110,7 +111,7 @@ impl Default for NodeConfig {
             allow_p2pv1_fallback: true,
             mempool_size: 100,
             address_man_size: None,
-            reachable_nets: vec![ReachableNetworks::IPv4, ReachableNetworks::IPv6],
+            reachable_nets: SUPPORTED_NETWORKS.to_vec(),
         }
     }
 }

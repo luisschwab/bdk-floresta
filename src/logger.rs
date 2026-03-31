@@ -94,12 +94,12 @@ impl Default for LoggerConfig {
 /// At `INFO` level and above, well-known `floresta_*` crate prefixes are
 /// replaced with short aliases for readability:
 ///
-/// | Module prefix                  | Alias     |
+/// | Module prefix                 | Alias     |
 /// |-------------------------------|-----------|
-/// | `floresta_wire`               | `wire`    |
 /// | `floresta_chain`              | `chain`   |
 /// | `floresta_compact_filters`    | `filters` |
 /// | `floresta_mempool`            | `mempool` |
+/// | `floresta_wire`               | `wire`    |
 ///
 /// At `DEBUG` level and below, the full module path is preserved.
 ///
@@ -126,14 +126,14 @@ impl ShortTargetFormatter {
     ///
     /// Returns the original target unchanged if no alias is defined for it.
     fn short_target(target: &str) -> &str {
-        if target.starts_with("floresta_wire") {
-            "wire"
-        } else if target.starts_with("floresta_chain") {
-            "chain"
+        if target.starts_with("floresta_chain") {
+            "floresta::chain"
         } else if target.starts_with("floresta_compact_filters") {
-            "filters"
+            "floresta::compact_filters"
         } else if target.starts_with("floresta_mempool") {
-            "mempool"
+            "floresta::mempool"
+        } else if target.starts_with("floresta_wire") {
+            "floresta::wire"
         } else {
             target
         }

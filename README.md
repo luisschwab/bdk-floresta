@@ -23,6 +23,13 @@ making it possible for every wallet to have it's own node.
 
 ## Developing
 
+This project uses [`cargo-rbmt`](https://github.com/rust-bitcoin/rust-bitcoin-maintainer-tools/tree/master/cargo-rbmt)
+to manage everything related to `cargo`, such as formatting, linting, testing and CI. To install it, run:
+
+```console
+% cargo install cargo-rbmt
+```
+
 A `justfile` is provided for convenience. Run `just` to see available commands:
 
 ```console
@@ -56,24 +63,24 @@ from a blockchain scan using [Compact Block Filters](https://bips.dev/158).
 
 The crates below are used to implement the `Node`:
 
-- [`floresta-wire`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-wire):
-  Implements all of the `Node`'s peer-to-peer logic.
-
 - [`floresta-chain`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-chain):
   Implements the `Node`'s chain state, and validates blocks and transactions.
-
-- [`floresta-mempool`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-mempool):
-  Implements the `Node`'s mempool, used to relay and cache transactions, as well as generating fee estimates.
 
 - [`floresta-compact-filters`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-compact-filters):
   Implements a storage mechanism for [Compact Block Filters](https://bips.dev/158), 
   used to figure out which blocks to request from the P2P network to update the wallet.
 
+- [`floresta-mempool`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-mempool):
+  Implements the `Node`'s mempool, used to relay and cache transactions, as well as generating fee estimates.
+
+- [`floresta-wire`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-wire):
+  Implements all of the `Node`'s peer-to-peer logic.
+
 ## Minimum Supported Rust Version (MSRV)
 
 This library should compile with any combination of features on Rust 1.85.0.
 
-Use `Cargo-minimal.lock` to build the MSRV by copying to `Cargo.lock` and building.
+To build with the MSRV toolchain, copy `Cargo-minimal.lock` to `Cargo.lock`.
 
 ## License
 
