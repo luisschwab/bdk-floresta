@@ -1,8 +1,8 @@
+name: Rust CI
 on: [push, pull_request]
-name: CI
+permissions: {}
 env:
   CARGO_TERM_COLOR: always
-permissions: {}
 
 jobs:
   Test:
@@ -18,11 +18,16 @@ jobs:
           # Exclude MSRV toolchain + `Cargo-recent.lock`
           - toolchain: msrv
             dep: recent
+
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@64715bab0d6fa1f3ebd6f9be336c4c5089bb5eb9
+
+      - name: Setup cargo-rbmt
+        uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
+
       - name: Run tests
         run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lock-file ${{ matrix.dep }}
 
@@ -34,10 +39,15 @@ jobs:
       fail-fast: false
       matrix:
         task: [lint, docs]
+
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@64715bab0d6fa1f3ebd6f9be336c4c5089bb5eb9
+
+      - name: Setup cargo-rbmt
+        uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
+
       - name: Run ${{ matrix.task }}
         run: cargo rbmt ${{ matrix.task }}
