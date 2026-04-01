@@ -1,24 +1,23 @@
+name: Signed Commits
 on: [push, pull_request]
-name: Signatures
 permissions: {}
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   Signatures:
-    name: Check if Commits are Signed
+    name: Assert all commits are signed
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Check Signature Status
-        run: |
-          TOTAL=$(git log --pretty='tformat:%H' origin/master..HEAD | wc -l | tr -d ' ')
-          UNSIGNED=$(git log --pretty='tformat:%H %G?' origin/master..HEAD | grep " N$" | wc -l | tr -d ' ')
-          if [ "$UNSIGNED" -gt 0 ]; then
-            echo "⚠️ Unsigned commits in this branch [$UNSIGNED/$TOTAL]"
-            exit 1
-          else
-            echo "🔏 All commits in this branch are signed [$TOTAL/$TOTAL]"
-          fi
+
+      - name: Setup just
+        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Check commit signatures
+        run: just check-sigs
