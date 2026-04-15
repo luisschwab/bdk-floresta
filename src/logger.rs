@@ -8,10 +8,12 @@
 //! ## Behavior
 //!
 //! - **Log level**: controlled by the `RUST_LOG` environment variable, falling back to
-//!   [`LoggerConfig::log_level`] if unset.
-//! - **Target formatting**: at `INFO` and above, module paths are shortened to a human-friendly
-//!   prefix (e.g. `floresta_wire::p2p_wire::node` → `wire`). At `DEBUG` and below, the full module
-//!   path is shown.
+//!   [`Logger::log_level`] if unset.
+//! - **Target formatting**: at `INFO` and above, well-known `floresta_*` module paths are shortened
+//!   to human-friendly aliases (e.g. `floresta_wire::p2p_wire::node` → `floresta::wire`). At
+//!   `DEBUG` and below, the full module path is preserved.
+//! - **Timestamp**: at `INFO` and above, timestamps are formatted as `YYYY-MM-DD HH:MM:SS`. At
+//!   `DEBUG` and below, milliseconds are included: `YYYY-MM-DD HH:MM:SS.mmm`.
 //! - **Color**: ANSI colors are applied when writing to an interactive terminal, and stripped when
 //!   writing to a file.
 //! - **Output**: events can be emitted to `stdout`, a log file, or both.
@@ -19,25 +21,34 @@
 //! ## Example
 //!
 //! ```rust,ignore
-//! let _guard = start_logger(
-//!     &data_dir,
-//!     None,
-//!     true,  // log to stdout
-//!     true,  // log to file
-//!     Level::INFO,
-//! )?;
+//! use bdk_floresta::logger::Logger;
+//! use tracing::Level;
+//!
+//! // stdout only
+//! Logger::default().init()?;
+//!
+//! // stdout + file
+//! let _guard = Logger {
+//!     log_level: Level::DEBUG,
+//!     log_to_stdout: true,
+//!     log_file: Some("./data/debug.log".into()),
+//! }.init()?;
 //! ```
 //!
-//! The returned [`WorkerGuard`] must be kept alive for the duration of the
-//! program; dropping it will flush and stop the background logging thread.
+//! When logging to a file, the returned [`WorkerGuard`] must be kept alive
+//! for the duration of the program — dropping it will flush and shut down
+//! the background file-writing thread.
 //!
 //! [`tracing-appender`]: https://crates.io/crates/tracing-appender
 //! [`tracing-subscriber`]: https://crates.io/crates/tracing-subscriber
 
 use core::fmt;
+use std::ffi::OsStr;
 use std::fs;
 use std::io;
+use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -56,37 +67,46 @@ use tracing_subscriber::Layer;
 
 use crate::error::BuilderError;
 
-/// The default filename used for the log file when none is specified.
+/// The file which logging events are written to by default.
 pub const LOG_FILE: &str = "debug.log";
 
-/// Configuration for the logger.
+/// The string used to format the timestamp, via [`ChronoLocal`].
 ///
-/// Controls the log level and output destinations. Can be passed to the
-/// [`Builder`](crate::Builder) or used directly with [`start_logger`].
-pub struct LoggerConfig {
-    /// The minimum log level to emit. Can be overridden at runtime via `RUST_LOG`.
-    pub log_level: Level,
-    /// Whether to emit log events to `stdout`.
-    pub log_to_stdout: bool,
-    /// Whether to emit log events to a file.
-    pub log_to_file: bool,
-}
+/// Format: `YYYY-MM-DD HH:mm:ss`
+pub(crate) const CHRONO_FORMATTER: &str = "%Y-%m-%d %H:%M:%S";
 
-impl Default for LoggerConfig {
-    fn default() -> Self {
-        Self {
-            log_level: Level::INFO,
-            log_to_stdout: true,
-            log_to_file: true,
-        }
-    }
-}
+/// The string used to format the timestamp when
+/// the log level [`Level::DEBUG`] or higher, via [`ChronoLocal`].
+///
+/// Format: `YYYY-MM-DD HH:mm:ss.sss`
+pub(crate) const CHRONO_FORMATTER_DEBUG: &str = "%Y-%m-%d %H:%M:%S%.3f";
+
+/// ANSI escape code to begin dimmed text.
+pub(crate) const ANSI_DIM: &str = "\x1b[2m";
+
+/// ANSI escape code to reset all formatting.
+pub(crate) const ANSI_RESET: &str = "\x1b[0m";
+
+/// Colored `ERROR` in bright red.
+pub(crate) const COLORED_ERROR: &str = "\x1b[0;31mERROR\x1b[0m";
+
+/// Colored `WARN` in bright yellow
+pub(crate) const COLORED_WARN: &str = "\x1b[0;33m WARN\x1b[0m";
+
+/// Colored `INFO` in dim green.
+pub(crate) const COLORED_INFO: &str = "\x1b[0;32m INFO\x1b[0m";
+
+/// Colored `DEBUG` in dim blue.
+pub(crate) const COLORED_DEBUG: &str = "\x1b[0;34mDEBUG\x1b[0m";
+
+/// Colored `TRACE` in dim magenta.
+pub(crate) const COLORED_TRACE: &str = "\x1b[0;35mTRACE\x1b[0m";
 
 /// A custom [`FormatEvent`] implementation for [`tracing-subscriber`]'s `fmt` layer.
 ///
 /// Formats log events as:
 /// ```text
-/// [YYYY-MM-DD HH:MM:SS] LEVEL target: message
+/// YYYY-MM-DD HH:MM:SS LEVEL target: message
 /// ```
 ///
 /// ## Target shortening
@@ -116,12 +136,27 @@ pub struct ShortTargetFormatter {
 impl Default for ShortTargetFormatter {
     fn default() -> Self {
         Self {
-            timer: ChronoLocal::new("[%Y-%m-%d %H:%M:%S]".to_string()),
+            timer: ChronoLocal::new(CHRONO_FORMATTER.to_string()),
         }
     }
 }
 
 impl ShortTargetFormatter {
+    /// Create a new [`ShortTargetFormatter`] for the given [`Level`].
+    ///
+    /// At [`Level::DEBUG`] and below, the timestamp will include milliseconds.
+    pub fn new(level: Level) -> Self {
+        let time_fmt = if level >= Level::DEBUG {
+            CHRONO_FORMATTER_DEBUG
+        } else {
+            CHRONO_FORMATTER
+        };
+
+        Self {
+            timer: ChronoLocal::new(time_fmt.to_string()),
+        }
+    }
+
     /// Maps a full module path to a short human-friendly alias.
     ///
     /// Returns the original target unchanged if no alias is defined for it.
@@ -151,113 +186,163 @@ where
         mut writer: Writer<'_>,
         event: &tracing::Event<'_>,
     ) -> fmt::Result {
-        // Timestamp (ANSI colored if the TTY supports it).
-        if writer.has_ansi_escapes() {
-            write!(writer, "\x1b[2m")?;
+        let event_metadata = event.metadata();
+
+        // Check if the `writer` supports ANSI escape codes.
+        let writer_supports_ansi_escaping = writer.has_ansi_escapes();
+
+        // Timestamp (dimmed if the `tty` supports it).
+        if writer_supports_ansi_escaping {
+            write!(writer, "{}", ANSI_DIM)?;
         }
         self.timer.format_time(&mut writer)?;
-        if writer.has_ansi_escapes() {
-            write!(writer, "\x1b[0m ")?;
+        if writer_supports_ansi_escaping {
+            write!(writer, "{} ", ANSI_RESET)?;
         } else {
             write!(writer, " ")?;
         }
 
-        // Level (ANSI colored if the TTY supports it).
-        let meta = event.metadata();
-        if writer.has_ansi_escapes() {
-            let colored_level = match *meta.level() {
-                Level::ERROR => "\x1b[0;31mERROR\x1b[0m", // bold red
-                Level::WARN => "\x1b[0;33m WARN\x1b[0m",  // bold yellow
-                Level::INFO => "\x1b[0;32m INFO\x1b[0m",  // dimmed green
-                Level::DEBUG => "\x1b[0;34mDEBUG\x1b[0m", // dimmed blue
-                Level::TRACE => "\x1b[0;35mTRACE\x1b[0m", // dimmed magenta
+        // Level (colored if the `tty` supports it).
+        if writer_supports_ansi_escaping {
+            let colored_level = match *event_metadata.level() {
+                Level::ERROR => COLORED_ERROR,
+                Level::WARN => COLORED_WARN,
+                Level::INFO => COLORED_INFO,
+                Level::DEBUG => COLORED_DEBUG,
+                Level::TRACE => COLORED_TRACE,
             };
             write!(writer, "{} ", colored_level)?;
         } else {
-            write!(writer, "{:>5} ", meta.level())?;
+            write!(writer, "{:>5} ", event_metadata.level())?;
         }
 
-        // Target (ANSI colored if the TTY supports it).
-        let meta = event.metadata();
+        // Target (dimmed if the TTY supports it).
         let target = if tracing::enabled!(Level::DEBUG) {
-            meta.target()
+            event_metadata.target()
         } else {
-            Self::short_target(meta.target())
+            Self::short_target(event_metadata.target())
         };
-        if writer.has_ansi_escapes() {
-            write!(writer, "\x1b[2m{}\x1b[0m: ", target)?;
+        if writer_supports_ansi_escaping {
+            write!(writer, "{}{}{}: ", ANSI_DIM, target, ANSI_RESET)?;
         } else {
             write!(writer, "{}: ", target)?;
         }
 
-        // Log Message and Fields.
+        // Log message and fields.
         ctx.format_fields(writer.by_ref(), event)?;
         writeln!(writer)
     }
 }
 
-/// Start a logger that consumes tracing events and outputs them to `stdout` and/or a file.
+/// Logger configuration for the [`Node`](crate::Node).
 ///
-/// The log level is read from the `RUST_LOG` environment variable if set,
-/// otherwise `log_level` is used as the default.
+/// Controls the log level and output destinations. Can be passed to the
+/// [`Builder`](crate::Builder) via [`Builder::with_logger`](crate::Builder::with_logger),
+/// or used directly by calling [`Logger::init`].
 ///
-/// # Returns
+/// # Example
 ///
-/// Returns a [`WorkerGuard`] that must be kept alive for the duration of the
-/// program. Dropping it will flush and shut down the background logging thread.
+/// ```rust,ignore
+/// use bdk_floresta::logger::Logger;
+/// use tracing::Level;
 ///
-/// # Errors
-///
-/// Returns a [`BuilderError`] if the log file cannot be created or opened.
-pub fn start_logger(
-    data_directory: &PathBuf,
-    log_file: Option<String>,
-    log_to_stdout: bool,
-    log_to_file: bool,
-    log_level: Level,
-) -> Result<Option<WorkerGuard>, BuilderError> {
-    let make_filter = || {
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level.to_string()))
-    };
+/// let _guard = Logger {
+///     log_level: Level::DEBUG,
+///     log_to_stdout: true,
+///     log_file: Some("./data/debug.log".into()),
+/// }.init()?;
+/// ```
+#[derive(Clone, Debug)]
+pub struct Logger {
+    /// The minimum log level to emit. Can be overridden at runtime via `RUST_LOG`.
+    pub log_level: Level,
+    /// Whether to emit log events to `stdout`.
+    pub log_to_stdout: bool,
+    /// The file where logging events should be written to.
+    ///
+    /// If `None`, log events will not be written to a file.
+    pub log_file: Option<PathBuf>,
+}
 
-    // Formatter for events destined to `stdout`.
-    let ansi_tty = io::IsTerminal::is_terminal(&io::stdout());
-    let fmt_layer_stdout = log_to_stdout.then(|| {
-        layer()
-            .with_writer(io::stdout)
-            .with_ansi(ansi_tty)
-            .event_format(ShortTargetFormatter::default())
-            .with_filter(make_filter())
-    });
-
-    let log_file = log_file.unwrap_or(LOG_FILE.to_string());
-
-    // Validate the log file path.
-    if log_to_file {
-        let file_path = format!("{}/{}", data_directory.to_string_lossy(), log_file);
-        fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&file_path)?;
+impl Default for Logger {
+    /// Returns a [`Logger`] that emits [`Level::INFO`] events to `stdout` only.
+    fn default() -> Self {
+        Self {
+            log_level: Level::INFO,
+            log_to_stdout: true,
+            log_file: None,
+        }
     }
+}
 
-    // Formatter for events destined to file.
-    let mut guard = None;
-    let fmt_layer_logfile = log_to_file.then(|| {
-        let file_appender = tracing_appender::rolling::never(data_directory, log_file);
-        let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
-        guard = Some(file_guard);
-        layer()
-            .with_writer(non_blocking)
-            .with_ansi(false)
-            .event_format(ShortTargetFormatter::default())
-            .with_filter(make_filter())
-    });
+impl Logger {
+    /// Initialize a global tracing subscriber with this configuration.
+    ///
+    /// The log level is read from the `RUST_LOG` environment variable,
+    /// if set. Otherwise, [`Logger::log_level`] is used as the default.
+    ///
+    /// If a global subscriber is already registered, this will
+    ///
+    /// # Returns
+    ///
+    /// Returns an `Option<`[`WorkerGuard`]`>` which is `Some` only when
+    /// [`Logger::log_file`] is set. The guard must be kept alive for the
+    /// duration of the program — dropping it will flush and shut down the
+    /// background file-writing thread.
+    ///
+    /// # Errors
+    ///
+    /// - Returns [`BuilderError::LoggerAlreadySetup`] if a global tracing subscriber has already
+    ///   been registered.
+    /// - Returns [`BuilderError::LoggerSetup`] if the log file cannot be created or opened.
+    pub fn init(self) -> Result<Option<WorkerGuard>, BuilderError> {
+        let make_filter = || {
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new(self.log_level.to_string()))
+        };
 
-    tracing_subscriber::registry()
-        .with(fmt_layer_stdout)
-        .with(fmt_layer_logfile)
-        .init();
+        // Formatter for events destined to `stdout`.
+        let ansi_tty = io::IsTerminal::is_terminal(&io::stdout());
+        let fmt_layer_stdout = self.log_to_stdout.then(|| {
+            layer()
+                .with_writer(io::stdout)
+                .with_ansi(ansi_tty)
+                .event_format(ShortTargetFormatter::new(self.log_level))
+                .with_filter(make_filter())
+        });
 
-    Ok(guard)
+        // Formatter for events destined to file.
+        let mut guard = None;
+        let fmt_layer_logfile = self
+            .log_file
+            .map(|log_file| -> Result<_, BuilderError> {
+                // Validate the log file path before handing it to the `tracing_appender`.
+                fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&log_file)
+                    .map_err(|e| BuilderError::LoggerSetup(Arc::new(e)))?;
+
+                let file_appender = tracing_appender::rolling::never(
+                    log_file.parent().unwrap_or(Path::new(".")),
+                    log_file.file_name().unwrap_or(OsStr::new(LOG_FILE)),
+                );
+                let (non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
+                guard = Some(file_guard);
+                Ok(layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false)
+                    .event_format(ShortTargetFormatter::new(self.log_level))
+                    .with_filter(make_filter()))
+            })
+            .transpose()?;
+
+        tracing_subscriber::registry()
+            .with(fmt_layer_stdout)
+            .with(fmt_layer_logfile)
+            .try_init()
+            .map_err(|_| BuilderError::LoggerAlreadySetup)?;
+
+        Ok(guard)
+    }
 }

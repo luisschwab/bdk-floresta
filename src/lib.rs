@@ -22,6 +22,9 @@ pub mod logger;
 pub mod node;
 pub mod updater;
 
+#[cfg(feature = "logger")]
+pub use tracing::Level;
+
 pub use crate::builder::Builder;
 pub use crate::error::BuilderError;
 pub use crate::error::NodeError;

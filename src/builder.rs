@@ -39,11 +39,7 @@ use tracing::info;
 
 use crate::error::BuilderError;
 #[cfg(feature = "logger")]
-use crate::logger::start_logger;
-#[cfg(feature = "logger")]
-use crate::logger::LoggerConfig;
-#[cfg(feature = "logger")]
-use crate::logger::LOG_FILE;
+use crate::logger::Logger;
 use crate::updater::WalletUpdater;
 use crate::Node;
 use crate::WalletUpdate;
@@ -155,7 +151,7 @@ pub struct Builder {
     pub node_configuration: NodeConfig,
     /// Configuration for building the tracing subscriber logger.
     #[cfg(feature = "logger")]
-    pub logger_configuration: LoggerConfig,
+    pub logger: Option<Logger>,
     /// A [`Wallet`] that will receive updates from the [`Node`].
     pub wallet: Option<Wallet>,
 }
@@ -169,6 +165,12 @@ impl Builder {
     /// Instantiate a [`Builder`] from a [`NodeConfig`].
     pub fn from_config(mut self, node_configuration: NodeConfig) -> Self {
         self.node_configuration = node_configuration;
+        self
+    }
+
+    #[cfg(feature = "logger")]
+    pub fn with_logger(mut self, logger: Logger) -> Self {
+        self.logger = Some(logger);
         self
     }
 
@@ -192,15 +194,13 @@ impl Builder {
         // Create the data directory for node and wallet data.
         fs::create_dir_all(&self.node_configuration.data_directory)?;
 
-        // Keep a guard for the logger during the node's lifetime.
+        // Init the logger, and keep a guard if logging to a file is enabled.
         #[cfg(feature = "logger")]
-        let _logger_guard = start_logger(
-            &self.node_configuration.data_directory,
-            Some(LOG_FILE.to_string()),
-            self.logger_configuration.log_to_file,
-            self.logger_configuration.log_to_stdout,
-            self.logger_configuration.log_level,
-        )?;
+        let _log_guard = if let Some(logger) = self.logger {
+            logger.init()?
+        } else {
+            None
+        };
 
         // Configure the [`FlatChainStore`].
         let chain_store_cfg = FlatChainStoreConfig::new(
@@ -293,7 +293,7 @@ impl Builder {
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),
             #[cfg(feature = "logger")]
-            _logger_guard,
+            _log_guard,
         })
     }
 }
