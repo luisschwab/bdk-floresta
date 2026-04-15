@@ -73,7 +73,7 @@ pub struct Node {
     pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
     /// A guard that ensures the logger remains active for the [`Node`]'s lifetime.
     #[cfg(feature = "logger")]
-    pub(crate) _logger_guard: Option<WorkerGuard>,
+    pub(crate) _log_guard: Option<WorkerGuard>,
 }
 
 impl Node {

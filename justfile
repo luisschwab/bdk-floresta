@@ -14,6 +14,7 @@ build:
 
 # Check code formatting, compilation, linting, and commit signature
 check:
+    cargo rbmt fmt --check
     cargo rbmt lint
     cargo rbmt docs
     just check-sigs
@@ -24,15 +25,7 @@ check-features:
 
 # Checks whether all commits in this branch are signed
 check-sigs:
-    #!/usr/bin/env bash
-    TOTAL=$(git log --pretty='tformat:%H' origin/master..HEAD | wc -l | tr -d ' ')
-    UNSIGNED=$(git log --pretty='tformat:%H %G?' origin/master..HEAD | grep " N$" | wc -l | tr -d ' ')
-    if [ "$UNSIGNED" -gt 0 ]; then
-        echo "⚠️ Unsigned commits in this branch [$UNSIGNED/$TOTAL]"
-        exit 1
-    else
-        echo "🔏 All commits in this branch are signed [$TOTAL/$TOTAL]"
-    fi
+    bash contrib/check-signatures.sh
 
 # Delete files: data, target, lockfiles
 delete item="data":
@@ -48,8 +41,9 @@ doc-open: doc
     cargo rbmt docs
     cargo doc --no-deps --open
 
-# Run an example crate
-example name="node":
+# Run an example: `regtest_ibd`, `signet_ibd`
+example name="regtest_ibd":
+    rm -rf examples/data/regtest_ibd
     cargo run --release --example {{ name }}
 
 # Format code
