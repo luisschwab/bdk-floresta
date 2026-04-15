@@ -224,10 +224,10 @@ impl Node {
         }
     }
 
-    /// Connect to a specific peer, given a [`SocketAddr`].
+    /// Manually connect to a specific peer, given a [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the connection was successfully established.
-    pub async fn connect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
+    pub async fn add_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
         match self
             .node_handle
             .add_peer(socket.ip(), socket.port(), self.config.allow_p2pv1_fallback)
