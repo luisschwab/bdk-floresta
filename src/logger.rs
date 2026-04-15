@@ -317,6 +317,10 @@ impl Logger {
             .log_file
             .map(|log_file| -> Result<_, BuilderError> {
                 // Validate the log file path before handing it to the `tracing_appender`.
+                if let Some(parent) = log_file.parent() {
+                    fs::create_dir_all(parent)
+                        .map_err(|e| BuilderError::LoggerSetup(Arc::new(e)))?;
+                }
                 fs::OpenOptions::new()
                     .create(true)
                     .append(true)
