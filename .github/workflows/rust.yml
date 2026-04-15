@@ -1,53 +1,59 @@
 name: Rust CI
+
 on: [push, pull_request]
+
 permissions: {}
 env:
-  CARGO_TERM_COLOR: always
+    CARGO_TERM_COLOR: always
+    RUST_BACKTRACE: 1
 
 jobs:
-  Test:
-    name: Test - ${{ matrix.toolchain }} toolchain, ${{ matrix.dep }} deps
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    strategy:
-      fail-fast: false
-      matrix:
-        toolchain: [stable, msrv]
-        dep: [minimal, recent]
-        exclude:
-          # Exclude MSRV toolchain + `Cargo-recent.lock`
-          - toolchain: msrv
-            dep: recent
+    check:
+        name: Check - ${{ matrix.task }}
+        runs-on: ubuntu-latest
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+        strategy:
+            fail-fast: false
+            matrix:
+                task: [fmt --check, lint, docs]
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
+            - name: Setup build cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
-      - name: Setup cargo-rbmt
-        uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
+            - name: Setup cargo-rbmt
+              uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
 
-      - name: Run tests
-        run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lock-file ${{ matrix.dep }}
+            - name: Run ${{ matrix.task }}
+              run: cargo rbmt ${{ matrix.task }}
 
-  Check:
-    name: Check - ${{ matrix.task }}
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    strategy:
-      fail-fast: false
-      matrix:
-        task: [lint, docs]
+    test:
+        name: Test - ${{ matrix.toolchain }} toolchain, ${{ matrix.lockfile }} deps
+        runs-on: ubuntu-latest
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+        strategy:
+            fail-fast: false
+            matrix:
+                toolchain: [stable, nightly, msrv]
+                lockfile: [minimal, recent]
+                exclude:
+                    - toolchain: msrv
+                      lockfile: recent
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
+            - name: Setup build cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
-      - name: Setup cargo-rbmt
-        uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
+            - name: Setup cargo-rbmt
+              uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
 
-      - name: Run ${{ matrix.task }}
-        run: cargo rbmt ${{ matrix.task }}
+            - name: Run tests
+              run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lock-file ${{ matrix.lockfile }}

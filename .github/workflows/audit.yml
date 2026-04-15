@@ -1,37 +1,32 @@
 name: Security Audit
-on: [push, pull_request]
-permissions: {}
+
+on:
+    push:
+    pull_request:
 env:
-  CARGO_TERM_COLOR: always
+    CARGO_TERM_COLOR: always
+permissions: {}
 
 jobs:
-  supply-chain:
-    name: 'cargo-audit'
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    timeout-minutes: 30
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
+    audit:
+        name: cargo-audit
+        runs-on: ubuntu-latest
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+        permissions:
+            contents: read
 
-      - name: Install Rust toolchain
-        run: |
-            rustup toolchain install nightly --profile minimal
-            rustup default nightly
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
 
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          cache-on-failure: true
+            - name: Install cargo-audit
+              run: cargo install cargo-audit --locked
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit@0.22.1 --force --locked
+            - name: Check for audit warnings
+              run: cargo audit -D warnings
+              continue-on-error: true
 
-      - name: Check for Audit Warnings
-        run: cargo audit -D warnings
-        continue-on-error: true
-
-      - name: Check for Vulnerabilities
-        run: cargo audit
+            - name: Check for vulnerabilities
+              run: cargo audit
