@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Spawn a BitcoinD
     info!("> Spawning BitcoinD...");
-    let bitcoind = BitcoinD::download_new()?;
+    let bitcoind = BitcoinD::new()?;
     info!("> BitcoinD spawned");
 
     // Mine blocks.
@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Spawn an UtreexoD
     info!("> Spawning UtreexoD...");
-    let utreexod = UtreexoD::download_new()?;
+    let utreexod = UtreexoD::new()?;
     info!("> UtreexoD spawned");
 
     // Connect BitcoinD and UtreexoD

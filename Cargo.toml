@@ -48,7 +48,7 @@ time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
-halfin = { version = "0.2.0" }
+halfin = { version = "0.2.1" }
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.docs.rs]
