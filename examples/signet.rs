@@ -63,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
             info!("> Connected peers ({}):", peer_info.len());
             for (i, peer) in peer_info.iter().enumerate() {
                 info!("  > Peer {}:", i);
-                info!("  > Peer {}:", i);
                 info!("    > Socket: {}", peer.address);
                 info!("    > User Agent: {}", peer.user_agent);
             }
