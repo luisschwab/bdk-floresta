@@ -1,11 +1,13 @@
 name: Rust CI
 
-on: [push, pull_request]
-
+on:
+    push:
+    pull_request:
 permissions: {}
 env:
     CARGO_TERM_COLOR: always
     RUST_BACKTRACE: 1
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
     check:

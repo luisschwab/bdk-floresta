@@ -1,0 +1,29 @@
+name: Integration Tests
+
+on:
+    push:
+    pull_request:
+permissions: {}
+env:
+    CARGO_TERM_COLOR: always
+    RUST_BACKTRACE: 1
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+    integration-tests:
+        name: Examples
+        runs-on: ubuntu-latest
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+        strategy:
+            fail-fast: false
+            matrix:
+                example: [regtest, signet]
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
+
+            - name: Run ${{ matrix.example }} example
+              run: cargo run --release --example ${{ matrix.example }}
+              timeout-minutes: 15

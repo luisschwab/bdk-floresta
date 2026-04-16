@@ -3,58 +3,59 @@ alias c := check
 alias d := delete
 alias e := example
 alias f := fmt
+alias l := lock
 
 _default:
-    @just --list --list-heading $'> bdk-floresta\n> A Floresta-powered chain-source crate for BDK\n\n> Available recipes:\n'
+    @echo "> bdk-floresta"
+    @echo "> A Floresta-powered chain-source crate for BDK"
+    @just --list
 
-# Build `bdk-floresta` and examples
+[doc: "Build `bdk-floresta` and examples"]
 build:
     cargo build --release
     cargo build --release --examples
 
-# Check code formatting, compilation, linting, and commit signature
+[doc: "Check code formatting, compilation, linting, and commit signatures"]
 check:
     cargo rbmt fmt --check
     cargo rbmt lint
     cargo rbmt docs
     just check-sigs
 
-# Check that all feature combinations compile
+[doc: "Check that all feature combinations compile"]
 check-features:
     cargo rbmt test --toolchain stable --lock-file recent
 
-# Checks whether all commits in this branch are signed
+[doc: "Check if commits are PGP-signed"]
 check-sigs:
     bash contrib/check-signatures.sh
 
-# Delete files: data, target, lockfiles
+[doc: "Delete files: data, target, lockfiles"]
 delete item="data":
     just _delete-{{ item }}
 
-# Generate documentation
+[doc: "Generate documentation"]
 doc:
     cargo rbmt docs
-    cargo doc --no-deps
 
-# Generate and open documentation
-doc-open: doc
-    cargo rbmt docs
-    cargo doc --no-deps --open
+[doc: "Generate and open documentation"]
+doc-open:
+    cargo rbmt docs --open
 
-# Run an example: `regtest_ibd`, `signet_ibd`
-example name="regtest_ibd":
+[doc: "Run an example: `regtest`, `signet`"]
+example name="regtest":
     rm -rf examples/data/regtest_ibd
     cargo run --release --example {{ name }}
 
-# Format code
+[doc: "Format code"]
 fmt:
     cargo rbmt fmt
 
-# Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`
+[doc: "Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`"]
 lock:
   cargo +nightly rbmt lock
 
-# Verify the library builds with MSRV (1.85.0)
+[doc: "Check if this library builds with the MSRV toolchain"]
 msrv:
     cargo rbmt test --toolchain msrv --lock-file minimal
 
