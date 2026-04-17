@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+//! Signet integration test between [`bdk_floresta`] and the Bitcoin signet P2P network.
+
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -10,7 +14,7 @@ use tracing::info;
 use tracing::Level;
 
 const NETWORK: Network = Network::Signet;
-const DATA_DIR: &str = "./examples/data/signet_ibd/";
+const DATA_DIR: &str = "./examples/data/signet/";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -18,14 +22,14 @@ async fn main() -> anyhow::Result<()> {
     let _logger = Logger {
         log_level: Level::INFO,
         log_to_stdout: true,
-        log_file: Some(PathBuf::from(DATA_DIR).join(LOG_FILE)),
+        log_file: Some(PathBuf::from(DATA_DIR).join("bdk_floresta").join(LOG_FILE)),
     }
     .init()?;
 
     // Configure the node
     let config = NodeConfig {
         network: NETWORK,
-        data_directory: PathBuf::from(DATA_DIR),
+        data_directory: PathBuf::from(DATA_DIR).join("bdk_floresta"),
         ..Default::default()
     };
 
@@ -37,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
-                info!("> Shutting down...");
+                info!("> /exit");
                 node.shutdown().await?;
                 return Ok(());
         }
