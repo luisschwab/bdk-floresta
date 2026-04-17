@@ -48,14 +48,14 @@ async fn main() -> anyhow::Result<()> {
                 tokio::time::sleep(Duration::from_secs(10)).await;
                 info!(
                     "> Waiting for the node to catch up to the chain tip... [{}/{}]",
-                    node.get_validation_height()?,
-                    node.get_height()?,
+                    node.get_node_height()?,
+                    node.get_chain_height()?,
                 );
             }
             info!("> Finished IBD");
 
             // Get the node's Utreexo accumulator state
-            let stump = node.get_accumulator()?;
+            let stump = node.get_accumulator();
             info!("> bdk_floresta accumulator state: {:?}", stump);
 
             // Print the node's peer information
@@ -68,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
             }
 
             // Get the hash of the block at the tip
-            let tip = node.get_height()?;
+            let tip = node.get_chain_height()?;
             let block_hash = node.get_block_hash(tip)?;
             info!("> Hash of the block at the tip: {}", block_hash);
 

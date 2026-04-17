@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
     info!("> Mining {} blocks...", BLOCK_COUNT);
     let hashes = bitcoind.generate(BLOCK_COUNT)?;
     info!(
-        "Mined {} blocks [{}..{}]",
+        "> Mined {} blocks [{}..{}]",
         BLOCK_COUNT,
         &hashes.first().unwrap().to_string()[..8],
         &hashes.last().unwrap().to_string()[..8],
@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
     assert_eq!(node.get_peer_info().await?.len(), 2);
 
     // Wait for bdk_floresta to catch up
-    while node.get_validation_height()? < BLOCK_COUNT {
+    while node.get_node_height()? < BLOCK_COUNT {
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
 
@@ -112,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
     info!("> Header of the block at the tip: {:#?}", block.header);
 
     // Get bdk_floresta's Utreexo accumulator state
-    let stump = node.get_accumulator()?;
+    let stump = node.get_accumulator();
     info!("> bdk_floresta accumulator state: {:?}", stump);
 
     // TODO(@luisschwab): mine more blocks and have bdk_floresta sync up

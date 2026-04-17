@@ -169,9 +169,8 @@ impl Node {
     }
 
     /// Get the [`Node`]'s current [`NodeConfig`].
-    pub async fn get_config(&self) -> Result<NodeConfig, NodeError> {
-        let config = self.config.clone();
-        Ok(config)
+    pub fn get_config(&self) -> NodeConfig {
+        self.config.clone()
     }
 
     /// Check if the [`Node`] is still performing Initial Block Download.
@@ -180,21 +179,18 @@ impl Node {
     }
 
     /// Get the height of the blockchain tip.
-    pub fn get_height(&self) -> Result<u32, NodeError> {
-        let height = self.chain_state.get_height()?;
-        Ok(height)
+    pub fn get_chain_height(&self) -> Result<u32, NodeError> {
+        self.chain_state.get_validation_index().map_err(Into::into)
     }
 
     /// Get the [`Node`]'s validation height.
-    pub fn get_validation_height(&self) -> Result<u32, NodeError> {
-        let height = self.chain_state.get_validation_index()?;
-        Ok(height)
+    pub fn get_node_height(&self) -> Result<u32, NodeError> {
+        self.chain_state.get_validation_index().map_err(Into::into)
     }
 
     /// Get the [`Node`]'s current accumulator, as a [`Stump`].
-    pub fn get_accumulator(&self) -> Result<Stump, NodeError> {
-        let stump = self.chain_state.get_acc();
-        Ok(stump)
+    pub fn get_accumulator(&self) -> Stump {
+        self.chain_state.get_acc()
     }
 
     /// Get the [`BlockHash`] associated with a height.
