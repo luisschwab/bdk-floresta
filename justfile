@@ -1,14 +1,15 @@
 alias b := build
 alias c := check
 alias d := delete
-alias e := example
+alias reg := example-regtest
+alias sig := example-signet
 alias f := fmt
 alias l := lock
 alias p := pre-push
 
 _default:
     @echo "> bdk-floresta"
-    @echo "> A Floresta-powered chain-source crate for BDK"
+    @echo "> A Floresta-powered chain-source crate for BDK\n"
     @just --list
 
 [doc: "Build `bdk-floresta` and examples"]
@@ -43,10 +44,15 @@ doc:
 doc-open:
     cargo rbmt docs --open
 
-[doc: "Run an example: `regtest`, `signet`"]
-example name="regtest":
-    rm -rf examples/data/regtest_ibd
-    cargo run --release --example {{ name }}
+[doc: "Run the `regtest` example"]
+example-regtest:
+    rm -rf examples/data/regtest
+    cargo run --release --example regtest
+
+[doc: "Run the `signet` example"]
+example-signet:
+    rm -rf examples/data/signet
+    cargo run --release --example signet
 
 [doc: "Format code"]
 fmt:
