@@ -212,48 +212,34 @@ impl Builder {
         );
 
         // Try to load an existing [`FlatChainStore`] from the file system, or create a new one.
-        let flat_chain_store: FlatChainStore = match FlatChainStore::new(chain_store_cfg.clone()) {
-            Ok(store) => store,
-            Err(e) => {
-                error!("Failed to open FlatChainStore: {:?}", e);
-                return Err(e.into());
-            }
-        };
+        let chain_store: FlatChainStore =
+            FlatChainStore::new(chain_store_cfg.clone()).map_err(BuilderError::ChainStoreInit)?;
 
-        // Load an existing [`ChainState`] from the [`FlatChainStore`], or create a new one.
-        //
-        // TODO: unify `ChainState::new` and `ChainState::load_chain_state`
-        // upstream and change it here.
+        // Initialize a [`ChainState`] from the [`FlatChainStore`].
         let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(
-            ChainState::load_chain_state(
-                flat_chain_store,
+            ChainState::open(
+                chain_store,
                 self.node_configuration.network,
                 AssumeValidArg::Hardcoded,
             )
-            .or_else(|e| match e {
-                BlockchainError::ChainNotInitialized => Ok(ChainState::new(
-                    FlatChainStore::new(chain_store_cfg.clone())?,
-                    self.node_configuration.network,
-                    AssumeValidArg::Hardcoded,
-                )),
-                e => Err(BuilderError::ChainState(Arc::new(e))),
-            })?,
+            .map_err(BuilderError::ChainState)?,
         );
 
-        // Create the [`FlatFiltersStore`]'s configuration.
-        let flat_filters_store =
+        // Configure the [`FlatFiltersStore`].
+        let filter_store =
             FlatFiltersStore::new(self.node_configuration.data_directory.join("cbf"));
-        let filters = Arc::new(NetworkFilters::new(flat_filters_store));
+        let filters = Arc::new(NetworkFilters::new(filter_store));
+
         info!("FilterStore loaded at height {}", filters.get_height()?);
 
         // A kill signal that keeps track of whether the [`Node`] should stop.
         let kill_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        // Create the node's mempool.
+        // Create the [`Node`]'s mempool.
         let mempool_size_bytes = 1_000_000 * self.node_configuration.mempool_size;
         let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(mempool_size_bytes)));
 
-        // Encapsulate `UtreexoNode` into an inner of `Node`.
+        // Encapsulate [`UtreexoNode`] as an inner of [`Node`].
         let node_inner = UtreexoNode::<_, RunningNode>::new(
             self.node_configuration.clone().into(),
             chain_state.clone(),
@@ -267,7 +253,7 @@ impl Builder {
         )
         .map_err(|e| BuilderError::BuildInner(e.to_string()))?;
 
-        // Get a handle to interact with the `Node`.
+        // Get a handle to interact with the [`Node`].
         let node_handle: NodeInterface = node_inner.get_handle();
 
         // Set up the [`Wallet`]'s update channel, sender and receiver.
