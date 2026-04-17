@@ -4,6 +4,7 @@ alias d := delete
 alias e := example
 alias f := fmt
 alias l := lock
+alias p := pre-push
 
 _default:
     @echo "> bdk-floresta"
@@ -58,6 +59,13 @@ lock:
 [doc: "Check if this library builds with the MSRV toolchain"]
 msrv:
     cargo rbmt test --toolchain msrv --lock-file minimal
+
+[doc: "Perform pre-push checks: "]
+pre-push:
+    @just check-sigs
+    @just check
+    @just doc
+    @just msrv
 
 _delete-data:
     rm -rf examples/data
