@@ -29,10 +29,10 @@ toml = { version = "1.0" }
 [dependencies]
 bitcoin = { version = "0.32.7" }
 bdk_wallet = { version = "2.3" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "1c7ab888ee76611436dd6a91289d0626d109501c", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "1c7ab888ee76611436dd6a91289d0626d109501c" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "1c7ab888ee76611436dd6a91289d0626d109501c" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "1c7ab888ee76611436dd6a91289d0626d109501c" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 thiserror = { version = "2.0" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }
@@ -47,8 +47,8 @@ dns-lookup = { version = "2.1.1" }
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
+halfin = { version = "0.3.0" }
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
-halfin = { version = "0.2.1" }
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.docs.rs]

@@ -728,7 +728,7 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=1c7ab888ee76611436dd6a91289d0626d109501c#1c7ab888ee76611436dd6a91289d0626d109501c"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
 dependencies = [
  "bitcoin",
  "floresta-common",
@@ -744,7 +744,7 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=1c7ab888ee76611436dd6a91289d0626d109501c#1c7ab888ee76611436dd6a91289d0626d109501c"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
 dependencies = [
  "bitcoin",
  "hashbrown 0.16.1",
@@ -756,7 +756,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=1c7ab888ee76611436dd6a91289d0626d109501c#1c7ab888ee76611436dd6a91289d0626d109501c"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -765,7 +765,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=1c7ab888ee76611436dd6a91289d0626d109501c#1c7ab888ee76611436dd6a91289d0626d109501c"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -778,7 +778,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=1c7ab888ee76611436dd6a91289d0626d109501c#1c7ab888ee76611436dd6a91289d0626d109501c"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -887,9 +887,9 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "halfin"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43e5ddef1b50ffe7e3b734f3ff60b745e32a7c1babf70409f3520d439f300d66"
+checksum = "ede1f2f6ef69143f8cb6c9844b1f53a23e67a0bea0eab98ccb5bd0f8fe2cdd40"
 dependencies = [
  "anyhow",
  "bitcoin_hashes 0.20.0",

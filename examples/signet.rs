@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+//! Signet integration test between [`bdk_floresta`] and the Bitcoin signet P2P network.
+
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -10,7 +14,7 @@ use tracing::info;
 use tracing::Level;
 
 const NETWORK: Network = Network::Signet;
-const DATA_DIR: &str = "./examples/data/signet_ibd/";
+const DATA_DIR: &str = "./examples/data/signet/";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -18,14 +22,14 @@ async fn main() -> anyhow::Result<()> {
     let _logger = Logger {
         log_level: Level::INFO,
         log_to_stdout: true,
-        log_file: Some(PathBuf::from(DATA_DIR).join(LOG_FILE)),
+        log_file: Some(PathBuf::from(DATA_DIR).join("bdk_floresta").join(LOG_FILE)),
     }
     .init()?;
 
     // Configure the node
     let config = NodeConfig {
         network: NETWORK,
-        data_directory: PathBuf::from(DATA_DIR),
+        data_directory: PathBuf::from(DATA_DIR).join("bdk_floresta"),
         ..Default::default()
     };
 
@@ -37,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
-                info!("> Shutting down...");
+                info!("> /exit");
                 node.shutdown().await?;
                 return Ok(());
         }
@@ -48,14 +52,14 @@ async fn main() -> anyhow::Result<()> {
                 tokio::time::sleep(Duration::from_secs(10)).await;
                 info!(
                     "> Waiting for the node to catch up to the chain tip... [{}/{}]",
-                    node.get_validation_height()?,
-                    node.get_height()?,
+                    node.get_node_height()?,
+                    node.get_chain_height()?,
                 );
             }
             info!("> Finished IBD");
 
             // Get the node's Utreexo accumulator state
-            let stump = node.get_accumulator()?;
+            let stump = node.get_accumulator();
             info!("> bdk_floresta accumulator state: {:?}", stump);
 
             // Print the node's peer information
@@ -68,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
             }
 
             // Get the hash of the block at the tip
-            let tip = node.get_height()?;
+            let tip = node.get_chain_height()?;
             let block_hash = node.get_block_hash(tip)?;
             info!("> Hash of the block at the tip: {}", block_hash);
 

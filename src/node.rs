@@ -17,7 +17,6 @@ use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::BlockchainInterface;
 use floresta_chain::pruned_utreexo::UpdatableChainstate;
 use floresta_chain::BlockConsumer;
-use floresta_chain::BlockchainError;
 use floresta_chain::ChainState;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
@@ -158,13 +157,8 @@ impl Node {
     pub fn flush(&mut self) -> Result<(), NodeError> {
         self.chain_state.flush().map_err(|e| {
             error!("Error flushing chain state to the file system: {e:?}");
-            match e {
-                BlockchainError::Database(e) => NodeError::Persistence(Arc::new(e)),
-                BlockchainError::Io(e) => NodeError::Io(Arc::new(e)),
-                e => NodeError::Blockchain(Arc::new(e)),
-            }
-        })?;
-        Ok(())
+            NodeError::Flush(e)
+        })
     }
 
     /// A subscriber for validated [`Block`]s.
@@ -175,9 +169,8 @@ impl Node {
     }
 
     /// Get the [`Node`]'s current [`NodeConfig`].
-    pub async fn get_config(&self) -> Result<NodeConfig, NodeError> {
-        let config = self.config.clone();
-        Ok(config)
+    pub fn get_config(&self) -> NodeConfig {
+        self.config.clone()
     }
 
     /// Check if the [`Node`] is still performing Initial Block Download.
@@ -186,21 +179,18 @@ impl Node {
     }
 
     /// Get the height of the blockchain tip.
-    pub fn get_height(&self) -> Result<u32, NodeError> {
-        let height = self.chain_state.get_height()?;
-        Ok(height)
+    pub fn get_chain_height(&self) -> Result<u32, NodeError> {
+        self.chain_state.get_validation_index().map_err(Into::into)
     }
 
     /// Get the [`Node`]'s validation height.
-    pub fn get_validation_height(&self) -> Result<u32, NodeError> {
-        let height = self.chain_state.get_validation_index()?;
-        Ok(height)
+    pub fn get_node_height(&self) -> Result<u32, NodeError> {
+        self.chain_state.get_validation_index().map_err(Into::into)
     }
 
     /// Get the [`Node`]'s current accumulator, as a [`Stump`].
-    pub fn get_accumulator(&self) -> Result<Stump, NodeError> {
-        let stump = self.chain_state.get_acc();
-        Ok(stump)
+    pub fn get_accumulator(&self) -> Stump {
+        self.chain_state.get_acc()
     }
 
     /// Get the [`BlockHash`] associated with a height.
@@ -342,7 +332,7 @@ impl Node {
             }
             Ok(Err(e)) => {
                 error!("Invalid transaction: {}", e);
-                Err(NodeError::Mempool(e.into()))
+                Err(NodeError::Mempool(e))
             }
             Err(e) => {
                 error!("Failed to broadcast transaction: {}", e);

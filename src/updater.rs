@@ -45,20 +45,16 @@ impl BlockConsumer for WalletUpdater {
     ) {
         // Wrap the block in a wallet update.
         let update = WalletUpdate::NewBlock(block.clone(), height);
-        let update_height = height;
 
         // Send the update over the channel.
         match self.sender.send(update) {
             Ok(_) => {
-                debug!(
-                    "Sent block update at height {} over the channel",
-                    update_height
-                );
+                debug!("Sent block update at height {} over the channel", height);
             }
             Err(e) => {
                 error!(
                     "Failed to send block update at height {} over the channel: {}",
-                    update_height, e
+                    height, e
                 );
             }
         }
