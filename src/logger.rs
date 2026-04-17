@@ -48,7 +48,6 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -318,14 +317,13 @@ impl Logger {
             .map(|log_file| -> Result<_, BuilderError> {
                 // Validate the log file path before handing it to the `tracing_appender`.
                 if let Some(parent) = log_file.parent() {
-                    fs::create_dir_all(parent)
-                        .map_err(|e| BuilderError::LoggerSetup(Arc::new(e)))?;
+                    fs::create_dir_all(parent).map_err(BuilderError::LoggerSetup)?;
                 }
                 fs::OpenOptions::new()
                     .create(true)
                     .append(true)
                     .open(&log_file)
-                    .map_err(|e| BuilderError::LoggerSetup(Arc::new(e)))?;
+                    .map_err(BuilderError::LoggerSetup)?;
 
                 let file_appender = tracing_appender::rolling::never(
                     log_file.parent().unwrap_or(Path::new(".")),

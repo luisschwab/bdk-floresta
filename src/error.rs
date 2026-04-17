@@ -11,53 +11,47 @@ use thiserror::Error;
 
 /// Errors which might occur when building the
 /// [`Node`](crate::node::Node) or [logger](crate::logger::Logger).
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum BuilderError {
     #[error("Failed to create the data directory: {0:?}")]
-    CreateDirectory(Arc<std::io::Error>),
+    CreateDirectory(#[from] std::io::Error),
 
     #[error("Failed to create a ChainState: {0:?}")]
-    ChainState(Arc<floresta_chain::BlockchainError>),
+    ChainState(#[from] floresta_chain::BlockchainError),
 
     #[error("Failed to setup the tracing subscriber logger: {0:?}")]
-    LoggerSetup(Arc<std::io::Error>),
+    LoggerSetup(std::io::Error),
 
     #[error("Tracing subscriber logger already initialized")]
     LoggerAlreadySetup,
 
     #[error("Failed to load or create a new chain store: {0:?}")]
-    ChainStoreInit(Arc<floresta_chain::FlatChainstoreError>),
+    ChainStoreInit(floresta_chain::FlatChainstoreError),
 
     #[error("Node and Wallet are not on the same network")]
     NetworkMismatch,
 
     #[error("Compact Block Filter error: {0:?}")]
-    CompactBlockFilter(Arc<floresta_compact_filters::IterableFilterStoreError>),
+    CompactBlockFilter(floresta_compact_filters::IterableFilterStoreError),
 
     #[error("Failed to build the inner node: {0}")]
-    BuildInner(String),
-}
-
-impl From<std::io::Error> for BuilderError {
-    fn from(err: std::io::Error) -> Self {
-        BuilderError::CreateDirectory(Arc::new(err))
-    }
+    BuildInner(floresta_wire::error::WireError),
 }
 
 impl From<floresta_chain::FlatChainstoreError> for BuilderError {
     fn from(err: floresta_chain::FlatChainstoreError) -> Self {
-        BuilderError::ChainStoreInit(Arc::new(err))
+        BuilderError::ChainStoreInit(err)
     }
 }
 
 impl From<floresta_compact_filters::IterableFilterStoreError> for BuilderError {
     fn from(err: floresta_compact_filters::IterableFilterStoreError) -> Self {
-        BuilderError::CompactBlockFilter(Arc::new(err))
+        BuilderError::CompactBlockFilter(err)
     }
 }
 
 /// Errors which might occur when running the [`Node`](crate::node::Node).
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum NodeError {
     /// The [`Node`](crate::node::Node) is already running.
     #[error("The node is already running")]
@@ -71,9 +65,9 @@ pub enum NodeError {
     #[error(transparent)]
     Receiver(#[from] tokio::sync::oneshot::error::RecvError),
 
-    /// The [`Node`](crate::node::Node) threw an error while persisting data to the file system.
-    #[error("Persistence error: {0:?}")]
-    Persistence(Arc<Box<dyn floresta_chain::DatabaseError>>),
+    /// The [`Node`](crate::node::Node) failed to flush the chain state to disk.
+    #[error("Failed to flush chain state: {0:?}")]
+    Flush(floresta_chain::BlockchainError),
 
     /// I/O error during persistence.
     #[error("I/O error: {0}")]
@@ -81,11 +75,11 @@ pub enum NodeError {
 
     /// Blockchain related errors.
     #[error("Blockchain error: {0:?}")]
-    Blockchain(Arc<floresta_chain::BlockchainError>),
+    Blockchain(floresta_chain::BlockchainError),
 
     /// Mempool related errors.
     #[error("Mempool acceptance error: {0:?}")]
-    Mempool(Arc<floresta_mempool::mempool::AcceptToMempoolError>),
+    Mempool(floresta_mempool::mempool::AcceptToMempoolError),
 }
 
 impl From<std::io::Error> for NodeError {
@@ -96,12 +90,12 @@ impl From<std::io::Error> for NodeError {
 
 impl From<floresta_chain::BlockchainError> for NodeError {
     fn from(err: floresta_chain::BlockchainError) -> Self {
-        NodeError::Blockchain(Arc::new(err))
+        NodeError::Blockchain(err)
     }
 }
 
 impl From<floresta_mempool::mempool::AcceptToMempoolError> for NodeError {
     fn from(err: floresta_mempool::mempool::AcceptToMempoolError) -> Self {
-        NodeError::Mempool(Arc::new(err))
+        NodeError::Mempool(err)
     }
 }

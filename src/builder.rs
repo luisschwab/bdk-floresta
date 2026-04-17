@@ -16,7 +16,6 @@ use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_chain::AssumeValidArg;
-use floresta_chain::BlockchainError;
 use floresta_chain::BlockchainInterface;
 use floresta_chain::ChainParams;
 use floresta_chain::ChainState;
@@ -34,7 +33,6 @@ use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
-use tracing::error;
 use tracing::info;
 
 use crate::error::BuilderError;
@@ -251,7 +249,7 @@ impl Builder {
                 &self.node_configuration.reachable_nets,
             ),
         )
-        .map_err(|e| BuilderError::BuildInner(e.to_string()))?;
+        .map_err(BuilderError::BuildInner)?;
 
         // Get a handle to interact with the [`Node`].
         let node_handle: NodeInterface = node_inner.get_handle();

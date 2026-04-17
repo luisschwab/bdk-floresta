@@ -17,7 +17,6 @@ use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::BlockchainInterface;
 use floresta_chain::pruned_utreexo::UpdatableChainstate;
 use floresta_chain::BlockConsumer;
-use floresta_chain::BlockchainError;
 use floresta_chain::ChainState;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
@@ -158,13 +157,8 @@ impl Node {
     pub fn flush(&mut self) -> Result<(), NodeError> {
         self.chain_state.flush().map_err(|e| {
             error!("Error flushing chain state to the file system: {e:?}");
-            match e {
-                BlockchainError::Database(e) => NodeError::Persistence(Arc::new(e)),
-                BlockchainError::Io(e) => NodeError::Io(Arc::new(e)),
-                e => NodeError::Blockchain(Arc::new(e)),
-            }
-        })?;
-        Ok(())
+            NodeError::Flush(e)
+        })
     }
 
     /// A subscriber for validated [`Block`]s.
@@ -342,7 +336,7 @@ impl Node {
             }
             Ok(Err(e)) => {
                 error!("Invalid transaction: {}", e);
-                Err(NodeError::Mempool(e.into()))
+                Err(NodeError::Mempool(e))
             }
             Err(e) => {
                 error!("Failed to broadcast transaction: {}", e);
