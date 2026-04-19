@@ -327,11 +327,14 @@ impl Node {
         self.chain_state.get_acc()
     }
 
-    /// Get the [`BlockHash`] associated with a height.
+    /// Get the [`BlockHash`] of a [`Block`] at a given height.
     pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, NodeError> {
-        let hash = self.chain_state.get_block_hash(height)?;
+        self.chain_state.get_block_hash(height).map_err(Into::into)
+    }
 
-        Ok(hash)
+    /// Get the [`Header`] of a [`Block`], given its [`BlockHash`].
+    pub fn get_block_header(&self, hash: &BlockHash) -> Result<Header, NodeError> {
+        self.chain_state.get_block_header(hash).map_err(Into::into)
     }
 
     /// A subscriber for validated [`Block`]s.
