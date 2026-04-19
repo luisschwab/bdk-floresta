@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use bitcoin::BlockHash;
 use thiserror::Error;
 
 /// Errors which might occur when building the
@@ -80,6 +81,10 @@ pub enum NodeError {
     /// Mempool related errors.
     #[error("Mempool acceptance error: {0:?}")]
     Mempool(floresta_mempool::mempool::AcceptToMempoolError),
+
+    /// Failed to fetch all of the requested blocks.
+    #[error("Failed to fetch all all of the requested blocks (the block with hash={0:?} does not exist)")]
+    MissingBlock(BlockHash),
 }
 
 impl From<std::io::Error> for NodeError {

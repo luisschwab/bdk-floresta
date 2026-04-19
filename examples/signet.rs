@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
             info!("> Hash of the block at the tip: {}", block_hash);
 
             // Fetch the block at the tip from a peer
-            let block = node.fetch_block(block_hash).await?.unwrap();
+            let block = node.fetch_block(block_hash).await?;
             info!("> Header of the block at the tip: {:#?}", block.header);
 
             info!("> /exit");

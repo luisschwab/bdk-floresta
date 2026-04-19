@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bdk_wallet::Wallet;
+use bitcoin::block::Header;
 use bitcoin::Block;
 use bitcoin::BlockHash;
 use bitcoin::Transaction;
@@ -363,17 +364,44 @@ impl Node {
     /// Fetch a [`Block`] given its [`BlockHash`].
     ///
     /// Since [`floresta-chain`](floresta_chain) does not persist any
-    /// [`Block`]s, these must be requested over the wire from a peer.
-    pub async fn fetch_block(&self, hash: BlockHash) -> Result<Option<Block>, NodeError> {
+    /// [`Block`]s, it must be requested over the wire from a peer.
+    pub async fn fetch_block(&self, hash: BlockHash) -> Result<Block, NodeError> {
         let last_state = self.state.read().await.clone();
         *self.state.write().await =
             State::PerformingAction(Action::FetchingBlock(hash.to_string()));
 
         let block = self.handle.get_block(hash).await?;
+        if let Some(block) = block {
+            *self.state.write().await = last_state;
+            Ok(block)
+        } else {
+            *self.state.write().await = last_state;
+            Err(NodeError::MissingBlock(hash))
+        }
+    }
 
+    /// Fetch a number [`Block`]s in a batch, given their [`BlockHash`]es.
+    ///
+    /// Since [`floresta-chain`](floresta_chain) does not persist any
+    /// [`Block`]s, they must be requested over the wire from a peer.
+    pub async fn fetch_blocks(&self, hashes: Vec<BlockHash>) -> Result<Vec<Block>, NodeError> {
+        let last_state = self.state.read().await.clone();
+
+        let mut blocks: Vec<Block> = Vec::with_capacity(hashes.len());
+        for hash in hashes {
+            *self.state.write().await =
+                State::PerformingAction(Action::FetchingBlock(hash.to_string()));
+
+            let block = self.handle.get_block(hash).await?;
+            if let Some(block) = block {
+                blocks.push(block);
+            } else {
+                return Err(NodeError::MissingBlock(hash));
+            }
+        }
         *self.state.write().await = last_state;
 
-        Ok(block)
+        Ok(blocks)
     }
 
     /// Broadcast a [`Transaction`] to the [`Node`]'s peers.

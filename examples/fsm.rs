@@ -24,7 +24,7 @@ const STATUS_POLL_PERIOD: Duration = Duration::from_secs(5);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // On display the example's logs
+    // Only display the example's logs
     env::set_var("RUST_LOG", "fsm=info");
 
     // Set up the logger
