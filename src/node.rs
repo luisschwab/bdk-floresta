@@ -19,6 +19,8 @@ use floresta_chain::pruned_utreexo::BlockchainInterface;
 use floresta_chain::pruned_utreexo::UpdatableChainstate;
 use floresta_chain::BlockConsumer;
 use floresta_chain::ChainState;
+use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
+use floresta_compact_filters::network_filters::NetworkFilters;
 #[allow(unused)]
 use floresta_wire::address_man::AddressMan;
 use floresta_wire::node::running_ctx::RunningNode;
@@ -43,6 +45,9 @@ use crate::error::NodeError;
 use crate::fsm::compute_next_state;
 use crate::fsm::State;
 use crate::updater::WalletUpdate;
+
+/// A conservative value for the maximum chain reorganization depth.
+const MAX_REORG_DEPTH: u8 = 7;
 
 /// The period between polls for the `status_update_task`, in milliseconds.
 const STATUS_UPDATE_POLL_PERIOD: Duration = Duration::from_millis(500);
@@ -95,20 +100,17 @@ type NodeInner = UtreexoNode<Arc<ChainState<FlatChainStore>>, RunningNode>;
 ///
 /// It groups all of the required pieces for the [`Node`] to function.
 pub struct Node {
-    /// The [`Node`]'s current [`State`].
-    pub state: Arc<RwLock<State>>,
-
     /// The inner, underlying [`UtreexoNode`].
-    pub(crate) node_inner: Option<NodeInner>,
+    pub(crate) inner: Option<NodeInner>,
+
+    /// A handle used to interact with the [`UtreexoNode`].
+    pub(crate) handle: NodeInterface,
 
     /// The [`Node`]'s configuration settings.
     pub(crate) config: NodeConfig,
 
-    /// The [`Node`]'s blockchain state.
-    pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
-
-    /// A handle used to interact with the [`UtreexoNode`].
-    pub(crate) node_handle: NodeInterface,
+    /// The [`Node`]'s current [`State`].
+    pub(crate) state: Arc<RwLock<State>>,
 
     /// A cancellation token used to signal shutdown to all tasks,
     /// Triggered via `SIGINT` or [`Node::shutdown()`].
@@ -132,12 +134,18 @@ pub struct Node {
     /// the values returned into a [`State`].
     pub(crate) state_update_task: Option<JoinHandle<()>>,
 
-    /// A [`Wallet`] that will receive updates from the [`Node`].
-    pub wallet: Option<Arc<RwLock<Wallet>>>,
+    /// The [`Node`]'s blockchain state.
+    pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
+
+    /// The [`Node`]'s [Compact Block Filter](https://github.com/bitcoin/bips/blob/master/bip-0158.mediawiki) Store.
+    pub(crate) block_filters: Arc<NetworkFilters<FlatFiltersStore>>,
 
     /// Receiver for [`WalletUpdate`]s that come from
     /// the [`Node`] and should be applied to the [`Wallet`].
     pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
+
+    /// A [`Wallet`] that will receive updates from the [`Node`].
+    pub wallet: Option<Arc<RwLock<Wallet>>>,
 
     /// A guard that ensures the logger remains active for the [`Node`]'s lifetime.
     #[cfg(feature = "logger")]
@@ -191,7 +199,7 @@ impl Node {
     ///   signal, and perfoms the graceful shutdown routine.
     pub async fn run(&mut self) -> Result<(), NodeError> {
         // `take()` the inner node to make sure `Node::run()` can only be called once
-        let inner_node = self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
+        let inner_node = self.inner.take().ok_or(NodeError::AlreadyRunning)?;
 
         // Set the node's state to `State::Active`
         *self.state.write().await = State::Active;
@@ -335,7 +343,7 @@ impl Node {
 
     /// Get information about peers the [`Node`] is currently connected to.
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
-        match self.node_handle.get_peer_info().await {
+        match self.handle.get_peer_info().await {
             Ok(peer_infos) => {
                 debug!("Got peer information: {:?}", peer_infos);
                 Ok(peer_infos)
@@ -358,7 +366,7 @@ impl Node {
         *self.state.write().await =
             State::PerformingAction(Action::FetchingBlock(hash.to_string()));
 
-        let block = self.node_handle.get_block(hash).await?;
+        let block = self.handle.get_block(hash).await?;
 
         *self.state.write().await = last_state;
 
@@ -375,7 +383,7 @@ impl Node {
         *self.state.write().await =
             State::PerformingAction(Action::BroadcastingTransaction(txid.to_string()));
 
-        let result = match self.node_handle.broadcast_transaction(tx).await {
+        let result = match self.handle.broadcast_transaction(tx).await {
             Ok(Ok(txid)) => {
                 info!("Successfully broadcast transaction with txid={}", txid);
                 Ok(txid)
@@ -406,7 +414,7 @@ impl Node {
             State::PerformingAction(Action::ConnectingToPeer(socket.to_string()));
 
         let result = match self
-            .node_handle
+            .handle
             .add_peer(socket.ip(), socket.port(), self.config.allow_p2pv1_fallback)
             .await
         {
@@ -437,7 +445,7 @@ impl Node {
             State::PerformingAction(Action::DisconnectingFromPeer(socket.to_string()));
 
         let result = match self
-            .node_handle
+            .handle
             .disconnect_peer(socket.ip(), socket.port())
             .await
         {
@@ -468,11 +476,7 @@ impl Node {
         *self.state.write().await =
             State::PerformingAction(Action::RemovingPeer(socket.to_string()));
 
-        let result = match self
-            .node_handle
-            .remove_peer(socket.ip(), socket.port())
-            .await
-        {
+        let result = match self.handle.remove_peer(socket.ip(), socket.port()).await {
             Ok(true) => {
                 debug!("Removed peer={} from the address manager", socket);
                 Ok(true)
@@ -499,7 +503,7 @@ impl Node {
         let last_state = self.state.read().await.clone();
         *self.state.write().await = State::PerformingAction(Action::Pinging);
 
-        let result = match self.node_handle.ping().await {
+        let result = match self.handle.ping().await {
             Ok(true) => {
                 debug!("Sent a ping to all peers");
                 Ok(true)
