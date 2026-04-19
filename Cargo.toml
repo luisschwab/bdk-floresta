@@ -32,7 +32,7 @@ toml = { version = "1.0" }
 
 [dependencies]
 bitcoin = { version = "0.32.8" }
-bdk_wallet = { version = "2.3" }
+bdk_wallet = { version = "3.0" }
 floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5", features = ["flat-chainstore"] }
 floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
