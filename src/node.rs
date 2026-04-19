@@ -39,8 +39,49 @@ use crate::builder::NodeConfig;
 use crate::error::NodeError;
 use crate::updater::WalletUpdate;
 
-/// Timeout for the [`Node`]'s shutdown task, in seconds.
-const SHUTDOWN_TIMEOUT: u64 = 15;
+/// The period between polls for the `status_update_task`, in milliseconds.
+const STATUS_UPDATE_POLL_PERIOD: Duration = Duration::from_millis(500);
+
+/// The timeout for the [`Node`]'s shutdown task, in seconds.
+const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The set of [`Action`]s the [`Node`] can
+/// possibly be performing at any given instant.
+///
+/// These [`Action`]s are triggered when a user calls
+/// [`Node`] methods (e.g. scaning the blockchain with
+/// Compact Block Filters).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Action {
+    /// The [`Node`] is connecting to a peer.
+    ConnectingToPeer(String),
+    /// The [`Node`] is disconnecting from a peer.
+    DisconnectingFromPeer(String),
+    /// The [`Node`] is removing a peer from its [address manager](AddressMan).
+    RemovingPeer(String),
+    /// The [`Node`] is pinging all of its peers.
+    Pinging,
+    /// The [`Node`] is fetching a [`Block`] from a peers.
+    FetchingBlock(String),
+    /// The [`Node`] is scanning the blockchain with Compact Block Filters.
+    CompactFilterScan((u32, u32)),
+    /// The [`Node`] is broadcasting a [`Transaction`].
+    BroadcastingTransaction(String),
+}
+
+impl fmt::Display for Action {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ConnectingToPeer(socket) => write!(f, "Connecting to peer={}", socket),
+            Self::DisconnectingFromPeer(socket) => write!(f, "Disconnecting from peer={}", socket),
+            Self::RemovingPeer(socket) => write!(f, "Removing peer={}", socket),
+            Self::Pinging => write!(f, "Pinging all peers"),
+            Self::FetchingBlock(hash) => write!(f, "Fetching block with hash={}", hash),
+            Self::CompactFilterScan((start_height, end_height)) => write!(f, "Scanning the blockchain with Compact Block Filters from start_height={} up to end_height={}", start_height, end_height),
+            Self::BroadcastingTransaction(txid) => write!(f, "Broadcasting transaction with txid={}", txid),
+        }
+    }
+}
 
 /// Type alias for the [`Node`]'s inner [`UtreexoNode`].
 type NodeInner = UtreexoNode<Arc<ChainState<FlatChainStore>>, RunningNode>;
