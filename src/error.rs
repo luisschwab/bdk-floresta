@@ -50,7 +50,7 @@ impl From<floresta_compact_filters::IterableFilterStoreError> for BuilderError {
     }
 }
 
-/// Errors which might occur when running the [`Node`](crate::node::Node).
+/// Errors that can occur whilst interacting with the [`Node`](crate::node::Node).
 #[derive(Debug, Error)]
 pub enum NodeError {
     /// The [`Node`](crate::node::Node) is already running.

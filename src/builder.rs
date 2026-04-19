@@ -36,6 +36,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::info;
 
 use crate::error::BuilderError;
+use crate::fsm::State;
 #[cfg(feature = "logger")]
 use crate::logger::Logger;
 use crate::updater::WalletUpdater;
@@ -267,6 +268,7 @@ impl Builder {
         };
 
         Ok(Node {
+            state: Arc::new(RwLock::new(State::Inactive)),
             config: self.node_configuration,
             node_inner: Some(node_inner),
             chain_state,
@@ -274,6 +276,7 @@ impl Builder {
             cancellation_token: CancellationToken::new(),
             kill_signal,
             shutdown_task: None,
+            state_update_task: None,
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),
             #[cfg(feature = "logger")]

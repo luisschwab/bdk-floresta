@@ -1,9 +1,10 @@
 alias b := build
 alias c := check
 alias d := delete
+alias f := fmt
+alias fsm := example-fsm
 alias reg := example-regtest
 alias sig := example-signet
-alias f := fmt
 alias l := lock
 alias p := pre-push
 
@@ -43,6 +44,11 @@ doc:
 [doc: "Generate and open documentation"]
 doc-open:
     cargo rbmt docs --open
+
+[doc: "Run the `fsm` example"]
+example-fsm:
+    rm -rf examples/data/fsm
+    cargo run --release --example fsm
 
 [doc: "Run the `regtest` example"]
 example-regtest:

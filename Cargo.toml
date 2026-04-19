@@ -16,6 +16,10 @@ default = ["logger"]
 logger = ["dep:tracing-appender", "dep:tracing-subscriber"]
 
 [[example]]
+name = "fsm"
+required-features = ["logger"]
+
+[[example]]
 name = "regtest"
 required-features = ["logger"]
 
