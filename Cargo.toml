@@ -60,10 +60,6 @@ tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
-[package.metadata.rbmt.toolchains]
-stable = "1.94.0"
-nightly = "nightly-2026-03-18"
-
 # Allow packages of different versions in the dependency tree.
 [package.metadata.rbmt.lint]
 allowed_duplicates = [
@@ -77,3 +73,7 @@ allowed_duplicates = [
     "serde_core",
     "windows-sys",
 ]
+
+[package.metadata.rbmt.toolchains]
+stable = "1.95.0"
+nightly = "nightly-2026-03-18"
