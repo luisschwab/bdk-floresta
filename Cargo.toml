@@ -46,12 +46,12 @@ tokio-util = { version = "0.7.18" }
 
 # These pins are needed for `Cargo-minimal.lock`:
 lazy_static = { version = "1.5.0" } # blame: sharded-slab = "0.1.7"
-dns-lookup = { version = "2.1.1" }
+dns-lookup = { version = "2.1.1" } # blame: floresta-wire
 # These pins are needed for MSRV + `Cargo-recent.lock`:
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
-halfin = { version = "0.3.0" }
+halfin = { version = "0.3.1" }
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 

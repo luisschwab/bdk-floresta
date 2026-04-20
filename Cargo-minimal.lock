@@ -969,9 +969,9 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "halfin"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ede1f2f6ef69143f8cb6c9844b1f53a23e67a0bea0eab98ccb5bd0f8fe2cdd40"
+checksum = "a3b715be946f4edb52ab33523b52c7561c5e8f473322d6f9f86ac3bb1888acc3"
 dependencies = [
  "anyhow",
  "bitcoin_hashes 0.20.0",
