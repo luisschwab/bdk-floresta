@@ -5,7 +5,9 @@ alias f := fmt
 alias fsm := example-fsm
 alias reg := example-regtest
 alias sig := example-signet
+alias ws := example-wallet-sync
 alias l := lock
+alias t := test
 alias p := pre-push
 
 _default:
@@ -68,16 +70,16 @@ fmt:
 lock:
   cargo +nightly rbmt lock
 
-[doc: "Check if this library builds with the MSRV toolchain"]
-msrv:
-    cargo rbmt test --toolchain msrv --lock-file minimal
+[doc: "Run tests across all toolchains and lockfiles"]
+test:
+    cargo rbmt test
 
-[doc: "Perform pre-push checks: "]
+[doc: "Run pre-push checks"]
 pre-push:
     @just check-sigs
     @just check
     @just doc
-    @just msrv
+    @just test
 
 _delete-data:
     rm -rf examples/data

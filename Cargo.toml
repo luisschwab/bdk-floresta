@@ -38,7 +38,6 @@ floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git"
 floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 futures = { version = "0.3.32" }
-thiserror = { version = "2.0" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }
 tracing-appender = { version = "0.2", optional = true }
@@ -47,22 +46,18 @@ tokio-util = { version = "0.7.18" }
 
 # These pins are needed for `Cargo-minimal.lock`:
 lazy_static = { version = "1.5.0" } # blame: sharded-slab = "0.1.7"
-dns-lookup = { version = "2.1.1" }
+dns-lookup = { version = "2.1.1" } # blame: floresta-wire
 # These pins are needed for MSRV + `Cargo-recent.lock`:
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
-halfin = { version = "0.3.0" }
+halfin = { version = "0.3.1" }
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
-
-[package.metadata.rbmt.toolchains]
-stable = "1.94.0"
-nightly = "nightly-2026-03-18"
 
 # Allow packages of different versions in the dependency tree.
 [package.metadata.rbmt.lint]
@@ -77,3 +72,7 @@ allowed_duplicates = [
     "serde_core",
     "windows-sys",
 ]
+
+[package.metadata.rbmt.toolchains]
+stable = "1.95.0"
+nightly = "nightly-2026-03-18"
