@@ -333,9 +333,22 @@ impl Node {
         self.chain_state.get_validation_index().map_err(Into::into)
     }
 
+    /// Get the [`Node`]'s [`NetworkFilters`] height.
+    pub fn get_filter_height(&self) -> Result<u32, NodeError> {
+        self.block_filters.get_height().map_err(Into::into)
+    }
+
     /// Get the [`Node`]'s current accumulator, as a [`Stump`].
     pub fn get_accumulator(&self) -> Stump {
         self.chain_state.get_acc()
+    }
+
+    /// Get the height of a [`Block`] given its [`BlockHash`].
+    pub fn get_block_height(&self, hash: &BlockHash) -> Result<u32, NodeError> {
+        self.chain_state
+            .get_block_height(hash)
+            .map_err(NodeError::Blockchain)?
+            .ok_or(NodeError::MissingBlock(*hash))
     }
 
     /// Get the [`BlockHash`] of a [`Block`] at a given height.
