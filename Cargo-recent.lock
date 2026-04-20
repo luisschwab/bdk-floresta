@@ -121,7 +121,6 @@ dependencies = [
  "futures",
  "halfin",
  "lazy_static",
- "thiserror",
  "time",
  "tokio",
  "tokio-util",

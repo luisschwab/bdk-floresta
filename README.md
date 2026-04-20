@@ -28,7 +28,7 @@ This project uses [`just`](https://github.com/casey/just) for command running, a
 [`cargo-rbmt`](https://github.com/rust-bitcoin/rust-bitcoin-maintainer-tools/tree/master/cargo-rbmt)
 to manage everything related to `cargo`, such as formatting, linting, testing and CI. To install them, run:
 
-```console
+```shell
 ~$ cargo install just
 
 ~$ cargo install cargo-rbmt
@@ -36,24 +36,27 @@ to manage everything related to `cargo`, such as formatting, linting, testing an
 
 A `justfile` is provided for convenience. Run `just` to see available commands:
 
-```console
-~$ > bdk-floresta
+```shell
+~$ just
+> bdk-floresta
 > A Floresta-powered chain-source crate for BDK
 
 Available recipes:
-    build              # Build `bdk-floresta` and examples [alias: b]
-    check              # Check code formatting, compilation, linting, and commit signatures [alias: c]
-    check-features     # Check that all feature combinations compile
-    check-sigs         # Check if commits are PGP-signed
-    delete item="data" # Delete files: data, target, lockfiles [alias: d]
-    doc                # Generate documentation
-    doc-open           # Generate and open documentation
-    example-regtest    # Run the `regtest` example [alias: reg]
-    example-signet     # Run the `signet` example [alias: sig]
-    fmt                # Format code [alias: f]
-    lock               # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock` [alias: l]
-    msrv               # Check if this library builds with the MSRV toolchain
-    pre-push           # Perform pre-push checks:  [alias: p]
+    build               # Build `bdk-floresta` and examples [alias: b]
+    check               # Check code formatting, compilation, linting, and commit signatures [alias: c]
+    check-features      # Check that all feature combinations compile
+    check-sigs          # Check if commits are PGP-signed
+    delete item="data"  # Delete files: data, target, lockfiles [alias: d]
+    doc                 # Generate documentation
+    doc-open            # Generate and open documentation
+    example-fsm         # Run the `fsm` example [alias: fsm]
+    example-regtest     # Run the `regtest` example [alias: reg]
+    example-signet      # Run the `signet` example [alias: sig]
+    example-wallet-sync # Run the `sync` example [alias: ws]
+    fmt                 # Format code [alias: f]
+    lock                # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock` [alias: l]
+    pre-push            # Run pre-push checks [alias: p]
+    test                # Run tests across all toolchains and lockfiles [alias: t]
 ```
 
 ## Architecture
