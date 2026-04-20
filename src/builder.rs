@@ -147,7 +147,7 @@ impl From<UtreexoNodeConfig> for NodeConfig {
 #[derive(Default)]
 pub struct Builder {
     /// Configuration for building the [`Node`].
-    pub node_configuration: NodeConfig,
+    pub config: NodeConfig,
     /// Configuration for building the tracing subscriber logger.
     #[cfg(feature = "logger")]
     pub logger: Option<Logger>,
@@ -162,8 +162,8 @@ impl Builder {
     }
 
     /// Instantiate a [`Builder`] from a [`NodeConfig`].
-    pub fn from_config(mut self, node_configuration: NodeConfig) -> Self {
-        self.node_configuration = node_configuration;
+    pub fn from_config(mut self, config: NodeConfig) -> Self {
+        self.config = config;
         self
     }
 
@@ -185,13 +185,13 @@ impl Builder {
     pub fn build(self) -> Result<Node, BuilderError> {
         // Assert that the node and wallet network are equal.
         if let Some(ref wallet) = self.wallet {
-            if self.node_configuration.network != wallet.network() {
+            if self.config.network != wallet.network() {
                 return Err(BuilderError::NetworkMismatch);
             }
         }
 
         // Create the data directory for node and wallet data.
-        fs::create_dir_all(&self.node_configuration.data_directory)?;
+        fs::create_dir_all(&self.config.data_directory)?;
 
         // Init the logger, and keep a guard if logging to a file is enabled.
         #[cfg(feature = "logger")]
@@ -203,7 +203,7 @@ impl Builder {
 
         // Configure the [`FlatChainStore`].
         let chain_store_cfg = FlatChainStoreConfig::new(
-            self.node_configuration
+            self.config
                 .data_directory
                 .join("chain")
                 .to_string_lossy()
@@ -216,44 +216,39 @@ impl Builder {
 
         // Initialize a [`ChainState`] from the [`FlatChainStore`].
         let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(
-            ChainState::open(
-                chain_store,
-                self.node_configuration.network,
-                AssumeValidArg::Hardcoded,
-            )
-            .map_err(BuilderError::ChainState)?,
+            ChainState::open(chain_store, self.config.network, AssumeValidArg::Hardcoded)
+                .map_err(BuilderError::ChainState)?,
         );
 
         // Configure the [`FlatFiltersStore`].
-        let filter_store =
-            FlatFiltersStore::new(self.node_configuration.data_directory.join("cbf"));
-        let filters = Arc::new(NetworkFilters::new(filter_store));
+        let block_filter_store = FlatFiltersStore::new(self.config.data_directory.join("cbf"));
+        let block_filters = Arc::new(NetworkFilters::new(block_filter_store));
 
-        info!("FilterStore loaded at height {}", filters.get_height()?);
+        info!(
+            "FilterStore loaded at height {}",
+            block_filters.get_height()?
+        );
 
         // A kill signal that keeps track of whether the [`Node`] should stop.
         let kill_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
         // Create the [`Node`]'s mempool.
-        let mempool_size_bytes = 1_000_000 * self.node_configuration.mempool_size;
+        let mempool_size_bytes = 1_000_000 * self.config.mempool_size;
         let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(mempool_size_bytes)));
 
         // Encapsulate [`UtreexoNode`] as an inner of [`Node`].
-        let node_inner = UtreexoNode::<_, RunningNode>::new(
-            self.node_configuration.clone().into(),
+        let inner = UtreexoNode::<_, RunningNode>::new(
+            self.config.clone().into(),
             chain_state.clone(),
             mempool,
-            Some(filters),
+            Some(block_filters.clone()),
             kill_signal.clone(),
-            AddressMan::new(
-                self.node_configuration.address_man_size,
-                &self.node_configuration.reachable_nets,
-            ),
+            AddressMan::new(self.config.address_man_size, &self.config.reachable_nets),
         )
         .map_err(BuilderError::BuildInner)?;
 
         // Get a handle to interact with the [`Node`].
-        let node_handle: NodeInterface = node_inner.get_handle();
+        let handle: NodeInterface = inner.get_handle();
 
         // Set up the [`Wallet`]'s update channel, sender and receiver.
         let (update_tx, update_rx) = unbounded_channel::<WalletUpdate>();
@@ -268,15 +263,16 @@ impl Builder {
         };
 
         Ok(Node {
+            inner: Some(inner),
+            handle,
+            config: self.config,
             state: Arc::new(RwLock::new(State::Inactive)),
-            config: self.node_configuration,
-            node_inner: Some(node_inner),
-            chain_state,
-            node_handle,
             cancellation_token: CancellationToken::new(),
             kill_signal,
             shutdown_task: None,
             state_update_task: None,
+            chain_state,
+            block_filters,
             wallet: wallet_arc,
             update_subscriber: Some(update_rx),
             #[cfg(feature = "logger")]

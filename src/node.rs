@@ -10,8 +10,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bdk_wallet::Wallet;
+use bitcoin::block::Header;
 use bitcoin::Block;
 use bitcoin::BlockHash;
+use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
 use bitcoin::Txid;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
@@ -19,6 +21,8 @@ use floresta_chain::pruned_utreexo::BlockchainInterface;
 use floresta_chain::pruned_utreexo::UpdatableChainstate;
 use floresta_chain::BlockConsumer;
 use floresta_chain::ChainState;
+use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
+use floresta_compact_filters::network_filters::NetworkFilters;
 #[allow(unused)]
 use floresta_wire::address_man::AddressMan;
 use floresta_wire::node::running_ctx::RunningNode;
@@ -26,6 +30,7 @@ use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::node_interface::PeerInfo;
 use floresta_wire::rustreexo::stump::Stump;
+use futures::future;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
 use tokio::sync::RwLock;
@@ -43,6 +48,10 @@ use crate::error::NodeError;
 use crate::fsm::compute_next_state;
 use crate::fsm::State;
 use crate::updater::WalletUpdate;
+
+#[allow(unused)]
+/// A conservative value for the maximum chain reorganization depth.
+const MAX_REORG_DEPTH: u8 = 7;
 
 /// The period between polls for the `status_update_task`, in milliseconds.
 const STATUS_UPDATE_POLL_PERIOD: Duration = Duration::from_millis(500);
@@ -82,7 +91,7 @@ impl fmt::Display for Action {
             Self::RemovingPeer(socket) => write!(f, "Removing peer={}", socket),
             Self::Pinging => write!(f, "Pinging all peers"),
             Self::FetchingBlock(hash) => write!(f, "Fetching block with hash={}", hash),
-            Self::CompactFilterScan((start_height, end_height)) => write!(f, "Scanning the blockchain with Compact Block Filters from start_height={} up to end_height={}", start_height, end_height),
+            Self::CompactFilterScan((start_height, stop_height)) => write!(f, "Scanning the blockchain with Compact Block Filters from start_height={} up to stop_height={}", start_height, stop_height),
             Self::BroadcastingTransaction(txid) => write!(f, "Broadcasting transaction with txid={}", txid),
         }
     }
@@ -95,20 +104,17 @@ type NodeInner = UtreexoNode<Arc<ChainState<FlatChainStore>>, RunningNode>;
 ///
 /// It groups all of the required pieces for the [`Node`] to function.
 pub struct Node {
-    /// The [`Node`]'s current [`State`].
-    pub state: Arc<RwLock<State>>,
-
     /// The inner, underlying [`UtreexoNode`].
-    pub(crate) node_inner: Option<NodeInner>,
+    pub(crate) inner: Option<NodeInner>,
+
+    /// A handle used to interact with the [`UtreexoNode`].
+    pub(crate) handle: NodeInterface,
 
     /// The [`Node`]'s configuration settings.
     pub(crate) config: NodeConfig,
 
-    /// The [`Node`]'s blockchain state.
-    pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
-
-    /// A handle used to interact with the [`UtreexoNode`].
-    pub(crate) node_handle: NodeInterface,
+    /// The [`Node`]'s current [`State`].
+    pub(crate) state: Arc<RwLock<State>>,
 
     /// A cancellation token used to signal shutdown to all tasks,
     /// Triggered via `SIGINT` or [`Node::shutdown()`].
@@ -132,12 +138,18 @@ pub struct Node {
     /// the values returned into a [`State`].
     pub(crate) state_update_task: Option<JoinHandle<()>>,
 
-    /// A [`Wallet`] that will receive updates from the [`Node`].
-    pub wallet: Option<Arc<RwLock<Wallet>>>,
+    /// The [`Node`]'s blockchain state.
+    pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
+
+    /// The [`Node`]'s [Compact Block Filter](https://github.com/bitcoin/bips/blob/master/bip-0158.mediawiki) Store.
+    pub(crate) block_filters: Arc<NetworkFilters<FlatFiltersStore>>,
 
     /// Receiver for [`WalletUpdate`]s that come from
     /// the [`Node`] and should be applied to the [`Wallet`].
     pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
+
+    /// A [`Wallet`] that will receive updates from the [`Node`].
+    pub wallet: Option<Arc<RwLock<Wallet>>>,
 
     /// A guard that ensures the logger remains active for the [`Node`]'s lifetime.
     #[cfg(feature = "logger")]
@@ -191,7 +203,7 @@ impl Node {
     ///   signal, and perfoms the graceful shutdown routine.
     pub async fn run(&mut self) -> Result<(), NodeError> {
         // `take()` the inner node to make sure `Node::run()` can only be called once
-        let inner_node = self.node_inner.take().ok_or(NodeError::AlreadyRunning)?;
+        let inner_node = self.inner.take().ok_or(NodeError::AlreadyRunning)?;
 
         // Set the node's state to `State::Active`
         *self.state.write().await = State::Active;
@@ -204,9 +216,10 @@ impl Node {
 
         // Spawn a task that will update the node's state
         let state = self.state.clone();
-        let cancellation_token = self.cancellation_token.clone();
         let kill_signal = self.kill_signal.clone();
+        let cancellation_token = self.cancellation_token.clone();
         let chain_state = self.chain_state.clone();
+        let block_filters = self.block_filters.clone();
 
         let state_update_task = tokio::task::spawn(async move {
             loop {
@@ -225,10 +238,17 @@ impl Node {
                             error!("Failed to compute FSM's next state (failed to get chain tip): {}", chain_tip.unwrap_err());
                             continue
                         };
-                        let current_state = state.read().await.clone();
 
+                        let filter_tip = block_filters.get_height();
+                        let Ok(filter_tip) = filter_tip else {
+                            error!("Failed to compute FSM's next state (failed to filter chain tip): {}", filter_tip.unwrap_err());
+                            continue
+                        };
+
+                        // Compute the next state from the current state + inputs
+                        let current_state = state.read().await.clone();
                         if !matches!(current_state, State::PerformingAction(_) | State::ShuttingDown) {
-                            *state.write().await = compute_next_state(current_state, node_tip, chain_tip);
+                            *state.write().await = compute_next_state(current_state, node_tip, chain_tip, filter_tip);
                         }
                     }
                 }
@@ -314,16 +334,32 @@ impl Node {
         self.chain_state.get_validation_index().map_err(Into::into)
     }
 
+    /// Get the [`Node`]'s [`NetworkFilters`] height.
+    pub fn get_filter_height(&self) -> Result<u32, NodeError> {
+        self.block_filters.get_height().map_err(Into::into)
+    }
+
     /// Get the [`Node`]'s current accumulator, as a [`Stump`].
     pub fn get_accumulator(&self) -> Stump {
         self.chain_state.get_acc()
     }
 
-    /// Get the [`BlockHash`] associated with a height.
-    pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, NodeError> {
-        let hash = self.chain_state.get_block_hash(height)?;
+    /// Get the height of a [`Block`] given its [`BlockHash`].
+    pub fn get_block_height(&self, hash: &BlockHash) -> Result<u32, NodeError> {
+        self.chain_state
+            .get_block_height(hash)
+            .map_err(NodeError::Blockchain)?
+            .ok_or(NodeError::MissingBlock(*hash))
+    }
 
-        Ok(hash)
+    /// Get the [`BlockHash`] of a [`Block`] at a given height.
+    pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, NodeError> {
+        self.chain_state.get_block_hash(height).map_err(Into::into)
+    }
+
+    /// Get the [`Header`] of a [`Block`], given its [`BlockHash`].
+    pub fn get_block_header(&self, hash: &BlockHash) -> Result<Header, NodeError> {
+        self.chain_state.get_block_header(hash).map_err(Into::into)
     }
 
     /// A subscriber for validated [`Block`]s.
@@ -335,7 +371,7 @@ impl Node {
 
     /// Get information about peers the [`Node`] is currently connected to.
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
-        match self.node_handle.get_peer_info().await {
+        match self.handle.get_peer_info().await {
             Ok(peer_infos) => {
                 debug!("Got peer information: {:?}", peer_infos);
                 Ok(peer_infos)
@@ -352,17 +388,50 @@ impl Node {
     /// Fetch a [`Block`] given its [`BlockHash`].
     ///
     /// Since [`floresta-chain`](floresta_chain) does not persist any
-    /// [`Block`]s, these must be requested over the wire from a peer.
-    pub async fn fetch_block(&self, hash: BlockHash) -> Result<Option<Block>, NodeError> {
+    /// [`Block`]s, it must be requested over the wire from a peer.
+    pub async fn fetch_block(&self, hash: BlockHash) -> Result<Block, NodeError> {
         let last_state = self.state.read().await.clone();
         *self.state.write().await =
             State::PerformingAction(Action::FetchingBlock(hash.to_string()));
 
-        let block = self.node_handle.get_block(hash).await?;
+        let block = self.handle.get_block(hash).await?;
+        if let Some(block) = block {
+            *self.state.write().await = last_state;
+            Ok(block)
+        } else {
+            *self.state.write().await = last_state;
+            Err(NodeError::MissingBlock(hash))
+        }
+    }
+
+    /// Fetch a number [`Block`]s in a batch, given their [`BlockHash`]es.
+    ///
+    /// The [`Block`]s are returned in the same ordering of the provided hashes.
+    ///
+    /// Since [`floresta-chain`](floresta_chain) does not persist any
+    /// [`Block`]s, they must be requested over the wire from a peer.
+    pub async fn fetch_blocks(&self, hashes: &[BlockHash]) -> Result<Vec<Block>, NodeError> {
+        let last_state = self.state.read().await.clone();
+        *self.state.write().await =
+            State::PerformingAction(Action::FetchingBlock("multiple".to_string()));
+
+        // Fetch all blocks in parallel
+        let blocks = future::try_join_all(hashes.iter().map(|hash| {
+            let handle = self.handle.clone();
+            let hash = *hash;
+            async move {
+                handle
+                    .get_block(hash)
+                    .await
+                    .map_err(NodeError::from)?
+                    .ok_or(NodeError::MissingBlock(hash))
+            }
+        }))
+        .await?;
 
         *self.state.write().await = last_state;
 
-        Ok(block)
+        Ok(blocks)
     }
 
     /// Broadcast a [`Transaction`] to the [`Node`]'s peers.
@@ -375,7 +444,7 @@ impl Node {
         *self.state.write().await =
             State::PerformingAction(Action::BroadcastingTransaction(txid.to_string()));
 
-        let result = match self.node_handle.broadcast_transaction(tx).await {
+        let result = match self.handle.broadcast_transaction(tx).await {
             Ok(Ok(txid)) => {
                 info!("Successfully broadcast transaction with txid={}", txid);
                 Ok(txid)
@@ -406,7 +475,7 @@ impl Node {
             State::PerformingAction(Action::ConnectingToPeer(socket.to_string()));
 
         let result = match self
-            .node_handle
+            .handle
             .add_peer(socket.ip(), socket.port(), self.config.allow_p2pv1_fallback)
             .await
         {
@@ -437,7 +506,7 @@ impl Node {
             State::PerformingAction(Action::DisconnectingFromPeer(socket.to_string()));
 
         let result = match self
-            .node_handle
+            .handle
             .disconnect_peer(socket.ip(), socket.port())
             .await
         {
@@ -468,11 +537,7 @@ impl Node {
         *self.state.write().await =
             State::PerformingAction(Action::RemovingPeer(socket.to_string()));
 
-        let result = match self
-            .node_handle
-            .remove_peer(socket.ip(), socket.port())
-            .await
-        {
+        let result = match self.handle.remove_peer(socket.ip(), socket.port()).await {
             Ok(true) => {
                 debug!("Removed peer={} from the address manager", socket);
                 Ok(true)
@@ -499,7 +564,7 @@ impl Node {
         let last_state = self.state.read().await.clone();
         *self.state.write().await = State::PerformingAction(Action::Pinging);
 
-        let result = match self.node_handle.ping().await {
+        let result = match self.handle.ping().await {
             Ok(true) => {
                 debug!("Sent a ping to all peers");
                 Ok(true)
@@ -516,5 +581,63 @@ impl Node {
         *self.state.write().await = last_state;
 
         result
+    }
+
+    // TODO(@luisschwab): implement scan interruption
+    // TODO(@luisschwab): implement scan progress observability
+    /// Perform a Compact Block Filter scan of the blockchain, given a set
+    /// of [scriptPubkeys](ScriptBuf), and a range of [`Block`]s to scan.
+    ///
+    /// This method will process the provided [scriptPubKeys](ScriptBuf) against
+    /// the [`Node`]'s Compact Block Filters via _Golomb-Coded Sets_ to figure
+    /// out which [`Block`]s to fetch from peers.
+    ///
+    /// Note that the matching process carries a small probability of false-positives.
+    /// This probability is inversely proportional to the size of the Compact Block
+    /// Filters that the [`Node`] stores. For more information, see
+    /// [BIP-0158](https://github.com/bitcoin/bips/blob/master/bip-0158.mediawiki#golomb-coded-sets).
+    pub async fn compact_filter_scan(
+        &self,
+        spks: &[ScriptBuf],
+        start_height: u32,
+        stop_height: u32,
+    ) -> Result<Vec<(u32, Block)>, NodeError> {
+        let last_state = self.state.read().await.clone();
+
+        // Only perform the scan if the node's state is `Operational` or `PerformingAction`
+        if !matches!(last_state, State::Operational | State::PerformingAction(_)) {
+            return Err(NodeError::IllegalAction);
+        }
+        // Only perform the scan if at least one spk is provided
+        if spks.is_empty() {
+            return Err(NodeError::NoSpksProvided);
+        }
+        *self.state.write().await =
+            State::PerformingAction(Action::CompactFilterScan((start_height, stop_height)));
+
+        let chain_state = self.chain_state.clone();
+        let block_filters = self.block_filters.as_ref();
+        let spks = spks.iter().map(|s| s.as_bytes()).collect();
+
+        // Match spks against block filters to figure out what blocks need to be fetched
+        let hashes = block_filters
+            .match_any(spks, Some(start_height), Some(stop_height), chain_state)
+            .map_err(NodeError::CompactFilterScan)?;
+
+        // Fetch the blocks
+        let blocks = self.fetch_blocks(&hashes).await?;
+
+        // Query the chain for each block's height
+        let mut height_and_block: Vec<(u32, Block)> = blocks
+            .into_iter()
+            .map(|block| Ok((self.get_block_height(&block.block_hash())?, block)))
+            .collect::<Result<_, NodeError>>()?;
+
+        // Sort blocks by height
+        height_and_block.sort_by_key(|(height, _)| *height);
+
+        *self.state.write().await = last_state;
+
+        Ok(height_and_block)
     }
 }

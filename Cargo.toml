@@ -31,12 +31,13 @@ required-features = ["logger"]
 toml = { version = "1.0" }
 
 [dependencies]
-bitcoin = { version = "0.32.7" }
-bdk_wallet = { version = "2.3" }
+bitcoin = { version = "0.32.8" }
+bdk_wallet = { version = "3.0" }
 floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5", features = ["flat-chainstore"] }
 floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
+futures = { version = "0.3.32" }
 thiserror = { version = "2.0" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }

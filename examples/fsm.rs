@@ -24,7 +24,7 @@ const STATUS_POLL_PERIOD: Duration = Duration::from_secs(5);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // On display the example's logs
+    // Only display the example's own logs
     env::set_var("RUST_LOG", "fsm=info");
 
     // Set up the logger
@@ -59,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
                 return Ok(());
         }
         result = async {
+            // Wait until the node becomes operational
             while node.get_state().await != State::Operational {
                 tokio::time::sleep(STATUS_POLL_PERIOD).await;
                 info!("> NODE STATE: {}", node.get_state().await);

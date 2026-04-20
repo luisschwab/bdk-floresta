@@ -6,7 +6,7 @@
 //!
 //! ```text
 //!  ┌──────────┐   P2P    ┌──────────┐        P2P        ┌──────────────┐
-//!  │ bitcoind │ <======> │ utreexod │ <===============> │ bdk_floresta │
+//!  │ BitcoinD │ <======> │ UtreexoD │ <===============> │ bdk_floresta │
 //!  └──────────┘  blocks  └──────────┘  blocks + proofs  └──────────────┘
 //! ```
 //!
@@ -143,7 +143,7 @@ async fn main() -> anyhow::Result<()> {
             info!("> Hash of the block at the tip: {}", block_hash);
 
             // Fetch the block at the tip from a peer and show its header
-            let block = node.fetch_block(block_hash).await?.unwrap();
+            let block = node.fetch_block(block_hash).await?;
             info!("> Header of the block at the tip: {:#?}", block.header);
 
             // Get bdk_floresta's Utreexo accumulator state
