@@ -37,6 +37,7 @@ floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "a
 floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
 floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
+futures = { version = "0.3.32" }
 thiserror = { version = "2.0" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }

@@ -29,6 +29,7 @@ use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::node_interface::PeerInfo;
 use floresta_wire::rustreexo::stump::Stump;
+use futures::future;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
 use tokio::sync::RwLock;
@@ -47,6 +48,7 @@ use crate::fsm::compute_next_state;
 use crate::fsm::State;
 use crate::updater::WalletUpdate;
 
+#[allow(unused)]
 /// A conservative value for the maximum chain reorganization depth.
 const MAX_REORG_DEPTH: u8 = 7;
 
@@ -390,23 +392,29 @@ impl Node {
 
     /// Fetch a number [`Block`]s in a batch, given their [`BlockHash`]es.
     ///
+    /// The [`Block`]s are returned in the same ordering of the provided hashes.
+    ///
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, they must be requested over the wire from a peer.
-    pub async fn fetch_blocks(&self, hashes: Vec<BlockHash>) -> Result<Vec<Block>, NodeError> {
+    pub async fn fetch_blocks(&self, hashes: &[BlockHash]) -> Result<Vec<Block>, NodeError> {
         let last_state = self.state.read().await.clone();
+        *self.state.write().await =
+            State::PerformingAction(Action::FetchingBlock("multiple".to_string()));
 
-        let mut blocks: Vec<Block> = Vec::with_capacity(hashes.len());
-        for hash in hashes {
-            *self.state.write().await =
-                State::PerformingAction(Action::FetchingBlock(hash.to_string()));
-
-            let block = self.handle.get_block(hash).await?;
-            if let Some(block) = block {
-                blocks.push(block);
-            } else {
-                return Err(NodeError::MissingBlock(hash));
+        // Fetch all blocks in parallel
+        let blocks = future::try_join_all(hashes.iter().map(|hash| {
+            let handle = self.handle.clone();
+            let hash = *hash;
+            async move {
+                handle
+                    .get_block(hash)
+                    .await
+                    .map_err(NodeError::from)?
+                    .ok_or(NodeError::MissingBlock(hash))
             }
-        }
+        }))
+        .await?;
+
         *self.state.write().await = last_state;
 
         Ok(blocks)
