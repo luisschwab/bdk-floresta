@@ -8,6 +8,7 @@ use core::fmt;
 use core::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 
 use bdk_wallet::Wallet;
 use bitcoin::block::Header;
@@ -116,6 +117,9 @@ pub struct Node {
     /// The [`Node`]'s current [`State`].
     pub(crate) state: Arc<RwLock<State>>,
 
+    /// The [`Instant`] at which the [`Node`] was started.
+    pub(crate) started_at: Option<Instant>,
+
     /// A cancellation token used to signal shutdown to all tasks,
     /// Triggered via `SIGINT` or [`Node::shutdown()`].
     pub(crate) cancellation_token: CancellationToken,
@@ -202,6 +206,9 @@ impl Node {
     /// - A task for the shutdown handler, which reacts to a [`Node::shutdown`] call or a `SIGINT`
     ///   signal, and perfoms the graceful shutdown routine.
     pub async fn run(&mut self) -> Result<(), NodeError> {
+        // Register the `Instant` the node started running
+        self.started_at = Some(Instant::now());
+
         // `take()` the inner node to make sure `Node::run()` can only be called once
         let inner_node = self.inner.take().ok_or(NodeError::AlreadyRunning)?;
 
@@ -308,6 +315,13 @@ impl Node {
     }
 
     // ----> LOCAL METHODS
+
+    /// How [long](Duration) the [`Node`] has been running.
+    pub fn uptime(&self) -> Duration {
+        self.started_at
+            .map(|t| t.elapsed())
+            .expect("started_at is always some")
+    }
 
     /// Get the [`Node`]'s current [`State`].
     pub async fn get_state(&self) -> State {

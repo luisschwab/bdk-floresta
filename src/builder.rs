@@ -267,6 +267,7 @@ impl Builder {
             handle,
             config: self.config,
             state: Arc::new(RwLock::new(State::Inactive)),
+            started_at: None,
             cancellation_token: CancellationToken::new(),
             kill_signal,
             shutdown_task: None,
