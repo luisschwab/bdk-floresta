@@ -88,7 +88,7 @@ impl fmt::Display for Action {
             Self::RemovingPeer(socket) => write!(f, "Removing peer={}", socket),
             Self::Pinging => write!(f, "Pinging all peers"),
             Self::FetchingBlock(hash) => write!(f, "Fetching block with hash={}", hash),
-            Self::CompactFilterScan((start_height, end_height)) => write!(f, "Scanning the blockchain with Compact Block Filters from start_height={} up to end_height={}", start_height, end_height),
+            Self::CompactFilterScan((start_height, stop_height)) => write!(f, "Scanning the blockchain with Compact Block Filters from start_height={} up to stop_height={}", start_height, stop_height),
             Self::BroadcastingTransaction(txid) => write!(f, "Broadcasting transaction with txid={}", txid),
         }
     }
@@ -213,9 +213,10 @@ impl Node {
 
         // Spawn a task that will update the node's state
         let state = self.state.clone();
-        let cancellation_token = self.cancellation_token.clone();
         let kill_signal = self.kill_signal.clone();
+        let cancellation_token = self.cancellation_token.clone();
         let chain_state = self.chain_state.clone();
+        let block_filters = self.block_filters.clone();
 
         let state_update_task = tokio::task::spawn(async move {
             loop {
@@ -234,10 +235,17 @@ impl Node {
                             error!("Failed to compute FSM's next state (failed to get chain tip): {}", chain_tip.unwrap_err());
                             continue
                         };
-                        let current_state = state.read().await.clone();
 
+                        let filter_tip = block_filters.get_height();
+                        let Ok(filter_tip) = filter_tip else {
+                            error!("Failed to compute FSM's next state (failed to filter chain tip): {}", filter_tip.unwrap_err());
+                            continue
+                        };
+
+                        // Compute the next state from the current state + inputs
+                        let current_state = state.read().await.clone();
                         if !matches!(current_state, State::PerformingAction(_) | State::ShuttingDown) {
-                            *state.write().await = compute_next_state(current_state, node_tip, chain_tip);
+                            *state.write().await = compute_next_state(current_state, node_tip, chain_tip, filter_tip);
                         }
                     }
                 }

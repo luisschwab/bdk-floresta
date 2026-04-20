@@ -42,7 +42,7 @@ pub enum State {
     /// The [`Node`] is performing Initial Block Download (S4).
     InitialBlockDownload((u32, u32)),
     /// The [`Node`] is downloading Compact Block Filters from its peers (S5).
-    CompactBlockFilterDownload,
+    CompactBlockFilterDownload(u32),
     /// The [`Node`] is performing backfill (S6).
     Backfill,
     /// The [`Node`] is fully operational (S7).
@@ -64,7 +64,9 @@ impl fmt::Display for State {
             Self::InitialBlockDownload((node_tip, chain_tip)) => {
                 write!(f, "Performing IBD [{}/{}] ", node_tip, chain_tip)
             }
-            Self::CompactBlockFilterDownload => write!(f, "Downloading Compact Block Filters"),
+            Self::CompactBlockFilterDownload(height) => {
+                write!(f, "Downloading Compact Block Filters at height={}", height)
+            }
             Self::Backfill => write!(f, "Performing Backfill"),
             Self::Operational => write!(f, "Operational"),
             Self::PerformingAction(action) => write!(f, "Performing {}", action),
@@ -76,7 +78,6 @@ impl fmt::Display for State {
 
 // TODO(@luisschwab): missing
 // - S2 (DNS Bootstrap)
-// - S5 (Compact Filter Download)
 // - S6 (Backfill)
 /// Continuously update the [`Node`]'s [`State`].
 ///
@@ -84,7 +85,12 @@ impl fmt::Display for State {
 /// we compute the next [`State`] from the current
 /// [`State`] and external inputs. See `doc/FSM.md`
 /// for the FSM model and next-state logic.
-pub fn compute_next_state(current_state: State, node_tip: u32, chain_tip: u32) -> State {
+pub fn compute_next_state(
+    current_state: State,
+    node_tip: u32,
+    chain_tip: u32,
+    filter_tip: u32,
+) -> State {
     match current_state {
         // S1: Active
         State::Active => {
@@ -107,6 +113,14 @@ pub fn compute_next_state(current_state: State, node_tip: u32, chain_tip: u32) -
             if node_tip != chain_tip {
                 State::InitialBlockDownload((node_tip, chain_tip))
             } else {
+                State::CompactBlockFilterDownload(filter_tip)
+            }
+        }
+        // S5: Compact Block Filter Download
+        State::CompactBlockFilterDownload(_) => {
+            if filter_tip != chain_tip && filter_tip != node_tip {
+                State::CompactBlockFilterDownload(filter_tip)
+            } else {
                 State::Operational
             }
         }
@@ -119,15 +133,13 @@ pub fn compute_next_state(current_state: State, node_tip: u32, chain_tip: u32) -
         // - S8 (PerformingAction): handled by `Node` methods
         // - S9 (ShuttingDown): handled by the shutdown task
         //
-        // Skip these variants since their
-        // next state logic still needs other TODOs:
+        // Skip these variants since their next
+        // state logic still needs figuring out
         // - S2 (DnsBootstrapping)
-        // - S5 (CompactBlockFilterDownload)
         // - S6 (Backfill)
         s @ State::PerformingAction(_)
         | s @ State::ShuttingDown
         | s @ State::Inactive
-        | s @ State::CompactBlockFilterDownload
         | s @ State::DnsBootstrapping
         | s @ State::Backfill => s,
     }
