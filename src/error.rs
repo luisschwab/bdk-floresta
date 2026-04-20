@@ -3,15 +3,22 @@
 //! # Error
 //!
 //! This module holds error enums for [`Builder`](crate::builder::Builder)-related
-//! or [`Node`](crate::node::Node)-related errors, along with their `From` implementations.
+//! or [`Node`]-related errors, along with their `From` implementations.
 
 use std::sync::Arc;
 
-use bitcoin::BlockHash;
+#[allow(unused)]
+use bitcoin::ScriptBuf;
 use thiserror::Error;
 
-/// Errors which might occur when building the
-/// [`Node`](crate::node::Node) or [logger](crate::logger::Logger).
+#[allow(unused)]
+use crate::fsm::State;
+#[allow(unused)]
+use crate::node::Action;
+#[allow(unused)]
+use crate::node::Node;
+
+/// Errors which might occur when building the [`Node`] or [`Logger`](crate::logger::Logger).
 #[derive(Debug, Error)]
 pub enum BuilderError {
     #[error("Failed to create the data directory: {0:?}")]
@@ -51,22 +58,22 @@ impl From<floresta_compact_filters::IterableFilterStoreError> for BuilderError {
     }
 }
 
-/// Errors that can occur whilst interacting with the [`Node`](crate::node::Node).
+/// Errors that can occur whilst interacting with the [`Node`].
 #[derive(Debug, Error)]
 pub enum NodeError {
-    /// The [`Node`](crate::node::Node) is already running.
+    /// The [`Node`] is already running.
     #[error("The node is already running")]
     AlreadyRunning,
 
-    /// The [`Node`](crate::node::Node) failed to perform a clean shutdown.
+    /// The [`Node`] failed to perform a clean shutdown.
     #[error("The node failed to perform a clean shutdown")]
     Shutdown,
 
-    /// The [`Node`](crate::node::Node)'s sender dropped without sending.
+    /// The [`Node`]'s sender dropped without sending.
     #[error(transparent)]
     Receiver(#[from] tokio::sync::oneshot::error::RecvError),
 
-    /// The [`Node`](crate::node::Node) failed to flush the chain state to disk.
+    /// The [`Node`] failed to flush the chain state to disk.
     #[error("Failed to flush chain state: {0:?}")]
     Flush(floresta_chain::BlockchainError),
 
@@ -83,8 +90,29 @@ pub enum NodeError {
     Mempool(floresta_mempool::mempool::AcceptToMempoolError),
 
     /// Failed to fetch all of the requested blocks.
-    #[error("Failed to fetch all all of the requested blocks (the block with hash={0:?} does not exist)")]
-    MissingBlock(BlockHash),
+    #[error("The block with hash={0:?} does not exist in the chain)")]
+    MissingBlock(bitcoin::BlockHash),
+
+    /// The requested [`Action`] cannot be performed in the [`Node`]'s current [`State`].
+    #[error("The requested action cannot be performed in the node's current state")]
+    IllegalAction,
+
+    /// No [scriptPubkeys](ScriptBuf) were provided.
+    #[error("No scriptPubkeys were provided when rescanning the blockchain")]
+    NoSpksProvided,
+
+    // TODO(@luisschwab): remove unwrap on `NetworkFilters::match_any` upstream.
+    /// Error whilst scanning the blockchain with Compact Block Filters.
+    #[error("Error whilst scanning the blockchain with Compact Block Filters: {0:?}")]
+    CompactFilterScan(floresta_compact_filters::IterableFilterStoreError),
+
+    /// Failed to join a task whilst fetching blocks.
+    #[error("Block fetch task failed: {0}")]
+    FetchTask(#[from] tokio::task::JoinError),
+
+    /// Compact Block Filter-related errors.
+    #[error("Compact Block Filter error: {0}")]
+    CompactBlockFilterStore(floresta_compact_filters::IterableFilterStoreError),
 }
 
 impl From<std::io::Error> for NodeError {
@@ -102,5 +130,11 @@ impl From<floresta_chain::BlockchainError> for NodeError {
 impl From<floresta_mempool::mempool::AcceptToMempoolError> for NodeError {
     fn from(err: floresta_mempool::mempool::AcceptToMempoolError) -> Self {
         NodeError::Mempool(err)
+    }
+}
+
+impl From<floresta_compact_filters::IterableFilterStoreError> for NodeError {
+    fn from(err: floresta_compact_filters::IterableFilterStoreError) -> Self {
+        NodeError::CompactBlockFilterStore(err)
     }
 }
