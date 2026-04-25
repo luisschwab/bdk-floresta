@@ -2,7 +2,9 @@ name: Signed Commits
 
 on:
     push:
+      branches: [ master ]
     pull_request:
+
 permissions: {}
 env:
     CARGO_TERM_COLOR: always
@@ -11,7 +13,6 @@ jobs:
     commit-signatures:
         name: Assert all commits are PGP-signed
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
         steps:
             - name: Checkout code

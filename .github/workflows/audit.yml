@@ -2,7 +2,9 @@ name: Security Audit
 
 on:
     push:
+      branches: [ master ]
     pull_request:
+
 env:
     CARGO_TERM_COLOR: always
 permissions: {}
@@ -11,7 +13,6 @@ jobs:
     audit:
         name: cargo-audit
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
         permissions:
             contents: read
 
