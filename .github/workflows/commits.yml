@@ -1,4 +1,4 @@
-name: Signed Commits
+name: Commit Signature
 
 on:
     push:
@@ -11,7 +11,7 @@ env:
 
 jobs:
     commit-signatures:
-        name: Assert all commits are PGP-signed
+        name: Enforce PGP signatures
         runs-on: ubuntu-latest
 
         steps:
@@ -20,9 +20,6 @@ jobs:
               with:
                   persist-credentials: false
                   fetch-depth: 0
-
-            - name: Setup just
-              uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
 
             - name: Check commit signatures
               run: bash contrib/check-signatures.sh

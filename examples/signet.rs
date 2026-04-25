@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-//! Signet integration test between [`bdk_floresta`] and the Bitcoin signet P2P network.
+//! Signet integration test between [`bdk_floresta`] and the greater Signet P2P network.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -71,14 +71,13 @@ async fn main() -> anyhow::Result<()> {
                 info!("    > User Agent: {}", peer.user_agent);
             }
 
-            // Get the hash of the block at the tip
-            let tip = node.get_chain_height()?;
-            let block_hash = node.get_block_hash(tip)?;
-            info!("> Hash of the block at the tip: {}", block_hash);
-
-            // Fetch the block at the tip from a peer
-            let block = node.fetch_block(block_hash).await?;
-            info!("> Header of the block at the tip: {:#?}", block.header);
+            // Get the hash of the block at
+            // the tip and fetch it from a peer
+            let height = node.get_chain_height()?;
+            let hash = node.get_block_hash(height)?;
+            let block = node.fetch_block(hash).await?;
+            info!("> Hash of the block at the tip={}: {}", height, hash);
+            info!("> Header of the block at the tip={}: {:#?}", height, block.header);
 
             info!("> /exit");
             node.shutdown().await?;
