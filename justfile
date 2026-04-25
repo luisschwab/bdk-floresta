@@ -1,3 +1,4 @@
+alias a := audit
 alias b := build
 alias c := check
 alias d := delete
@@ -8,12 +9,17 @@ alias sig := example-signet
 alias ws := example-wallet-sync
 alias l := lock
 alias t := test
+alias z := zizmor
 alias p := pre-push
 
 _default:
     @echo "> bdk-floresta"
     @echo "> A Floresta-powered chain-source crate for BDK\n"
     @just --list
+
+[doc: "Run `cargo audit`"]
+audit:
+    cargo audit
 
 [doc: "Build `bdk-floresta` and examples"]
 build:
@@ -74,12 +80,18 @@ lock:
 test:
     cargo rbmt test
 
+[doc: "Run Zizmor"]
+zizmor:
+    uvx zizmor .
+
 [doc: "Run pre-push checks"]
 pre-push:
     @just check-sigs
     @just check
     @just doc
     @just test
+    @just zizmor
+    @just audit
 
 _delete-data:
     rm -rf examples/data
