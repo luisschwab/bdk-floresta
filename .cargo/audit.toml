@@ -2,4 +2,5 @@
 ignore = [
     "RUSTSEC-2026-0098", # blame: bitreq v0.3.4
     "RUSTSEC-2026-0099", # blame: bitreq v0.3.4
+    "RUSTSEC-2026-0104", # blame: bitreq v0.3.4
 ]
