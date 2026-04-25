@@ -1,5 +1,7 @@
 [advisories]
 ignore = [
+    "RUSTSEC-2026-0049", # blame: floresta-wire 0.5.0 > ureq > rustls-webpki 0.103.9
+    "RUSTSEC-2026-0097", # blame: rand 0.8.5
     "RUSTSEC-2026-0098", # blame: bitreq v0.3.4
     "RUSTSEC-2026-0099", # blame: bitreq v0.3.4
     "RUSTSEC-2026-0104", # blame: bitreq v0.3.4
