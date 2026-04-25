@@ -1,8 +1,10 @@
-name: Integration Tests
+name: Integration Testing
 
 on:
     push:
+      branches: [ master ]
     pull_request:
+
 env:
     CARGO_TERM_COLOR: always
     RUST_BACKTRACE: 1
@@ -14,7 +16,6 @@ jobs:
     integration-tests:
         name: Examples
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
         strategy:
             fail-fast: false
             matrix:

@@ -2,7 +2,9 @@ name: Rust CI
 
 on:
     push:
+      branches: [ master ]
     pull_request:
+
 env:
     CARGO_TERM_COLOR: always
     RUST_BACKTRACE: 1
@@ -15,7 +17,6 @@ jobs:
     check:
         name: Check - ${{ matrix.task }}
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
         strategy:
             fail-fast: false
             matrix:
@@ -40,7 +41,6 @@ jobs:
     test:
         name: Test - ${{ matrix.toolchain }} toolchain, ${{ matrix.lockfile }} deps
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
         strategy:
             fail-fast: false
             matrix:
