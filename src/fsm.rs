@@ -20,6 +20,11 @@ use crate::node::Action;
 #[allow(unused)]
 use crate::node::Node;
 
+/// How many blocks behind the chain tip the node can be while still being
+/// considered [`State::Operational`]. Prevents flapping at the chain tip
+/// when a new block arrives and validation briefly lags.
+const OPERATIONAL_TOLERANCE: u32 = 6;
+
 /// The set of [`State`]s the [`Node`] can possibly be in.
 ///
 /// The [`Node`] can be modelled as a Finite State Machine.
@@ -30,26 +35,27 @@ use crate::node::Node;
 /// display the [`Node`]'s [`State`] to their users.
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
-    /// The [`Node`] is not running (S0).
+    /// S0: The [`Node`] is not running.
     Inactive,
-    /// The [`Node`] is active, but not in a well-defined state (S1).
+    /// S1: The [`Node`] is active, but not in a well-defined state.
     Active,
     // TODO(@luisschwab): how do we figure out when we are in this state?
-    /// The [`Node`] is bootstrapping its [address manager](AddressMan) from DNS seeders (S2).
+    /// S2: The [`Node`] is bootstrapping its [address manager](AddressMan) from DNS seeders.
     DnsBootstrapping,
-    /// The [`Node`] is synchronizing headers from its peers (S3).
+    /// S3: The [`Node`] is synchronizing headers from its peers.
     HeaderSync(u32),
-    /// The [`Node`] is performing Initial Block Download (S4).
+    /// S4: The [`Node`] is performing Initial Block Download.
     InitialBlockDownload((u32, u32)),
-    /// The [`Node`] is downloading Compact Block Filters from its peers (S5).
+    /// S5: The [`Node`] is downloading Compact Block Filters from its peers.
     CompactBlockFilterDownload(u32),
-    /// The [`Node`] is performing backfill (S6).
+    // TODO(@luisschwab): how do we figure out when we are in this state?
+    /// S6: The [`Node`] is performing backfill.
     Backfill,
-    /// The [`Node`] is fully operational (S7).
+    /// S7: The [`Node`] is fully operational.
     Operational,
-    /// The [`Node`] is performing an [`Action`] (S8).
+    /// S8: The [`Node`] is performing an [`Action`].
     PerformingAction(Action),
-    /// The [`Node`] is in the process of shutting down (S9).
+    /// S9: The [`Node`] is in the process of shutting down.
     ShuttingDown,
 }
 
@@ -58,19 +64,23 @@ impl fmt::Display for State {
         match self {
             Self::Active => write!(f, "Active"),
             Self::DnsBootstrapping => {
-                write!(f, "Bootstrapping the Address Manager from DNS seeders")
+                write!(f, "Address Manager Bootstrap")
             }
-            Self::HeaderSync(height) => write!(f, "Synchronizing Headers at height={}", height),
+            Self::HeaderSync(height) => write!(f, "Header Synchronization at height={}", height),
             Self::InitialBlockDownload((node_tip, chain_tip)) => {
-                write!(f, "Performing IBD [{}/{}] ", node_tip, chain_tip)
+                write!(
+                    f,
+                    "Initial Block Download at node_tip={} and chain_tip={}",
+                    node_tip, chain_tip
+                )
             }
             Self::CompactBlockFilterDownload(height) => {
-                write!(f, "Downloading Compact Block Filters at height={}", height)
+                write!(f, "Compact Block Filter download at height={}", height)
             }
-            Self::Backfill => write!(f, "Performing Backfill"),
+            Self::Backfill => write!(f, "Backfilling"),
             Self::Operational => write!(f, "Operational"),
-            Self::PerformingAction(action) => write!(f, "Performing {}", action),
-            Self::ShuttingDown => write!(f, "Shuting Down"),
+            Self::PerformingAction(action) => write!(f, "{}", action),
+            Self::ShuttingDown => write!(f, "Shutting Down"),
             Self::Inactive => write!(f, "Inactive"),
         }
     }
@@ -81,52 +91,25 @@ impl fmt::Display for State {
 // - S6 (Backfill)
 /// Continuously update the [`Node`]'s [`State`].
 ///
-/// Since the [`Node`] is an Finite State Machine,
-/// we compute the next [`State`] from the current
-/// [`State`] and external inputs. See `doc/FSM.md`
-/// for the FSM model and next-state logic.
+/// Since the [`Node`] can be modelled as a Finite State Machine,
+/// we compute the next [`State`] from the current [`State`] and
+/// external inputs.
+///
+/// See `doc/FSM.md` for FSM modelling and next-state logic.
 pub fn compute_next_state(
+    wire_ready: bool,
     current_state: State,
     node_tip: u32,
     chain_tip: u32,
     filter_tip: u32,
 ) -> State {
-    match current_state {
-        // S1: Active
-        State::Active => {
-            if node_tip == 0 && chain_tip > 0 {
-                State::HeaderSync(chain_tip)
-            } else {
-                State::Active
-            }
-        }
-        // S3: HeaderSync
-        State::HeaderSync(_) => {
-            if node_tip == 0 && chain_tip > 0 {
-                State::HeaderSync(chain_tip)
-            } else {
-                State::InitialBlockDownload((node_tip, chain_tip))
-            }
-        }
-        // S4: InitialBlockDownload
-        State::InitialBlockDownload(_) => {
-            if node_tip != chain_tip {
-                State::InitialBlockDownload((node_tip, chain_tip))
-            } else {
-                State::CompactBlockFilterDownload(filter_tip)
-            }
-        }
-        // S5: Compact Block Filter Download
-        State::CompactBlockFilterDownload(_) => {
-            if filter_tip != chain_tip && filter_tip != node_tip {
-                State::CompactBlockFilterDownload(filter_tip)
-            } else {
-                State::Operational
-            }
-        }
-        // S7: Operational
-        State::Operational => State::Operational,
+    // Filter tip should not be greater than node tip.
+    //
+    // Something went wrong if this is the case, so
+    // fallback to the minimum between the two values.
+    let filter_tip = filter_tip.min(node_tip);
 
+    match current_state {
         // Skip these variants since their
         // next-state logic is handled externally:
         // - S0 (Inactive): handled by the shutdown task
@@ -142,5 +125,23 @@ pub fn compute_next_state(
         | s @ State::Inactive
         | s @ State::DnsBootstrapping
         | s @ State::Backfill => s,
+
+        _ => {
+            // Wait for the inner node to be ready
+            // before transitioning to the next state.
+            if !wire_ready {
+                State::Active
+            } else if node_tip == 0 && chain_tip > 0 {
+                State::HeaderSync(chain_tip)
+            } else if node_tip + OPERATIONAL_TOLERANCE < chain_tip {
+                State::InitialBlockDownload((node_tip, chain_tip))
+            } else if filter_tip < chain_tip {
+                State::CompactBlockFilterDownload(filter_tip)
+            } else if node_tip > 0 {
+                State::Operational
+            } else {
+                State::Active
+            }
+        }
     }
 }

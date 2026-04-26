@@ -30,6 +30,7 @@ use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::mpsc::unbounded_channel;
+use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
@@ -266,7 +267,7 @@ impl Builder {
             inner: Some(inner),
             handle,
             config: self.config,
-            state: Arc::new(RwLock::new(State::Inactive)),
+            state: Arc::new(watch::Sender::new(State::Inactive)),
             started_at: None,
             cancellation_token: CancellationToken::new(),
             kill_signal,

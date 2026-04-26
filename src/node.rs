@@ -14,7 +14,7 @@ use bdk_wallet::Wallet;
 use bitcoin::block::Header;
 use bitcoin::Block;
 use bitcoin::BlockHash;
-use bitcoin::ScriptBuf;
+//use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
 use bitcoin::Txid;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
@@ -34,6 +34,7 @@ use floresta_wire::rustreexo::stump::Stump;
 use futures::future;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
+use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
@@ -79,8 +80,6 @@ pub enum Action {
     Pinging,
     /// The [`Node`] is fetching a [`Block`] from a peers.
     FetchingBlock(String),
-    /// The [`Node`] is scanning the blockchain with Compact Block Filters.
-    CompactFilterScan((u32, u32)),
     /// The [`Node`] is broadcasting a [`Transaction`].
     BroadcastingTransaction(String),
 }
@@ -93,8 +92,9 @@ impl fmt::Display for Action {
             Self::RemovingPeer(socket) => write!(f, "Removing peer={}", socket),
             Self::Pinging => write!(f, "Pinging all peers"),
             Self::FetchingBlock(hash) => write!(f, "Fetching block with hash={}", hash),
-            Self::CompactFilterScan((start_height, stop_height)) => write!(f, "Scanning the blockchain with Compact Block Filters from start_height={} up to stop_height={}", start_height, stop_height),
-            Self::BroadcastingTransaction(txid) => write!(f, "Broadcasting transaction with txid={}", txid),
+            Self::BroadcastingTransaction(txid) => {
+                write!(f, "Broadcasting transaction with txid={}", txid)
+            }
         }
     }
 }
@@ -116,7 +116,7 @@ pub struct Node {
     pub(crate) config: NodeConfig,
 
     /// The [`Node`]'s current [`State`].
-    pub(crate) state: Arc<RwLock<State>>,
+    pub(crate) state: Arc<watch::Sender<State>>,
 
     /// The [`Instant`] at which the [`Node`] was started.
     pub(crate) started_at: Option<Instant>,
@@ -204,7 +204,7 @@ impl Node {
         let inner_node = self.inner.take().ok_or(NodeError::AlreadyRunning)?;
 
         // Set the node's state to `State::Active`
-        *self.state.write().await = State::Active;
+        self.state.send_replace(State::Active);
 
         // Create a channel to carry shutdown notifications
         let (node_stopped_tx, node_stopped_rx) = oneshot::channel::<()>();
@@ -214,8 +214,8 @@ impl Node {
 
         // Spawn a task that will update the node's state
         let state = self.state.clone();
-        let kill_signal = self.kill_signal.clone();
         let cancellation_token = self.cancellation_token.clone();
+        let node_handle = self.handle.clone();
         let chain_state = self.chain_state.clone();
         let block_filters = self.block_filters.clone();
 
@@ -243,11 +243,28 @@ impl Node {
                             continue
                         };
 
-                        // Compute the next state from the current state + inputs
-                        let current_state = state.read().await.clone();
-                        if !matches!(current_state, State::PerformingAction(_) | State::ShuttingDown) {
-                            *state.write().await = compute_next_state(current_state, node_tip, chain_tip, filter_tip);
-                        }
+                        // Check if the inner node is ready.
+                        //
+                        // This is a best-effort way to detect if it's ready.
+                        // To implement this with 100% certainty, FSM logic
+                        // would need to be upstreamed to `floresta-wire`.
+                        let wire_ready = node_handle.get_peer_info().await
+                            .map(|peers| !peers.is_empty())
+                            .unwrap_or(false);
+
+                        // Compute the next state from the current state + inputs and send it if it changed
+                        state.send_if_modified(|current| {
+                            if matches!(current, State::PerformingAction(_) | State::ShuttingDown) {
+                                return false;
+                            }
+                            let next = compute_next_state(wire_ready, current.clone(), node_tip, chain_tip, filter_tip);
+                            if *current != next {
+                                *current = next;
+                                true
+                            } else {
+                                false
+                            }
+                        });
                     }
                 }
             }
@@ -256,8 +273,9 @@ impl Node {
 
         // Spawn a task that listens for SIGINT or `Node::shutdown` and waits for tasks to complete
         let state = self.state.clone();
-        let cancellation_token = self.cancellation_token.clone();
         let chain_state = self.chain_state.clone();
+        let kill_signal = self.kill_signal.clone();
+        let cancellation_token = self.cancellation_token.clone();
 
         let shutdown_task = tokio::task::spawn(async move {
             tokio::select! {
@@ -265,7 +283,7 @@ impl Node {
                 _ = cancellation_token.cancelled() => { info!("Shutting down"); }
             }
             // Set the node's state to `State::ShuttingDown`
-            *state.write().await = State::ShuttingDown;
+            state.send_replace(State::ShuttingDown);
 
             *kill_signal.write().await = true;
 
@@ -279,7 +297,7 @@ impl Node {
             cancellation_token.cancel();
 
             // Set the node's state to `State::Inactive`
-            *state.write().await = State::Inactive;
+            state.send_replace(State::Inactive);
 
             info!("Shutdown complete");
         });
@@ -314,9 +332,12 @@ impl Node {
             .expect("started_at is always some")
     }
 
-    /// Get the [`Node`]'s current [`State`].
-    pub async fn get_state(&self) -> State {
-        self.state.read().await.clone()
+    pub fn subscribe_state(&self) -> tokio::sync::watch::Receiver<State> {
+        self.state.subscribe()
+    }
+
+    pub fn get_state(&self) -> State {
+        self.state.borrow().clone()
     }
 
     /// Get the [`Node`]'s current [`NodeConfig`].
@@ -395,16 +416,18 @@ impl Node {
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, it must be requested over the wire from a peer.
     pub async fn fetch_block(&self, hash: BlockHash) -> Result<Block, NodeError> {
-        let last_state = self.state.read().await.clone();
-        *self.state.write().await =
-            State::PerformingAction(Action::FetchingBlock(hash.to_string()));
+        let last_state = self.state.borrow().clone();
+        self.state
+            .send_replace(State::PerformingAction(Action::FetchingBlock(
+                hash.to_string(),
+            )));
 
         let block = self.handle.get_block(hash).await?;
         if let Some(block) = block {
-            *self.state.write().await = last_state;
+            self.state.send_replace(last_state);
             Ok(block)
         } else {
-            *self.state.write().await = last_state;
+            self.state.send_replace(last_state);
             Err(NodeError::MissingBlock(hash))
         }
     }
@@ -416,9 +439,11 @@ impl Node {
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, they must be requested over the wire from a peer.
     pub async fn fetch_blocks(&self, hashes: &[BlockHash]) -> Result<Vec<Block>, NodeError> {
-        let last_state = self.state.read().await.clone();
-        *self.state.write().await =
-            State::PerformingAction(Action::FetchingBlock("multiple".to_string()));
+        let last_state = self.state.borrow().clone();
+        self.state
+            .send_replace(State::PerformingAction(Action::FetchingBlock(
+                "multiple".to_string(),
+            )));
 
         // Fetch all blocks in parallel
         let blocks = future::try_join_all(hashes.iter().map(|hash| {
@@ -434,7 +459,7 @@ impl Node {
         }))
         .await?;
 
-        *self.state.write().await = last_state;
+        self.state.send_replace(last_state);
 
         Ok(blocks)
     }
@@ -445,9 +470,11 @@ impl Node {
     pub async fn broadcast_tx(&self, tx: Transaction) -> Result<Txid, NodeError> {
         let txid = tx.compute_txid();
 
-        let last_state = self.state.read().await.clone();
-        *self.state.write().await =
-            State::PerformingAction(Action::BroadcastingTransaction(txid.to_string()));
+        let last_state = self.state.borrow().clone();
+        self.state
+            .send_replace(State::PerformingAction(Action::BroadcastingTransaction(
+                txid.to_string(),
+            )));
 
         let result = match self.handle.broadcast_transaction(tx).await {
             Ok(Ok(txid)) => {
@@ -466,7 +493,7 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        *self.state.write().await = last_state;
+        self.state.send_replace(last_state);
 
         result
     }
@@ -475,9 +502,11 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the connection was successful.
     pub async fn add_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let last_state = self.state.read().await.clone();
-        *self.state.write().await =
-            State::PerformingAction(Action::ConnectingToPeer(socket.to_string()));
+        let last_state = self.state.borrow().clone();
+        self.state
+            .send_replace(State::PerformingAction(Action::ConnectingToPeer(
+                socket.to_string(),
+            )));
 
         let result = match self
             .handle
@@ -497,7 +526,7 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        *self.state.write().await = last_state;
+        self.state.send_replace(last_state);
 
         result
     }
@@ -506,9 +535,11 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the [`Node`] successfully disconnected from the peer.
     pub async fn disconnect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let last_state = self.state.read().await.clone();
-        *self.state.write().await =
-            State::PerformingAction(Action::DisconnectingFromPeer(socket.to_string()));
+        let last_state = self.state.borrow().clone();
+        self.state
+            .send_replace(State::PerformingAction(Action::DisconnectingFromPeer(
+                socket.to_string(),
+            )));
 
         let result = match self
             .handle
@@ -528,7 +559,7 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        *self.state.write().await = last_state;
+        self.state.send_replace(last_state);
 
         result
     }
@@ -538,9 +569,11 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the address was successfully removed.
     pub async fn remove_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let last_state = self.state.read().await.clone();
-        *self.state.write().await =
-            State::PerformingAction(Action::RemovingPeer(socket.to_string()));
+        let last_state = self.state.borrow().clone();
+        self.state
+            .send_replace(State::PerformingAction(Action::RemovingPeer(
+                socket.to_string(),
+            )));
 
         let result = match self.handle.remove_peer(socket.ip(), socket.port()).await {
             Ok(true) => {
@@ -559,15 +592,16 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        *self.state.write().await = last_state;
+        self.state.send_replace(last_state);
 
         result
     }
 
     /// Send a `ping` to all of the [`Node`]'s peers.
     pub async fn ping(&self) -> Result<bool, NodeError> {
-        let last_state = self.state.read().await.clone();
-        *self.state.write().await = State::PerformingAction(Action::Pinging);
+        let last_state = self.state.borrow().clone();
+        self.state
+            .send_replace(State::PerformingAction(Action::Pinging));
 
         let result = match self.handle.ping().await {
             Ok(true) => {
@@ -583,10 +617,12 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        *self.state.write().await = last_state;
+        self.state.send_replace(last_state);
 
         result
     }
+
+    /*
 
     // TODO(@luisschwab): implement scan interruption
     // TODO(@luisschwab): implement scan progress observability
@@ -645,4 +681,5 @@ impl Node {
 
         Ok(height_and_block)
     }
+     */
 }

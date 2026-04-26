@@ -6,7 +6,6 @@ use core::net::SocketAddr;
 use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::time::Duration;
 
 use bdk_floresta::builder::Builder;
 use bdk_floresta::builder::NodeConfig;
@@ -20,7 +19,6 @@ use tracing::Level;
 const UTREEXOD_CASA21: &str = "189.44.63.101:38333";
 const NETWORK: Network = Network::Signet;
 const DATA_DIR: &str = "./examples/data/fsm/";
-const STATUS_POLL_PERIOD: Duration = Duration::from_secs(5);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -46,37 +44,41 @@ async fn main() -> anyhow::Result<()> {
     // Instantiate and run the node
     info!("> Instantiating the node...");
     let mut node = Builder::new().from_config(config).build()?;
-    info!("> NODE STATE: {}", node.get_state().await);
+    info!("> NODE STATE: {}", node.get_state());
 
     info!("> Spawning the node...");
     node.run().await?;
     info!("> Node spawned");
 
+    // Subscribe to state transitions
+    let mut state_rx = node.subscribe_state();
+
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
-                info!("> /exit");
-                node.shutdown().await?;
-                return Ok(());
+            info!("> /exit");
         }
         result = async {
-            // Wait until the node becomes operational
-            while node.get_state().await != State::Operational {
-                tokio::time::sleep(STATUS_POLL_PERIOD).await;
-                info!("> NODE STATE: {}", node.get_state().await);
+            // Print every state transition until we hit Operational
+            loop {
+                let state = state_rx.borrow_and_update().clone();
+                info!("> NODE STATE: {}", state);
+                if state == State::Operational {
+                    break;
+                }
+                if state_rx.changed().await.is_err() {
+                    // Channel closed — node is gone.
+                    break;
+                }
             }
-
-            info!("> NODE STATE: {}", node.get_state().await);
-
             info!("> /exit");
-            node.shutdown().await?;
-
-            info!("> NODE STATE: {}", node.get_state().await);
-
             Ok::<_, anyhow::Error>(())
         } => {
             result?;
         }
     }
+
+    node.shutdown().await?;
+    info!("> NODE STATE: {}", node.get_state());
 
     Ok(())
 }
