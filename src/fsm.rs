@@ -16,7 +16,6 @@ use bitcoin::Block;
 #[allow(unused)]
 use floresta_wire::address_man::AddressMan;
 
-use crate::node::Action;
 #[allow(unused)]
 use crate::node::Node;
 
@@ -53,9 +52,7 @@ pub enum State {
     Backfill,
     /// S7: The [`Node`] is fully operational.
     Operational,
-    /// S8: The [`Node`] is performing an [`Action`].
-    PerformingAction(Action),
-    /// S9: The [`Node`] is in the process of shutting down.
+    /// S8: The [`Node`] is in the process of shutting down.
     ShuttingDown,
 }
 
@@ -79,7 +76,6 @@ impl fmt::Display for State {
             }
             Self::Backfill => write!(f, "Backfilling"),
             Self::Operational => write!(f, "Operational"),
-            Self::PerformingAction(action) => write!(f, "{}", action),
             Self::ShuttingDown => write!(f, "Shutting Down"),
             Self::Inactive => write!(f, "Inactive"),
         }
@@ -113,15 +109,13 @@ pub fn compute_next_state(
         // Skip these variants since their
         // next-state logic is handled externally:
         // - S0 (Inactive): handled by the shutdown task
-        // - S8 (PerformingAction): handled by `Node` methods
-        // - S9 (ShuttingDown): handled by the shutdown task
+        // - S8 (ShuttingDown): handled by the shutdown task
         //
         // Skip these variants since their next
         // state logic still needs figuring out
         // - S2 (DnsBootstrapping)
         // - S6 (Backfill)
-        s @ State::PerformingAction(_)
-        | s @ State::ShuttingDown
+        s @ State::ShuttingDown
         | s @ State::Inactive
         | s @ State::DnsBootstrapping
         | s @ State::Backfill => s,

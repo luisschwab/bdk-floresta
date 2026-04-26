@@ -5,6 +5,7 @@
 //! This module holds all logic needed to instantiate a [`Node`]
 //! from default or user defined values, by way of the [`Builder`].
 
+use std::collections::HashSet;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -269,6 +270,7 @@ impl Builder {
             config: self.config,
             state: Arc::new(watch::Sender::new(State::Inactive)),
             started_at: None,
+            action: Arc::new(watch::Sender::new(HashSet::new())),
             cancellation_token: CancellationToken::new(),
             kill_signal,
             shutdown_task: Mutex::new(None),

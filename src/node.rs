@@ -6,6 +6,7 @@
 
 use core::fmt;
 use core::net::SocketAddr;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -68,7 +69,7 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 /// These [`Action`]s are triggered when a user calls
 /// [`Node`] methods (e.g. scaning the blockchain with
 /// Compact Block Filters).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Action {
     /// The [`Node`] is connecting to a peer.
     ConnectingToPeer(String),
@@ -120,6 +121,9 @@ pub struct Node {
 
     /// The [`Instant`] at which the [`Node`] was started.
     pub(crate) started_at: Option<Instant>,
+
+    /// A particular [`Action`] that the [`Node`] is currently performing.
+    pub(crate) action: Arc<watch::Sender<HashSet<Action>>>,
 
     /// A cancellation token used to signal shutdown to all tasks,
     /// Triggered via `SIGINT` or [`Node::shutdown()`].
@@ -188,6 +192,20 @@ impl Node {
         }
     }
 
+    /// Mark an [`Action`] as in-flight.
+    fn track_action(&self, action: &Action) {
+        self.action.send_modify(|set| {
+            set.insert(action.clone());
+        });
+    }
+
+    /// Mark an [`Action`] as no longer in-flight.
+    fn untrack_action(&self, action: &Action) {
+        self.action.send_modify(|set| {
+            set.remove(action);
+        });
+    }
+
     // ----> CONTROL METHODS
 
     /// Spawn and run the [`Node`].
@@ -254,7 +272,7 @@ impl Node {
 
                         // Compute the next state from the current state + inputs and send it if it changed
                         state.send_if_modified(|current| {
-                            if matches!(current, State::PerformingAction(_) | State::ShuttingDown) {
+                            if matches!(current,  State::ShuttingDown) {
                                 return false;
                             }
                             let next = compute_next_state(wire_ready, current.clone(), node_tip, chain_tip, filter_tip);
@@ -332,12 +350,30 @@ impl Node {
             .expect("started_at is always some")
     }
 
-    pub fn subscribe_state(&self) -> tokio::sync::watch::Receiver<State> {
+    /// Subscribe to [`State`] transitions.
+    ///
+    /// Returns a [`watch::Receiver`] that yields the
+    /// current [`State`] and wakes on every transition.
+    pub fn subscribe_state(&self) -> watch::Receiver<State> {
         self.state.subscribe()
     }
 
+    /// Get the [`Node`]'s current [`State`].
     pub fn get_state(&self) -> State {
         self.state.borrow().clone()
+    }
+
+    /// Subscribe to in-flight [`Action`]s.
+    ///
+    /// Returns a [`watch::Receiver`] that yields the
+    /// set of [`Action`]s currently being performed by the [`Node`].
+    pub fn subscribe_action(&self) -> watch::Receiver<HashSet<Action>> {
+        self.action.subscribe()
+    }
+
+    /// Get the [`Node`]'s currently in-flight [`Action`]s.
+    pub fn get_actions(&self) -> HashSet<Action> {
+        self.action.borrow().clone()
     }
 
     /// Get the [`Node`]'s current [`NodeConfig`].
@@ -416,20 +452,17 @@ impl Node {
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, it must be requested over the wire from a peer.
     pub async fn fetch_block(&self, hash: BlockHash) -> Result<Block, NodeError> {
-        let last_state = self.state.borrow().clone();
-        self.state
-            .send_replace(State::PerformingAction(Action::FetchingBlock(
-                hash.to_string(),
-            )));
+        let action = Action::FetchingBlock(hash.to_string());
+        self.track_action(&action);
 
-        let block = self.handle.get_block(hash).await?;
-        if let Some(block) = block {
-            self.state.send_replace(last_state);
-            Ok(block)
-        } else {
-            self.state.send_replace(last_state);
-            Err(NodeError::MissingBlock(hash))
-        }
+        let result = match self.handle.get_block(hash).await {
+            Ok(Some(block)) => Ok(block),
+            Ok(None) => Err(NodeError::MissingBlock(hash)),
+            Err(e) => Err(e.into()),
+        };
+
+        self.untrack_action(&action);
+        result
     }
 
     /// Fetch a number [`Block`]s in a batch, given their [`BlockHash`]es.
@@ -439,29 +472,24 @@ impl Node {
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, they must be requested over the wire from a peer.
     pub async fn fetch_blocks(&self, hashes: &[BlockHash]) -> Result<Vec<Block>, NodeError> {
-        let last_state = self.state.borrow().clone();
-        self.state
-            .send_replace(State::PerformingAction(Action::FetchingBlock(
-                "multiple".to_string(),
-            )));
+        let action = Action::FetchingBlock("multiple".to_string());
+        self.track_action(&action);
 
-        // Fetch all blocks in parallel
-        let blocks = future::try_join_all(hashes.iter().map(|hash| {
+        let result = future::try_join_all(hashes.iter().map(|hash| {
             let handle = self.handle.clone();
             let hash = *hash;
             async move {
-                handle
-                    .get_block(hash)
-                    .await
-                    .map_err(NodeError::from)?
-                    .ok_or(NodeError::MissingBlock(hash))
+                match handle.get_block(hash).await {
+                    Ok(Some(block)) => Ok(block),
+                    Ok(None) => Err(NodeError::MissingBlock(hash)),
+                    Err(e) => Err(e.into()),
+                }
             }
         }))
-        .await?;
+        .await;
 
-        self.state.send_replace(last_state);
-
-        Ok(blocks)
+        self.untrack_action(&action);
+        result
     }
 
     /// Broadcast a [`Transaction`] to the [`Node`]'s peers.
@@ -469,12 +497,8 @@ impl Node {
     /// Returns the [`Txid`], if the broadcast was successful.
     pub async fn broadcast_tx(&self, tx: Transaction) -> Result<Txid, NodeError> {
         let txid = tx.compute_txid();
-
-        let last_state = self.state.borrow().clone();
-        self.state
-            .send_replace(State::PerformingAction(Action::BroadcastingTransaction(
-                txid.to_string(),
-            )));
+        let action = Action::BroadcastingTransaction(txid.to_string());
+        self.track_action(&action);
 
         let result = match self.handle.broadcast_transaction(tx).await {
             Ok(Ok(txid)) => {
@@ -493,8 +517,8 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        self.state.send_replace(last_state);
 
+        self.untrack_action(&action);
         result
     }
 
@@ -502,11 +526,8 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the connection was successful.
     pub async fn add_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let last_state = self.state.borrow().clone();
-        self.state
-            .send_replace(State::PerformingAction(Action::ConnectingToPeer(
-                socket.to_string(),
-            )));
+        let action = Action::ConnectingToPeer(socket.to_string());
+        self.track_action(&action);
 
         let result = match self
             .handle
@@ -526,8 +547,8 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        self.state.send_replace(last_state);
 
+        self.untrack_action(&action);
         result
     }
 
@@ -535,11 +556,8 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the [`Node`] successfully disconnected from the peer.
     pub async fn disconnect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let last_state = self.state.borrow().clone();
-        self.state
-            .send_replace(State::PerformingAction(Action::DisconnectingFromPeer(
-                socket.to_string(),
-            )));
+        let action = Action::DisconnectingFromPeer(socket.to_string());
+        self.track_action(&action);
 
         let result = match self
             .handle
@@ -559,8 +577,8 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        self.state.send_replace(last_state);
 
+        self.untrack_action(&action);
         result
     }
 
@@ -569,11 +587,8 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the address was successfully removed.
     pub async fn remove_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let last_state = self.state.borrow().clone();
-        self.state
-            .send_replace(State::PerformingAction(Action::RemovingPeer(
-                socket.to_string(),
-            )));
+        let action = Action::RemovingPeer(socket.to_string());
+        self.track_action(&action);
 
         let result = match self.handle.remove_peer(socket.ip(), socket.port()).await {
             Ok(true) => {
@@ -592,16 +607,15 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        self.state.send_replace(last_state);
+        self.untrack_action(&action);
 
         result
     }
 
     /// Send a `ping` to all of the [`Node`]'s peers.
     pub async fn ping(&self) -> Result<bool, NodeError> {
-        let last_state = self.state.borrow().clone();
-        self.state
-            .send_replace(State::PerformingAction(Action::Pinging));
+        let action = Action::Pinging;
+        self.track_action(&action);
 
         let result = match self.handle.ping().await {
             Ok(true) => {
@@ -617,8 +631,8 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-        self.state.send_replace(last_state);
 
+        self.untrack_action(&action);
         result
     }
 
