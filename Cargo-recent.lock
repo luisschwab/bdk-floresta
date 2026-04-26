@@ -872,9 +872,9 @@ dependencies = [
 
 [[package]]
 name = "halfin"
-version = "0.3.1"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3b715be946f4edb52ab33523b52c7561c5e8f473322d6f9f86ac3bb1888acc3"
+checksum = "a1e2b30a147bf3f01de87d42a4803d2826d746a314eacd7db3a4228f0ccc03c8"
 dependencies = [
  "anyhow",
  "bitcoin_hashes 0.20.0",
