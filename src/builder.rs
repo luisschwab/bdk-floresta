@@ -270,7 +270,7 @@ impl Builder {
             started_at: None,
             cancellation_token: CancellationToken::new(),
             kill_signal,
-            shutdown_task: None,
+            shutdown_task: Mutex::new(None),
             state_update_task: None,
             chain_state,
             block_filters,

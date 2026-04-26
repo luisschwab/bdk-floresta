@@ -34,6 +34,7 @@ use floresta_wire::rustreexo::stump::Stump;
 use futures::future;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
+use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
@@ -133,7 +134,7 @@ pub struct Node {
     /// It sets the kill signal, waits for the [`NodeInner`] to
     /// stop, and flushes the [`ChainState`] to the file system.
     /// Awaited by [`Node::shutdown()`] and [`Node::cancelled()`].
-    pub(crate) shutdown_task: Option<JoinHandle<()>>,
+    pub(crate) shutdown_task: Mutex<Option<JoinHandle<()>>>,
 
     /// A handle to the status update task.
     ///
@@ -282,15 +283,15 @@ impl Node {
 
             info!("Shutdown complete");
         });
-        self.shutdown_task = Some(shutdown_task);
+        *self.shutdown_task.lock().await = Some(shutdown_task);
 
         Ok(())
     }
 
     /// Programatically request the [node](`Node`) to shutdown.
-    pub async fn shutdown(&mut self) -> Result<(), NodeError> {
+    pub async fn shutdown(&self) -> Result<(), NodeError> {
         self.cancellation_token.cancel();
-        if let Some(task) = self.shutdown_task.take() {
+        if let Some(task) = self.shutdown_task.lock().await.take() {
             let _ = task.await;
         }
         Ok(())
