@@ -187,16 +187,6 @@ impl Node {
         }
     }
 
-    /// Suspend the caller until the [`Node`] has completed shutdown.
-    ///
-    /// Shutdown must be triggered externally, either by
-    /// sending `SIGINT` or by calling [`Node::shutdown()`].
-    pub async fn cancelled(&mut self) {
-        if let Some(task) = self.shutdown_task.take() {
-            let _ = task.await;
-        }
-    }
-
     // ----> CONTROL METHODS
 
     /// Spawn and run the [`Node`].
