@@ -15,13 +15,13 @@ pub use floresta_wire::rustreexo;
 pub use floresta_wire::TransportProtocol;
 pub use floresta_wire::UtreexoNodeConfig;
 
-pub mod builder;
 pub mod client;
-pub mod error;
-pub mod fsm;
 #[cfg(feature = "logger")]
 pub mod logger;
 pub mod node;
 
+pub use node::builder;
+pub use node::error;
+pub use node::fsm;
 #[cfg(feature = "logger")]
 pub use tracing::Level;

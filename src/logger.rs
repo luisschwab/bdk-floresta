@@ -64,7 +64,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 
-use crate::error::BuilderError;
+use crate::node::error::BuilderError;
 
 /// The file which logging events are written to by default.
 pub const LOG_FILE: &str = "debug.log";

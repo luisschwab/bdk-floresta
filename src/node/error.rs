@@ -12,15 +12,15 @@ use std::io;
 #[allow(unused)]
 use bitcoin::ScriptBuf;
 
-#[allow(unused)]
-use crate::builder::Builder;
-#[allow(unused)]
-use crate::fsm::State;
 #[cfg(feature = "logger")]
 #[allow(unused)]
 use crate::logger::Logger;
 #[allow(unused)]
+use crate::node::fsm::State;
+#[allow(unused)]
 use crate::node::Action;
+#[allow(unused)]
+use crate::node::Builder;
 #[allow(unused)]
 use crate::node::Node;
 

@@ -36,10 +36,10 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tracing::info;
 
-use crate::error::BuilderError;
-use crate::fsm::State;
 #[cfg(feature = "logger")]
 use crate::logger::Logger;
+use crate::node::fsm::State;
+use crate::node::BuilderError;
 use crate::node::Node;
 
 /// Configuration parameters for building a [`Node`].

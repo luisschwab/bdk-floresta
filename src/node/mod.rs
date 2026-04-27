@@ -18,6 +18,10 @@ use bitcoin::BlockHash;
 use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
 use bitcoin::Txid;
+use builder::Builder;
+use builder::NodeConfig;
+use error::BuilderError;
+use error::NodeError;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::BlockchainInterface;
 use floresta_chain::pruned_utreexo::UpdatableChainstate;
@@ -46,10 +50,12 @@ use tracing::warn;
 #[cfg(feature = "logger")]
 use tracing_appender::non_blocking::WorkerGuard;
 
-use crate::builder::NodeConfig;
-use crate::error::NodeError;
-use crate::fsm::compute_next_state;
-use crate::fsm::State;
+use crate::node::fsm::compute_next_state;
+use crate::node::fsm::State;
+
+pub mod builder;
+pub mod error;
+pub mod fsm;
 
 /// The period between polls for the `status_update_task`, in milliseconds.
 const STATUS_UPDATE_POLL_PERIOD: Duration = Duration::from_millis(500);
