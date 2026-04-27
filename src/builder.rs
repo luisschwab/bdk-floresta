@@ -10,6 +10,7 @@ use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use bdk_wallet::Wallet;
 use bitcoin::BlockHash;
@@ -242,29 +243,17 @@ impl Builder {
         // Get a handle to interact with the [`Node`].
         let handle: NodeInterface = inner.get_handle();
 
-        // Set up the [`Wallet`]'s update channel, sender and receiver.
-        let (update_tx, update_rx) = unbounded_channel::<WalletUpdate>();
-        let wallet_arc = if let Some(wallet) = self.wallet {
-            let wallet_arc = Arc::new(RwLock::new(wallet));
-            let updater = Arc::new(WalletUpdater::new(update_tx));
-            chain_state.subscribe(updater);
-            info!("Wallet update subscriber set up successfully");
-            Some(wallet_arc)
-        } else {
-            None
-        };
-
         Ok(Node {
-            inner: Some(inner),
+            inner: Mutex::new(Some(inner)),
             handle,
             config: self.config,
             state: Arc::new(watch::Sender::new(State::Inactive)),
-            started_at: None,
+            started_at: OnceLock::new(),
             action: Arc::new(watch::Sender::new(HashSet::new())),
             cancellation_token: CancellationToken::new(),
             kill_signal,
             shutdown_task: Mutex::new(None),
-            state_update_task: None,
+            state_update_task: Mutex::new(None),
             chain_state,
             block_filters,
             #[cfg(feature = "logger")]

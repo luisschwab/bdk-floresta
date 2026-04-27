@@ -106,7 +106,7 @@ type NodeInner = UtreexoNode<Arc<ChainState<FlatChainStore>>, RunningNode>;
 /// It groups all of the required pieces for the [`Node`] to function.
 pub struct Node {
     /// The inner, underlying [`UtreexoNode`].
-    pub(crate) inner: Option<NodeInner>,
+    pub(crate) inner: Mutex<Option<NodeInner>>,
 
     /// A handle used to interact with the [`UtreexoNode`].
     pub(crate) handle: NodeInterface,
@@ -118,7 +118,7 @@ pub struct Node {
     pub(crate) state: Arc<watch::Sender<State>>,
 
     /// The [`Instant`] at which the [`Node`] was started.
-    pub(crate) started_at: Option<Instant>,
+    pub(crate) started_at: OnceLock<Instant>,
 
     /// A particular [`Action`] that the [`Node`] is currently performing.
     pub(crate) action: Arc<watch::Sender<HashSet<Action>>>,
@@ -143,7 +143,7 @@ pub struct Node {
     /// This task will update the [`Node`]'s [`State`]
     /// by polling the [`ChainState`] and interpreting
     /// the values returned into a [`State`].
-    pub(crate) state_update_task: Option<JoinHandle<()>>,
+    pub(crate) state_update_task: Mutex<Option<JoinHandle<()>>>,
 
     /// The [`Node`]'s blockchain state.
     pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
@@ -205,12 +205,19 @@ impl Node {
     /// - A task that runs the inner [`UtreexoNode`].
     /// - A task for the shutdown handler, which reacts to a [`Node::shutdown`] call or a `SIGINT`
     ///   signal, and perfoms the graceful shutdown routine.
-    pub async fn run(&mut self) -> Result<(), NodeError> {
+    pub async fn run(&self) -> Result<(), NodeError> {
         // Register the `Instant` the node started running
-        self.started_at = Some(Instant::now());
+        self.started_at
+            .set(Instant::now())
+            .map_err(|_| NodeError::AlreadyRunning)?;
 
         // `take()` the inner node to make sure `Node::run()` can only be called once
-        let inner_node = self.inner.take().ok_or(NodeError::AlreadyRunning)?;
+        let inner_node = self
+            .inner
+            .lock()
+            .await
+            .take()
+            .ok_or(NodeError::AlreadyRunning)?;
 
         // Set the node's state to `State::Active`
         self.state.send_replace(State::Active);
@@ -278,7 +285,7 @@ impl Node {
                 }
             }
         });
-        self.state_update_task = Some(state_update_task);
+        *self.state_update_task.lock().await = Some(state_update_task);
 
         // Spawn a task that listens for SIGINT or `Node::shutdown` and waits for tasks to complete
         let state = self.state.clone();
@@ -337,6 +344,7 @@ impl Node {
     /// How [long](Duration) the [`Node`] has been running.
     pub fn uptime(&self) -> Duration {
         self.started_at
+            .get()
             .map(|t| t.elapsed())
             .expect("started_at is always some")
     }
