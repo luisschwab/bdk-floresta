@@ -1,4 +1,4 @@
-name: Commit Signature
+name: Commits
 
 on:
     push:
@@ -10,16 +10,32 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-    commit-signatures:
-        name: Enforce PGP signatures
+    signed-commits:
+        name: Assert PGP-Signed Commits
         runs-on: ubuntu-latest
 
         steps:
-            - name: Checkout code
+            - name: Checkout Code
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   persist-credentials: false
                   fetch-depth: 0
 
-            - name: Check commit signatures
+            - name: Check Commit Signatures
               run: bash contrib/check-signatures.sh
+
+    conventional-commits:
+        name: Assert Conventinal Commits
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
+                  fetch-depth: 0
+
+            - name: Check Commit Messages
+              uses: webiny/action-conventional-commits@7f91b1595ca1951cdb671ddc9f07a49081ec5b69 # v1.4.2
+              with:
+                  allowed-commit-types: "feat,fix,doc,refactor,test,ci,chore,fuzz,bench"
