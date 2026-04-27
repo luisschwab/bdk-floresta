@@ -21,9 +21,9 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use bdk_floresta::builder::Builder;
 use bdk_floresta::builder::NodeConfig;
 use bdk_floresta::logger::Logger;
-use bdk_floresta::Builder;
 use bitcoin::Network;
 use halfin::bitcoind::BitcoinD;
 use halfin::bitcoind::BitcoinDConf;
@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Instantiate and run bdk_floresta
     info!("> Spawning bdk_floresta...");
-    let mut node = Builder::new().from_config(node_config).build()?;
+    let node = Builder::new().from_config(node_config).build()?;
     node.run().await?;
     info!("> bdk_floresta is spawned");
     std::thread::sleep(Duration::from_secs(2));

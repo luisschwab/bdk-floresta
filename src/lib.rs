@@ -16,6 +16,7 @@ pub use floresta_wire::TransportProtocol;
 pub use floresta_wire::UtreexoNodeConfig;
 
 pub mod builder;
+pub mod client;
 pub mod error;
 pub mod fsm;
 #[cfg(feature = "logger")]
@@ -24,8 +25,3 @@ pub mod node;
 
 #[cfg(feature = "logger")]
 pub use tracing::Level;
-
-pub use crate::builder::Builder;
-pub use crate::error::BuilderError;
-pub use crate::error::NodeError;
-pub use crate::node::Node;

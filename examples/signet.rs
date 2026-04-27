@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Instantiate and run the node
     info!("> Spawning the node...");
-    let mut node = Builder::new().from_config(config).build()?;
+    let node = Builder::new().from_config(config).build()?;
     node.run().await?;
     info!("> Node spawned");
 

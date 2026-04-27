@@ -40,7 +40,7 @@ use crate::error::BuilderError;
 use crate::fsm::State;
 #[cfg(feature = "logger")]
 use crate::logger::Logger;
-use crate::Node;
+use crate::node::Node;
 
 /// Configuration parameters for building a [`Node`].
 #[derive(Clone, Debug)]

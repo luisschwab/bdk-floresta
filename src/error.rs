@@ -130,14 +130,16 @@ pub enum NodeError {
     MissingBlock(bitcoin::BlockHash),
     /// The requested [`Action`] cannot be performed in the [`Node`]'s current [`State`].
     IllegalAction,
-    /// No [scriptPubkeys](ScriptBuf) were provided.
+    /// No [script pubkeys](ScriptBuf) were provided.
     NoSpksProvided,
     /// Error whilst scanning the blockchain with Compact Block Filters.
     CompactFilterScan(floresta_compact_filters::IterableFilterStoreError),
-    /// Failed to join a task whilst fetching blocks.
-    FetchTask(tokio::task::JoinError),
     /// Compact Block Filter-related errors.
     CompactBlockFilterStore(floresta_compact_filters::IterableFilterStoreError),
+    /// The requested `stop_height` exceeds the Compact Block Filter store's height.
+    StopHeightExceedsFilterTip { requested: u32, available: u32 },
+    /// Failed to join a task whilst fetching blocks.
+    FetchTask(tokio::task::JoinError),
 }
 
 impl fmt::Display for NodeError {
@@ -165,8 +167,17 @@ impl fmt::Display for NodeError {
                 f,
                 "Error whilst scanning the blockchain with Compact Block Filters: {e:?}"
             ),
-            NodeError::FetchTask(e) => write!(f, "Block fetch task failed: {e}"),
             NodeError::CompactBlockFilterStore(e) => write!(f, "Compact Block Filter error: {e}"),
+            NodeError::StopHeightExceedsFilterTip {
+                requested,
+                available,
+            } => {
+                write!(
+                    f,
+                    "The provided stop_height={requested} exceeds filter store height={available}"
+                )
+            }
+            NodeError::FetchTask(e) => write!(f, "Block fetch task failed: {e}"),
         }
     }
 }

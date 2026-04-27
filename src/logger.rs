@@ -233,10 +233,11 @@ where
     }
 }
 
-/// Logger configuration for the [`Node`](crate::Node).
+/// Logger configuration for the [`Node`](crate::node::Node).
 ///
-/// Controls the log level and output destinations. Can be passed to the
-/// [`Builder`](crate::Builder) via [`Builder::with_logger`](crate::Builder::with_logger),
+/// Controls the log level and output destinations.
+/// Can be passed to the [`Builder`](crate::builder::Builder)
+/// via [`Builder::with_logger`](crate::builder::Builder::with_logger),
 /// or used directly by calling [`Logger::init`].
 ///
 /// # Example
