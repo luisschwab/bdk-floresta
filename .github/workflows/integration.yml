@@ -1,4 +1,4 @@
-name: Integration Testing
+name: Integration Tests
 
 on:
     push:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
     integration-tests:
-        name: Examples
+        name: ${{ matrix.example }} example
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false

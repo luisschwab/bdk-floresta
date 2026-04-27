@@ -5,7 +5,7 @@ description = "A Floresta-powered chain-source crate for BDK"
 authors = ["Luis Schwab <dev@luisschwab.net"]
 repository = "https://github.com/luisschwab/bdk-floresta"
 documentation = "https://docs.rs/bdk-floresta"
-keywords = ["bitcoin", "bdk", "floresta", "utreexo"]
+keywords = ["bdk", "bitcoin", "floresta", "utreexo"]
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 edition = "2021"
@@ -51,7 +51,7 @@ dns-lookup = { version = "2.1.1" } # blame: floresta-wire
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
-halfin = { version = "0.3.1" }
+halfin = { version = "0.3.3" }
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 

@@ -26,13 +26,20 @@ making it possible for every wallet to have it's own node.
 
 This project uses [`just`](https://github.com/casey/just) for command running, and
 [`cargo-rbmt`](https://github.com/rust-bitcoin/rust-bitcoin-maintainer-tools/tree/master/cargo-rbmt)
-to manage everything related to `cargo`, such as formatting, linting, testing and CI. To install them, run:
+to manage everything related to `cargo`, such as formatting, linting, testing and CI.
+It also uses `uv` to run Zizmor, for GitHub Action static analysis.
+
+To install them with `cargo`, run:
 
 ```shell
 ~$ cargo install just
 
 ~$ cargo install cargo-rbmt
+
+~$ cargo install uv
 ```
+
+Alternatively, use your preferred package manager to install `just` and `uv`.
 
 A `justfile` is provided for convenience. Run `just` to see available commands:
 
@@ -84,7 +91,7 @@ The crates below are used to implement the `Node`:
 - [`floresta-wire`](https://github.com/getfloresta/Floresta/tree/master/crates/floresta-wire):
   Implements all of the `Node`'s peer-to-peer logic.
 
-## Minimum Supported Rust Version (MSRV)
+## Minimum Supported Rust Version
 
 This library should compile with any combination of features on Rust 1.85.0.
 

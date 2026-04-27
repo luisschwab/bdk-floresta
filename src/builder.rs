@@ -5,6 +5,7 @@
 //! This module holds all logic needed to instantiate a [`Node`]
 //! from default or user defined values, by way of the [`Builder`].
 
+use std::collections::HashSet;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -30,6 +31,7 @@ use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::mpsc::unbounded_channel;
+use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
@@ -266,11 +268,12 @@ impl Builder {
             inner: Some(inner),
             handle,
             config: self.config,
-            state: Arc::new(RwLock::new(State::Inactive)),
+            state: Arc::new(watch::Sender::new(State::Inactive)),
             started_at: None,
+            action: Arc::new(watch::Sender::new(HashSet::new())),
             cancellation_token: CancellationToken::new(),
             kill_signal,
-            shutdown_task: None,
+            shutdown_task: Mutex::new(None),
             state_update_task: None,
             chain_state,
             block_filters,
