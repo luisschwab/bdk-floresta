@@ -77,6 +77,8 @@ pub enum Action {
     FetchingBlock(String),
     /// The [`Node`] is broadcasting a [`Transaction`].
     BroadcastingTransaction(String),
+    /// The [`Node`] is matching [script pubkeys](ScriptBuf) to [`BlockHash`]es.
+    MatchingFilters,
 }
 
 impl fmt::Display for Action {
@@ -90,6 +92,7 @@ impl fmt::Display for Action {
             Self::BroadcastingTransaction(txid) => {
                 write!(f, "Broadcasting transaction with txid={}", txid)
             }
+            Self::MatchingFilters => write!(f, "Matching filters to block hashes"),
         }
     }
 }
@@ -428,6 +431,52 @@ impl Node {
         self.chain_state.get_block_header(hash).map_err(Into::into)
     }
 
+    /// Find [`Block`]s that contain relevant [`Transaction`]s
+    /// to a given set of [script pubkeys](ScriptBuf).
+    ///
+    /// Returns an error if the Compact Block Filters are not yet downloaded.
+    pub async fn match_filters(
+        &self,
+        spks: Vec<ScriptBuf>,
+        start_height: u32,
+        stop_height: u32,
+    ) -> Result<Vec<BlockHash>, NodeError> {
+        // Throw an error if the node is not operational
+        let last_state = self.state.borrow().clone();
+        if !matches!(last_state, State::Operational) {
+            return Err(NodeError::IllegalAction);
+        }
+
+        let filter_tip = self
+            .block_filters
+            .get_height()
+            .map_err(NodeError::CompactBlockFilterStore)?;
+
+        if stop_height > filter_tip {
+            return Err(NodeError::StopHeightExceedsFilterTip {
+                requested: stop_height,
+                available: filter_tip,
+            });
+        }
+
+        let action = Action::MatchingFilters;
+        self.track_action(&action);
+
+        let spks: Vec<&[u8]> = spks.iter().map(|s| s.as_bytes()).collect();
+        let block_hashes = self
+            .block_filters
+            .match_any(
+                spks,
+                Some(start_height),
+                Some(stop_height),
+                self.chain_state.clone(),
+            )
+            .map_err(NodeError::CompactBlockFilterStore)?;
+        self.untrack_action(&action);
+
+        Ok(block_hashes)
+    }
+
     /// A subscriber for validated [`Block`]s.
     ///
     /// Implements the [`BlockConsumer`] trait from [`floresta-chain`](floresta_chain).
@@ -635,68 +684,8 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-
         self.untrack_action(&action);
+
         result
-    }
-
-    /*
-
-    // TODO(@luisschwab): implement scan interruption
-    // TODO(@luisschwab): implement scan progress observability
-    /// Perform a Compact Block Filter scan of the blockchain, given a set
-    /// of [scriptPubkeys](ScriptBuf), and a range of [`Block`]s to scan.
-    ///
-    /// This method will process the provided [scriptPubKeys](ScriptBuf) against
-    /// the [`Node`]'s Compact Block Filters via _Golomb-Coded Sets_ to figure
-    /// out which [`Block`]s to fetch from peers.
-    ///
-    /// Note that the matching process carries a small probability of false-positives.
-    /// This probability is inversely proportional to the size of the Compact Block
-    /// Filters that the [`Node`] stores. For more information, see
-    /// [BIP-0158](https://github.com/bitcoin/bips/blob/master/bip-0158.mediawiki#golomb-coded-sets).
-    pub async fn compact_filter_scan(
-        &self,
-        spks: &[ScriptBuf],
-        start_height: u32,
-        stop_height: u32,
-    ) -> Result<Vec<(u32, Block)>, NodeError> {
-        let last_state = self.state.read().await.clone();
-
-        // Only perform the scan if the node's state is `Operational` or `PerformingAction`
-        if !matches!(last_state, State::Operational | State::PerformingAction(_)) {
-            return Err(NodeError::IllegalAction);
-        }
-        // Only perform the scan if at least one spk is provided
-        if spks.is_empty() {
-            return Err(NodeError::NoSpksProvided);
-        }
-        *self.state.write().await =
-            State::PerformingAction(Action::CompactFilterScan((start_height, stop_height)));
-
-        let chain_state = self.chain_state.clone();
-        let block_filters = self.block_filters.as_ref();
-        let spks = spks.iter().map(|s| s.as_bytes()).collect();
-
-        // Match spks against block filters to figure out what blocks need to be fetched
-        let hashes = block_filters
-            .match_any(spks, Some(start_height), Some(stop_height), chain_state)
-            .map_err(NodeError::CompactFilterScan)?;
-
-        // Fetch the blocks
-        let blocks = self.fetch_blocks(&hashes).await?;
-
-        // Query the chain for each block's height
-        let mut height_and_block: Vec<(u32, Block)> = blocks
-            .into_iter()
-            .map(|block| Ok((self.get_block_height(&block.block_hash())?, block)))
-            .collect::<Result<_, NodeError>>()?;
-
-        // Sort blocks by height
-        height_and_block.sort_by_key(|(height, _)| *height);
-
-        *self.state.write().await = last_state;
-
-        Ok(block_hashes)
     }
 }
