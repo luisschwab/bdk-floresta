@@ -51,10 +51,6 @@ use crate::error::NodeError;
 use crate::fsm::compute_next_state;
 use crate::fsm::State;
 
-#[allow(unused)]
-/// A conservative value for the maximum chain reorganization depth.
-const MAX_REORG_DEPTH: u8 = 7;
-
 /// The period between polls for the `status_update_task`, in milliseconds.
 const STATUS_UPDATE_POLL_PERIOD: Duration = Duration::from_millis(500);
 
@@ -339,6 +335,15 @@ impl Node {
         })
     }
 
+    /// Returns a clone of the [`Node`]'s cancellation token.
+    ///
+    /// The returned token fires when the [`Node`] begins shutdown.
+    /// This can be used by external tasks that want to reach to
+    /// the [`Node`]'s shutdown.
+    pub fn cancellation_token(&self) -> CancellationToken {
+        self.cancellation_token.clone()
+    }
+
     // ----> LOCAL METHODS
 
     /// How [long](Duration) the [`Node`] has been running.
@@ -444,7 +449,7 @@ impl Node {
         }
     }
 
-    // ----> NETWORK METHODS
+    // ----> P2P NETWORK METHODS
 
     /// Fetch a [`Block`] given its [`BlockHash`].
     ///
@@ -459,8 +464,8 @@ impl Node {
             Ok(None) => Err(NodeError::MissingBlock(hash)),
             Err(e) => Err(e.into()),
         };
-
         self.untrack_action(&action);
+
         result
     }
 
@@ -486,8 +491,8 @@ impl Node {
             }
         }))
         .await;
-
         self.untrack_action(&action);
+
         result
     }
 
@@ -516,8 +521,8 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-
         self.untrack_action(&action);
+
         result
     }
 
@@ -576,8 +581,8 @@ impl Node {
                 Err(NodeError::Receiver(e))
             }
         };
-
         self.untrack_action(&action);
+
         result
     }
 
