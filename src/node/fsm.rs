@@ -36,22 +36,30 @@ const OPERATIONAL_TOLERANCE: u32 = 6;
 pub enum State {
     /// S0: The [`Node`] is not running.
     Inactive,
+
     /// S1: The [`Node`] is active, but not in a well-defined state.
     Active,
+
     // TODO(@luisschwab): how do we figure out when we are in this state?
     /// S2: The [`Node`] is bootstrapping its [address manager](AddressMan) from DNS seeders.
     DnsBootstrapping,
+
     /// S3: The [`Node`] is synchronizing headers from its peers.
     HeaderSync(u32),
+
     /// S4: The [`Node`] is performing Initial Block Download.
     InitialBlockDownload((u32, u32)),
+
     /// S5: The [`Node`] is downloading Compact Block Filters from its peers.
     CompactBlockFilterDownload(u32),
+
     // TODO(@luisschwab): how do we figure out when we are in this state?
     /// S6: The [`Node`] is performing backfill.
     Backfill,
+
     /// S7: The [`Node`] is fully operational.
     Operational,
+
     /// S8: The [`Node`] is in the process of shutting down.
     ShuttingDown,
 }

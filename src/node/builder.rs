@@ -47,42 +47,56 @@ use crate::node::Node;
 pub struct NodeConfig {
     /// The [`Network`] which to run the [`Node`] and [`Wallet`] on.
     pub network: Network,
+
     /// The path to the directory where [`Node`] and [`Wallet`] data will be persisted to.
     pub data_directory: PathBuf,
+
     /// Proof-of-Work Fraud Proofs allow skipping verification of the
     /// entire blockchain with a better trust assumption than bare SPV.
     pub enable_powfps: bool,
+
     /// Skip script evaluation and assume all as valid for all preceding blocks.
     /// If set to `None`, all scripts since the genesis block will be evaluated.
     pub assume_valid: Option<BlockHash>,
+
     /// Skip IBD up until a checkpoint set by the [`Floresta`](https://github.com/getfloresta/Floresta) developers.
     /// See the [`ChainParams::get_assume_utreexo`](ChainParams::get_assume_utreexo)
     /// implementation for more details.
     pub assume_utreexo: bool,
+
     /// Download and validate all skipped blocks after IBD in the
     /// background, if `AssumeValid` or `AssumeUtreexo` are enabled.
     pub perform_backfill: bool,
+
     /// The user agent that will be sent to peers in the `version` message.
     pub user_agent: String,
+
     /// Connect to a single, pre-defined peer. If set, no other P2P connections will be made.
     pub fixed_peer: Option<SocketAddr>,
+
     /// The maximum banscore a peer can reach before he is banned.
     pub max_banscore: u32,
+
     /// A `SOCKS5` proxy which to route all traffic through.
     pub socks5_proxy: Option<SocketAddr>,
+
     /// Whether to disable fetching peers from DNS seeds to bootstrap the [`Node`]'s address
     /// manager.
     pub disable_dns_seeds: bool,
+
     /// Whether to allow connecting to peers that only support the unencrypted P2PV1 protocol.
     /// The [`Node`] will always attempt to establish an encrypted P2PV2 connection (BIP-0324),
     /// and will fall back to P2PV1 if set to true.
     pub allow_p2pv1_fallback: bool,
+
     /// The size of the [`Mempool`], in MB. If the [`Mempool`] becomes
     /// full, transactions are evicted based on their fee rate, lowest first.
     pub mempool_size: usize,
+
     /// The maximum number of addresses held in the [`AddressMan`].
     /// Defaults to 50_000 addresses.
     pub address_man_size: Option<usize>,
+
     /// The set of networks this node will communicate on.
     /// Currently, only [`ReachableNetworks::IPv4`] and [`ReachableNetworks::IPv6`] are supported.
     pub reachable_nets: Vec<ReachableNetworks>,

@@ -29,19 +29,26 @@ use crate::node::Node;
 pub enum BuilderError {
     /// Failed to create the data directory.
     CreateDirectory(io::Error),
+
     /// Failed to create a ChainState.
     ChainState(floresta_chain::BlockchainError),
+
     /// Failed to load or create a new chain store.
     ChainStoreInit(floresta_chain::FlatChainstoreError),
+
     /// Node and Wallet are not on the same network.
     NetworkMismatch,
+
     /// Compact Block Filter error.
     CompactBlockFilter(floresta_compact_filters::IterableFilterStoreError),
+
     /// Failed to build the inner node.
     BuildInner(floresta_wire::error::WireError),
+
     #[cfg(feature = "logger")]
     /// Failed to setup the tracing subscriber logger.
     LoggerSetup(io::Error),
+
     #[cfg(feature = "logger")]
     /// Tracing subscriber logger already initialized.
     LoggerAlreadySetup,
@@ -114,30 +121,43 @@ impl From<floresta_compact_filters::IterableFilterStoreError> for BuilderError {
 pub enum NodeError {
     /// The [`Node`] is already running.
     AlreadyRunning,
+
     /// The [`Node`] failed to perform a clean shutdown.
     Shutdown,
+
     /// The [`Node`]'s sender dropped without sending.
     Receiver(tokio::sync::oneshot::error::RecvError),
+
     /// The [`Node`] failed to flush the chain state to disk.
     Flush(floresta_chain::BlockchainError),
+
     /// I/O error during persistence.
     Io(io::Error),
+
     /// Blockchain related errors.
     Blockchain(floresta_chain::BlockchainError),
+
     /// Mempool related errors.
     Mempool(floresta_mempool::mempool::AcceptToMempoolError),
+
     /// Failed to fetch all of the requested blocks.
     MissingBlock(bitcoin::BlockHash),
+
     /// The requested [`Action`] cannot be performed in the [`Node`]'s current [`State`].
     IllegalAction,
+
     /// No [script pubkeys](ScriptBuf) were provided.
     NoSpksProvided,
+
     /// Error whilst scanning the blockchain with Compact Block Filters.
     CompactFilterScan(floresta_compact_filters::IterableFilterStoreError),
+
     /// Compact Block Filter-related errors.
     CompactBlockFilterStore(floresta_compact_filters::IterableFilterStoreError),
+
     /// The requested `stop_height` exceeds the Compact Block Filter store's height.
     StopHeightExceedsFilterTip { requested: u32, available: u32 },
+
     /// Failed to join a task whilst fetching blocks.
     FetchTask(tokio::task::JoinError),
 }

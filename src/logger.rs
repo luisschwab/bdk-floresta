@@ -256,8 +256,10 @@ where
 pub struct Logger {
     /// The minimum log level to emit. Can be overridden at runtime via `RUST_LOG`.
     pub log_level: Level,
+
     /// Whether to emit log events to `stdout`.
     pub log_to_stdout: bool,
+
     /// The file where logging events should be written to.
     ///
     /// If `None`, log events will not be written to a file.

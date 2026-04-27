@@ -73,16 +73,22 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 pub enum Action {
     /// The [`Node`] is connecting to a peer.
     ConnectingToPeer(String),
+
     /// The [`Node`] is disconnecting from a peer.
     DisconnectingFromPeer(String),
+
     /// The [`Node`] is removing a peer from its [address manager](AddressMan).
     RemovingPeer(String),
+
     /// The [`Node`] is pinging all of its peers.
     Pinging,
+
     /// The [`Node`] is fetching a [`Block`] from a peers.
     FetchingBlock(String),
+
     /// The [`Node`] is broadcasting a [`Transaction`].
     BroadcastingTransaction(String),
+
     /// The [`Node`] is matching [script pubkeys](ScriptBuf) to [`BlockHash`]es.
     MatchingFilters,
 }
