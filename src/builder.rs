@@ -17,7 +17,6 @@ use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_chain::AssumeValidArg;
-use floresta_chain::BlockchainInterface;
 use floresta_chain::ChainParams;
 use floresta_chain::ChainState;
 use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
@@ -30,7 +29,6 @@ use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::UtreexoNodeConfig;
-use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
@@ -41,9 +39,7 @@ use crate::error::BuilderError;
 use crate::fsm::State;
 #[cfg(feature = "logger")]
 use crate::logger::Logger;
-use crate::updater::WalletUpdater;
 use crate::Node;
-use crate::WalletUpdate;
 
 /// Configuration parameters for building a [`Node`].
 #[derive(Clone, Debug)]
@@ -175,12 +171,6 @@ impl Builder {
         self
     }
 
-    /// Add a [`Wallet`] that will receive updates from the [`Node`].
-    pub fn with_wallet(mut self, wallet: Wallet) -> Self {
-        self.wallet = Some(wallet);
-        self
-    }
-
     /// Build a [`Node`] from a [`Builder`].
     ///
     /// It will not run the [`Node`]. To run it, call [`Node::run()`].
@@ -277,8 +267,6 @@ impl Builder {
             state_update_task: None,
             chain_state,
             block_filters,
-            wallet: wallet_arc,
-            update_subscriber: Some(update_rx),
             #[cfg(feature = "logger")]
             _log_guard,
         })

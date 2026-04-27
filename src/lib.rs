@@ -21,7 +21,6 @@ pub mod fsm;
 #[cfg(feature = "logger")]
 pub mod logger;
 pub mod node;
-pub mod updater;
 
 #[cfg(feature = "logger")]
 pub use tracing::Level;
@@ -30,4 +29,3 @@ pub use crate::builder::Builder;
 pub use crate::error::BuilderError;
 pub use crate::error::NodeError;
 pub use crate::node::Node;
-pub use crate::updater::WalletUpdate;

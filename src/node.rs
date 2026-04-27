@@ -8,14 +8,14 @@ use core::fmt;
 use core::net::SocketAddr;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
 
-use bdk_wallet::Wallet;
 use bitcoin::block::Header;
 use bitcoin::Block;
 use bitcoin::BlockHash;
-//use bitcoin::ScriptBuf;
+use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
 use bitcoin::Txid;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
@@ -33,7 +33,6 @@ use floresta_wire::node_interface::NodeInterface;
 use floresta_wire::node_interface::PeerInfo;
 use floresta_wire::rustreexo::stump::Stump;
 use futures::future;
-use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::oneshot;
 use tokio::sync::watch;
 use tokio::sync::Mutex;
@@ -51,7 +50,6 @@ use crate::builder::NodeConfig;
 use crate::error::NodeError;
 use crate::fsm::compute_next_state;
 use crate::fsm::State;
-use crate::updater::WalletUpdate;
 
 #[allow(unused)]
 /// A conservative value for the maximum chain reorganization depth.
@@ -152,13 +150,6 @@ pub struct Node {
 
     /// The [`Node`]'s [Compact Block Filter](https://github.com/bitcoin/bips/blob/master/bip-0158.mediawiki) Store.
     pub(crate) block_filters: Arc<NetworkFilters<FlatFiltersStore>>,
-
-    /// Receiver for [`WalletUpdate`]s that come from
-    /// the [`Node`] and should be applied to the [`Wallet`].
-    pub update_subscriber: Option<UnboundedReceiver<WalletUpdate>>,
-
-    /// A [`Wallet`] that will receive updates from the [`Node`].
-    pub wallet: Option<Arc<RwLock<Wallet>>>,
 
     /// A guard that ensures the logger remains active for the [`Node`]'s lifetime.
     #[cfg(feature = "logger")]
@@ -693,7 +684,6 @@ impl Node {
 
         *self.state.write().await = last_state;
 
-        Ok(height_and_block)
+        Ok(block_hashes)
     }
-     */
 }
