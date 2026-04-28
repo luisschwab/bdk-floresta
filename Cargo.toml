@@ -56,6 +56,7 @@ anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
 [lints.clippy]
+uninlined_format_args = "deny"
 result_large_err = "allow"
 
 [package.metadata.docs.rs]
