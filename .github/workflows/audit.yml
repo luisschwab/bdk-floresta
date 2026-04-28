@@ -1,4 +1,4 @@
-name: Security Audit
+name: Audit
 
 on:
     push:
@@ -11,7 +11,7 @@ permissions: {}
 
 jobs:
     audit:
-        name: cargo-audit
+        name: Run cargo-audit
         runs-on: ubuntu-latest
         permissions:
             contents: read
