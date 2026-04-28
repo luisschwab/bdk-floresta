@@ -12,7 +12,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-use bdk_wallet::Wallet;
 use bitcoin::BlockHash;
 use bitcoin::Network;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
@@ -34,21 +33,23 @@ use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
-use tracing::info;
 
 #[cfg(feature = "logger")]
 use crate::logger::Logger;
+use crate::node::error::BuilderError;
 use crate::node::fsm::State;
-use crate::node::BuilderError;
 use crate::node::Node;
+
+/// The number of bytes per megabyte.
+const BYTES_PER_MB: usize = 1_000_000;
 
 /// Configuration parameters for building a [`Node`].
 #[derive(Clone, Debug)]
 pub struct NodeConfig {
-    /// The [`Network`] which to run the [`Node`] and [`Wallet`] on.
+    /// The [`Network`] which the [`Node`] will operate on.
     pub network: Network,
 
-    /// The path to the directory where [`Node`] and [`Wallet`] data will be persisted to.
+    /// The path to the directory where [`Node`] data will be persisted to.
     pub data_directory: PathBuf,
 
     /// Proof-of-Work Fraud Proofs allow skipping verification of the
@@ -152,7 +153,7 @@ impl From<NodeConfig> for UtreexoNodeConfig {
 // TODO
 impl From<UtreexoNodeConfig> for NodeConfig {
     fn from(_value: UtreexoNodeConfig) -> Self {
-        todo!()
+        unimplemented!()
     }
 }
 
@@ -164,8 +165,6 @@ pub struct Builder {
     /// Configuration for building the tracing subscriber logger.
     #[cfg(feature = "logger")]
     pub logger: Option<Logger>,
-    /// A [`Wallet`] that will receive updates from the [`Node`].
-    pub wallet: Option<Wallet>,
 }
 
 impl Builder {
@@ -175,7 +174,7 @@ impl Builder {
     }
 
     /// Instantiate a [`Builder`] from a [`NodeConfig`].
-    pub fn from_config(mut self, config: NodeConfig) -> Self {
+    pub fn with_config(mut self, config: NodeConfig) -> Self {
         self.config = config;
         self
     }
@@ -190,17 +189,10 @@ impl Builder {
     ///
     /// It will not run the [`Node`]. To run it, call [`Node::run()`].
     pub fn build(self) -> Result<Node, BuilderError> {
-        // Assert that the node and wallet network are equal.
-        if let Some(ref wallet) = self.wallet {
-            if self.config.network != wallet.network() {
-                return Err(BuilderError::NetworkMismatch);
-            }
-        }
+        // Create the data directory for node data.
+        fs::create_dir_all(&self.config.data_directory).map_err(BuilderError::CreateDirectory)?;
 
-        // Create the data directory for node and wallet data.
-        fs::create_dir_all(&self.config.data_directory)?;
-
-        // Init the logger, and keep a guard if logging to a file is enabled.
+        // Init the logger and keep a guard to it, if logging to a file is enabled
         #[cfg(feature = "logger")]
         let _log_guard = if let Some(logger) = self.logger {
             logger.init()?
@@ -208,8 +200,8 @@ impl Builder {
             None
         };
 
-        // Configure the [`FlatChainStore`].
-        let chain_store_cfg = FlatChainStoreConfig::new(
+        // Configure the node's chain store
+        let chain_store_config = FlatChainStoreConfig::new(
             self.config
                 .data_directory
                 .join("chain")
@@ -217,33 +209,28 @@ impl Builder {
                 .to_string(),
         );
 
-        // Try to load an existing [`FlatChainStore`] from the file system, or create a new one.
+        // Try to load an existing chain store from the file system, or create a new one.
         let chain_store: FlatChainStore =
-            FlatChainStore::new(chain_store_cfg.clone()).map_err(BuilderError::ChainStoreInit)?;
+            FlatChainStore::new(chain_store_config).map_err(BuilderError::ChainStoreInit)?;
 
-        // Initialize a [`ChainState`] from the [`FlatChainStore`].
+        // Initialize a chain state from the chain store
         let chain_state: Arc<ChainState<FlatChainStore>> = Arc::new(
             ChainState::open(chain_store, self.config.network, AssumeValidArg::Hardcoded)
                 .map_err(BuilderError::ChainState)?,
         );
 
-        // Configure the [`FlatFiltersStore`].
+        // Configure the compact block filter store
         let block_filter_store = FlatFiltersStore::new(self.config.data_directory.join("cbf"));
         let block_filters = Arc::new(NetworkFilters::new(block_filter_store));
 
-        info!(
-            "FilterStore loaded at height {}",
-            block_filters.get_height()?
-        );
-
-        // A kill signal that keeps track of whether the [`Node`] should stop.
+        // A kill signal that keeps track of whether the node should shutdown
         let kill_signal: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 
-        // Create the [`Node`]'s mempool.
-        let mempool_size_bytes = 1_000_000 * self.config.mempool_size;
+        // Create the node's mempool
+        let mempool_size_bytes = self.config.mempool_size * BYTES_PER_MB;
         let mempool: Arc<Mutex<Mempool>> = Arc::new(Mutex::new(Mempool::new(mempool_size_bytes)));
 
-        // Encapsulate [`UtreexoNode`] as an inner of [`Node`].
+        // Encapsulate `UtreexoNode` as an inner of `Node`
         let inner = UtreexoNode::<_, RunningNode>::new(
             self.config.clone().into(),
             chain_state.clone(),
@@ -254,7 +241,7 @@ impl Builder {
         )
         .map_err(BuilderError::BuildInner)?;
 
-        // Get a handle to interact with the [`Node`].
+        // Get a handle to interact with the node
         let handle: NodeInterface = inner.get_handle();
 
         Ok(Node {
@@ -267,7 +254,6 @@ impl Builder {
             cancellation_token: CancellationToken::new(),
             kill_signal,
             shutdown_task: Mutex::new(None),
-            state_update_task: Mutex::new(None),
             chain_state,
             block_filters,
             #[cfg(feature = "logger")]

@@ -734,7 +734,7 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
 dependencies = [
  "bitcoin",
  "floresta-common",
@@ -750,7 +750,7 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
 dependencies = [
  "bitcoin",
  "hashbrown 0.16.1",
@@ -762,7 +762,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -771,7 +771,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -784,7 +784,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=a244e9421af916680d3f17a8350a5040eefbdff5#a244e9421af916680d3f17a8350a5040eefbdff5"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
 dependencies = [
  "bip324",
  "bitcoin",

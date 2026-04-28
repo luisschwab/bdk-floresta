@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Instantiate and run the node
     info!("> Instantiating the node...");
-    let node = Builder::new().from_config(config).build()?;
+    let node = Builder::new().with_config(config).build()?;
     info!("> NODE STATE: {}", node.get_state());
 
     info!("> Spawning the node...");

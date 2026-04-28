@@ -192,11 +192,11 @@ where
 
         // Timestamp (dimmed if the `tty` supports it).
         if writer_supports_ansi_escaping {
-            write!(writer, "{}", ANSI_DIM)?;
+            write!(writer, "{ANSI_DIM}")?;
         }
         self.timer.format_time(&mut writer)?;
         if writer_supports_ansi_escaping {
-            write!(writer, "{} ", ANSI_RESET)?;
+            write!(writer, "{ANSI_RESET} ")?;
         } else {
             write!(writer, " ")?;
         }
@@ -210,7 +210,7 @@ where
                 Level::DEBUG => COLORED_DEBUG,
                 Level::TRACE => COLORED_TRACE,
             };
-            write!(writer, "{} ", colored_level)?;
+            write!(writer, "{colored_level} ")?;
         } else {
             write!(writer, "{:>5} ", event_metadata.level())?;
         }
@@ -222,9 +222,9 @@ where
             Self::short_target(event_metadata.target())
         };
         if writer_supports_ansi_escaping {
-            write!(writer, "{}{}{}: ", ANSI_DIM, target, ANSI_RESET)?;
+            write!(writer, "{ANSI_DIM}{target}{ANSI_RESET}: ")?;
         } else {
-            write!(writer, "{}: ", target)?;
+            write!(writer, "{target}: ")?;
         }
 
         // Log message and fields.

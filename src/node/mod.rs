@@ -20,7 +20,6 @@ use bitcoin::Transaction;
 use bitcoin::Txid;
 use builder::Builder;
 use builder::NodeConfig;
-use error::BuilderError;
 use error::NodeError;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_chain::pruned_utreexo::BlockchainInterface;
@@ -43,7 +42,6 @@ use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::debug;
 use tracing::error;
 use tracing::info;
 use tracing::warn;
@@ -63,46 +61,44 @@ const STATUS_UPDATE_POLL_PERIOD: Duration = Duration::from_millis(500);
 /// The timeout for the [`Node`]'s shutdown task, in seconds.
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// The set of [`Action`]s the [`Node`] can
-/// possibly be performing at any given instant.
+/// The set of [`Action`]s the [`Node`] can be performing at any given instant.
 ///
-/// These [`Action`]s are triggered when a user calls
-/// [`Node`] methods (e.g. scaning the blockchain with
-/// Compact Block Filters).
+/// These [`Action`]s are triggered when a user calls [`Node`] methods, such as
+/// scanning the blockchain with Compact Block Filters.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Action {
-    /// The [`Node`] is connecting to a peer.
-    ConnectingToPeer(String),
+    /// The [`Node`] is connecting to a peer with [`SocketAddr`].
+    ConnectingToPeer(SocketAddr),
 
     /// The [`Node`] is disconnecting from a peer.
-    DisconnectingFromPeer(String),
+    DisconnectingFromPeer(SocketAddr),
 
     /// The [`Node`] is removing a peer from its [address manager](AddressMan).
-    RemovingPeer(String),
+    RemovingPeer(SocketAddr),
 
     /// The [`Node`] is pinging all of its peers.
     Pinging,
 
     /// The [`Node`] is fetching a [`Block`] from a peers.
-    FetchingBlock(String),
+    FetchingBlock(BlockHash),
 
     /// The [`Node`] is broadcasting a [`Transaction`].
-    BroadcastingTransaction(String),
+    BroadcastingTransaction(Txid),
 
-    /// The [`Node`] is matching [script pubkeys](ScriptBuf) to [`BlockHash`]es.
+    /// The [`Node`] is matching [`ScriptBuf`] to [`BlockHash`]es.
     MatchingFilters,
 }
 
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ConnectingToPeer(socket) => write!(f, "Connecting to peer={}", socket),
-            Self::DisconnectingFromPeer(socket) => write!(f, "Disconnecting from peer={}", socket),
-            Self::RemovingPeer(socket) => write!(f, "Removing peer={}", socket),
+            Self::ConnectingToPeer(socket) => write!(f, "Connecting to peer={socket}"),
+            Self::DisconnectingFromPeer(socket) => write!(f, "Disconnecting from peer={socket}"),
+            Self::RemovingPeer(socket) => write!(f, "Removing peer={socket}"),
             Self::Pinging => write!(f, "Pinging all peers"),
-            Self::FetchingBlock(hash) => write!(f, "Fetching block with hash={}", hash),
+            Self::FetchingBlock(hash) => write!(f, "Fetching block with hash={hash}"),
             Self::BroadcastingTransaction(txid) => {
-                write!(f, "Broadcasting transaction with txid={}", txid)
+                write!(f, "Broadcasting transaction with txid={txid}")
             }
             Self::MatchingFilters => write!(f, "Matching filters to block hashes"),
         }
@@ -131,7 +127,7 @@ pub struct Node {
     /// The [`Instant`] at which the [`Node`] was started.
     pub(crate) started_at: OnceLock<Instant>,
 
-    /// A particular [`Action`] that the [`Node`] is currently performing.
+    /// The set of [`Action`]s that the [`Node`] is currently performing.
     pub(crate) action: Arc<watch::Sender<HashSet<Action>>>,
 
     /// A cancellation token used to signal shutdown to all tasks,
@@ -142,19 +138,9 @@ pub struct Node {
     /// set to `true` to instruct it to stop processing and exit.
     pub(crate) kill_signal: Arc<RwLock<bool>>,
 
-    /// A handle to the shutdown task.
-    ///
-    /// It sets the kill signal, waits for the [`NodeInner`] to
-    /// stop, and flushes the [`ChainState`] to the file system.
-    /// Awaited by [`Node::shutdown()`] and [`Node::cancelled()`].
+    /// A handle to the [`Node`]'s shutdown task,
+    /// awaited by [`Node::shutdown`].
     pub(crate) shutdown_task: Mutex<Option<JoinHandle<()>>>,
-
-    /// A handle to the status update task.
-    ///
-    /// This task will update the [`Node`]'s [`State`]
-    /// by polling the [`ChainState`] and interpreting
-    /// the values returned into a [`State`].
-    pub(crate) state_update_task: Mutex<Option<JoinHandle<()>>>,
 
     /// The [`Node`]'s blockchain state.
     pub(crate) chain_state: Arc<ChainState<FlatChainStore>>,
@@ -177,7 +163,7 @@ impl Node {
             Ok(Err(_)) => warn!("Shutdown channel closed without sending"),
             Err(_) => error!(
                 "Shutdown channel timed out after {} seconds",
-                SHUTDOWN_TIMEOUT.as_secs()
+                timeout.as_secs()
             ),
         }
     }
@@ -186,10 +172,10 @@ impl Node {
     async fn join_with_timeout(task: JoinHandle<()>, timeout: Duration) {
         match tokio::time::timeout(timeout, task).await {
             Ok(Ok(_)) => {}
-            Ok(Err(e)) => error!("Node task failed during shutdown: {:?}", e),
+            Ok(Err(e)) => error!("Node task failed during shutdown: {e:?}"),
             Err(_) => warn!(
                 "Node task join timed out after {} seconds",
-                SHUTDOWN_TIMEOUT.as_secs()
+                timeout.as_secs()
             ),
         }
     }
@@ -212,16 +198,12 @@ impl Node {
 
     /// Spawn and run the [`Node`].
     ///
-    /// This method will spawn two tasks:
+    /// This method will spawn three tasks:
     /// - A task that runs the inner [`UtreexoNode`].
+    /// - A task that polls chain/filter state and updates the [`Node`]'s [`State`].
     /// - A task for the shutdown handler, which reacts to a [`Node::shutdown`] call or a `SIGINT`
-    ///   signal, and perfoms the graceful shutdown routine.
+    ///   signal, and performs the graceful shutdown routine.
     pub async fn run(&self) -> Result<(), NodeError> {
-        // Register the `Instant` the node started running
-        self.started_at
-            .set(Instant::now())
-            .map_err(|_| NodeError::AlreadyRunning)?;
-
         // `take()` the inner node to make sure `Node::run()` can only be called once
         let inner_node = self
             .inner
@@ -230,8 +212,10 @@ impl Node {
             .take()
             .ok_or(NodeError::AlreadyRunning)?;
 
-        // Set the node's state to `State::Active`
-        self.state.send_replace(State::Active);
+        // Register the `Instant` the node started running
+        self.started_at
+            .set(Instant::now())
+            .map_err(|_| NodeError::AlreadyRunning)?;
 
         // Create a channel to carry shutdown notifications
         let (node_stopped_tx, node_stopped_rx) = oneshot::channel::<()>();
@@ -252,41 +236,50 @@ impl Node {
                     _ = cancellation_token.cancelled() => break,
                     // Sleep for `STATUS_UPDATE_POLL_PERIOD` between polls
                     _ = tokio::time::sleep(STATUS_UPDATE_POLL_PERIOD) => {
-                        let node_tip = chain_state.get_validation_index();
-                        let Ok(node_tip) = node_tip else {
-                            error!("Failed to compute FSM's next state (failed to get node tip): {}", node_tip.unwrap_err());
-                            continue
-                        };
-
-                        let chain_tip = chain_state.get_best_block();
-                        let Ok((chain_tip, _)) = chain_tip else {
-                            error!("Failed to compute FSM's next state (failed to get chain tip): {}", chain_tip.unwrap_err());
-                            continue
-                        };
-
-                        let filter_tip = block_filters.get_height();
-                        let Ok(filter_tip) = filter_tip else {
-                            error!("Failed to compute FSM's next state (failed to filter chain tip): {}", filter_tip.unwrap_err());
-                            continue
-                        };
-
-                        // Check if the inner node is ready.
+                        // Check if the inner node is ready to receive requests
                         //
-                        // This is a best-effort way to detect if it's ready.
+                        // This is a best-effort way to detect if it's ready
                         // To implement this with 100% certainty, FSM logic
-                        // would need to be upstreamed to `floresta-wire`.
+                        // would need to be upstreamed to `floresta-wire`
                         let wire_ready = node_handle.get_peer_info().await
                             .map(|peers| !peers.is_empty())
                             .unwrap_or(false);
 
-                        // Compute the next state from the current state + inputs and send it if it changed
-                        state.send_if_modified(|current| {
-                            if matches!(current,  State::ShuttingDown) {
+                        // Get the chain's tip
+                        let chain_tip = match chain_state.get_best_block() {
+                            Ok((tip, _)) => tip,
+                            Err(e) => {
+                                error!("Failed to compute FSM's next state (failed to get chain tip): {e}");
+                                continue;
+                            }
+                        };
+
+                        // Get the node's tip
+                        let node_tip = match chain_state.get_validation_index() {
+                            Ok(tip) => tip,
+                            Err(e) => {
+                                error!("Failed to compute FSM's next state (failed to get node tip): {e}");
+                                continue;
+                            }
+                        };
+
+                        // Get the filter's tip
+                        let filter_tip = match block_filters.get_height() {
+                            Ok(tip) => tip,
+                            Err(e) => {
+                                error!("Failed to compute FSM's next state (failed to get filter tip): {e}");
+                                continue;
+                            }
+                        };
+
+                        // Compute the next state and send it on state transitions
+                        state.send_if_modified(|current_state| {
+                            if matches!(current_state,  State::ShuttingDown) {
                                 return false;
                             }
-                            let next = compute_next_state(wire_ready, current.clone(), node_tip, chain_tip, filter_tip);
-                            if *current != next {
-                                *current = next;
+                            let next_state = compute_next_state(wire_ready, current_state, node_tip, chain_tip, filter_tip);
+                            if *current_state != next_state {
+                                *current_state = next_state;
                                 true
                             } else {
                                 false
@@ -296,7 +289,6 @@ impl Node {
                 }
             }
         });
-        *self.state_update_task.lock().await = Some(state_update_task);
 
         // Spawn a task that listens for SIGINT or `Node::shutdown` and waits for tasks to complete
         let state = self.state.clone();
@@ -305,32 +297,47 @@ impl Node {
         let cancellation_token = self.cancellation_token.clone();
 
         let shutdown_task = tokio::task::spawn(async move {
-            tokio::select! {
-                _ = tokio::signal::ctrl_c() => { info!("Shutting down"); }
-                _ = cancellation_token.cancelled() => { info!("Shutting down"); }
-            }
-            // Set the node's state to `State::ShuttingDown`
-            state.send_replace(State::ShuttingDown);
+            let reason = tokio::select! {
+                _ = tokio::signal::ctrl_c() => "SIGINT",
+                _ = cancellation_token.cancelled() => "SHUTDOWN request"
+            };
+            info!("Received {}, shutting the node down...", reason);
 
             *kill_signal.write().await = true;
+            state.send_replace(State::ShuttingDown);
 
-            Self::await_with_timeout(node_stopped_rx, SHUTDOWN_TIMEOUT).await;
-            Self::join_with_timeout(node_task, SHUTDOWN_TIMEOUT).await;
-
-            if let Err(e) = chain_state.flush() {
-                error!("Error flushing chain state to the file system: {e:?}");
-            }
-
+            // Cancel the node's cancellation token
+            // This allows clients to react to it and shut themselves down
             cancellation_token.cancel();
 
-            // Set the node's state to `State::Inactive`
+            // Wait for the node's tasks to finish
+            Self::await_with_timeout(node_stopped_rx, SHUTDOWN_TIMEOUT).await;
+            Self::join_with_timeout(node_task, SHUTDOWN_TIMEOUT).await;
+            Self::join_with_timeout(state_update_task, SHUTDOWN_TIMEOUT).await;
+
+            // Flush the chain state to the file system
+            if let Err(e) = chain_state.flush() {
+                error!("Failed to flush chain state during shutdown: {e}");
+            }
+
             state.send_replace(State::Inactive);
 
-            info!("Shutdown complete");
+            info!("Node shutdown complete");
         });
         *self.shutdown_task.lock().await = Some(shutdown_task);
 
+        // Set the node's state to active
+        self.state.send_replace(State::Active);
+
         Ok(())
+    }
+
+    /// Flush the [`Node`]'s [chainstate](ChainState) to the file system.
+    ///
+    /// This is triggered automatically during shutdown,
+    /// but can also be invoked while the [`Node`] is running.
+    pub fn flush(&self) -> Result<(), NodeError> {
+        self.chain_state.flush().map_err(NodeError::Blockchain)
     }
 
     /// Programatically request the [node](`Node`) to shutdown.
@@ -342,18 +349,10 @@ impl Node {
         Ok(())
     }
 
-    /// Flush the [`Node`]'s [chainstate](ChainState) to the file system.
-    pub fn flush(&mut self) -> Result<(), NodeError> {
-        self.chain_state.flush().map_err(|e| {
-            error!("Error flushing chain state to the file system: {e:?}");
-            NodeError::Flush(e)
-        })
-    }
-
     /// Returns a clone of the [`Node`]'s cancellation token.
     ///
     /// The returned token fires when the [`Node`] begins shutdown.
-    /// This can be used by external tasks that want to reach to
+    /// This can be used by external tasks that want to react to
     /// the [`Node`]'s shutdown.
     pub fn cancellation_token(&self) -> CancellationToken {
         self.cancellation_token.clone()
@@ -362,11 +361,11 @@ impl Node {
     // ----> LOCAL METHODS
 
     /// How [long](Duration) the [`Node`] has been running.
-    pub fn uptime(&self) -> Duration {
+    pub fn uptime(&self) -> Result<Duration, NodeError> {
         self.started_at
             .get()
             .map(|t| t.elapsed())
-            .expect("started_at is always some")
+            .ok_or(NodeError::NotRunning)
     }
 
     /// Subscribe to [`State`] transitions.
@@ -382,10 +381,10 @@ impl Node {
         self.state.borrow().clone()
     }
 
-    /// Subscribe to in-flight [`Action`]s.
+    /// Subscribe to the [`Node`]'s in-flight [`Action`]s.
     ///
-    /// Returns a [`watch::Receiver`] that yields the
-    /// set of [`Action`]s currently being performed by the [`Node`].
+    /// Returns a [`watch::Receiver`] that yields the set
+    /// of [`Action`]s currently being performed by the [`Node`].
     pub fn subscribe_action(&self) -> watch::Receiver<HashSet<Action>> {
         self.action.subscribe()
     }
@@ -405,19 +404,23 @@ impl Node {
         self.chain_state.is_in_ibd()
     }
 
-    /// Get the height of the blockchain tip.
+    /// Get the [`Node`]'s header height.
     pub fn get_chain_height(&self) -> Result<u32, NodeError> {
-        self.chain_state.get_validation_index().map_err(Into::into)
+        self.chain_state.get_height().map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Node`]'s validation height.
     pub fn get_node_height(&self) -> Result<u32, NodeError> {
-        self.chain_state.get_validation_index().map_err(Into::into)
+        self.chain_state
+            .get_validation_index()
+            .map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Node`]'s [`NetworkFilters`] height.
     pub fn get_filter_height(&self) -> Result<u32, NodeError> {
-        self.block_filters.get_height().map_err(Into::into)
+        self.block_filters
+            .get_height()
+            .map_err(NodeError::CompactBlockFilter)
     }
 
     /// Get the [`Node`]'s current accumulator, as a [`Stump`].
@@ -435,16 +438,35 @@ impl Node {
 
     /// Get the [`BlockHash`] of a [`Block`] at a given height.
     pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, NodeError> {
-        self.chain_state.get_block_hash(height).map_err(Into::into)
+        self.chain_state
+            .get_block_hash(height)
+            .map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Header`] of a [`Block`], given its [`BlockHash`].
     pub fn get_block_header(&self, hash: &BlockHash) -> Result<Header, NodeError> {
-        self.chain_state.get_block_header(hash).map_err(Into::into)
+        self.chain_state
+            .get_block_header(hash)
+            .map_err(NodeError::Blockchain)
+    }
+
+    /// Get information about peers the [`Node`] is currently connected to.
+    pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
+        self.handle
+            .get_peer_info()
+            .await
+            .map_err(NodeError::UnresponsiveNode)
+    }
+
+    /// Subscribe and receive every new [`Block`] the [`Node`] validates.
+    ///
+    /// Implements the [`BlockConsumer`] trait from [`floresta-chain`](floresta_chain).
+    pub fn block_subscriber<T: BlockConsumer + 'static>(&self, block_consumer: Arc<T>) {
+        self.chain_state.subscribe(block_consumer);
     }
 
     /// Find [`Block`]s that contain relevant [`Transaction`]s
-    /// to a given set of [script pubkeys](ScriptBuf).
+    /// to a given set of [`ScriptBuf`].
     ///
     /// Returns an error if the Compact Block Filters are not yet downloaded.
     pub async fn match_filters(
@@ -453,17 +475,22 @@ impl Node {
         start_height: u32,
         stop_height: u32,
     ) -> Result<Vec<BlockHash>, NodeError> {
-        // Throw an error if the node is not operational
+        // Throw an error if the node is not yet operational
         let last_state = self.state.borrow().clone();
         if !matches!(last_state, State::Operational) {
-            return Err(NodeError::IllegalAction);
+            return Err(NodeError::IllegalAction {
+                state: last_state,
+                attempted: Action::MatchingFilters,
+            });
         }
 
+        // Get the filter tip height from the node
         let filter_tip = self
             .block_filters
             .get_height()
-            .map_err(NodeError::CompactBlockFilterStore)?;
+            .map_err(NodeError::CompactBlockFilter)?;
 
+        // Can't perform CBF scans past the filter tip height
         if stop_height > filter_tip {
             return Err(NodeError::StopHeightExceedsFilterTip {
                 requested: stop_height,
@@ -474,8 +501,9 @@ impl Node {
         let action = Action::MatchingFilters;
         self.track_action(&action);
 
+        // Find blocks with relevant transactions to these spks
         let spks: Vec<&[u8]> = spks.iter().map(|s| s.as_bytes()).collect();
-        let block_hashes = self
+        let result = self
             .block_filters
             .match_any(
                 spks,
@@ -483,31 +511,10 @@ impl Node {
                 Some(stop_height),
                 self.chain_state.clone(),
             )
-            .map_err(NodeError::CompactBlockFilterStore)?;
+            .map_err(NodeError::CompactBlockFilter);
         self.untrack_action(&action);
 
-        Ok(block_hashes)
-    }
-
-    /// A subscriber for validated [`Block`]s.
-    ///
-    /// Implements the [`BlockConsumer`] trait from [`floresta-chain`](floresta_chain).
-    pub fn block_subscriber<T: BlockConsumer + 'static>(&self, block_consumer: Arc<T>) {
-        self.chain_state.subscribe(block_consumer);
-    }
-
-    /// Get information about peers the [`Node`] is currently connected to.
-    pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
-        match self.handle.get_peer_info().await {
-            Ok(peer_infos) => {
-                debug!("Got peer information: {:?}", peer_infos);
-                Ok(peer_infos)
-            }
-            Err(e) => {
-                error!("Error whilst receiving peer information: {}", e);
-                Err(NodeError::Receiver(e))
-            }
-        }
+        result
     }
 
     // ----> P2P NETWORK METHODS
@@ -517,14 +524,14 @@ impl Node {
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, it must be requested over the wire from a peer.
     pub async fn fetch_block(&self, hash: BlockHash) -> Result<Block, NodeError> {
-        let action = Action::FetchingBlock(hash.to_string());
+        let action = Action::FetchingBlock(hash);
         self.track_action(&action);
-
-        let result = match self.handle.get_block(hash).await {
-            Ok(Some(block)) => Ok(block),
-            Ok(None) => Err(NodeError::MissingBlock(hash)),
-            Err(e) => Err(e.into()),
-        };
+        let result = self
+            .handle
+            .get_block(hash)
+            .await
+            .map_err(NodeError::UnresponsiveNode)
+            .and_then(|opt| opt.ok_or(NodeError::MissingBlock(hash)));
         self.untrack_action(&action);
 
         result
@@ -537,22 +544,27 @@ impl Node {
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, they must be requested over the wire from a peer.
     pub async fn fetch_blocks(&self, hashes: &[BlockHash]) -> Result<Vec<Block>, NodeError> {
-        let action = Action::FetchingBlock("multiple".to_string());
-        self.track_action(&action);
+        let actions: Vec<Action> = hashes.iter().map(|h| Action::FetchingBlock(*h)).collect();
+        for action in &actions {
+            self.track_action(action);
+        }
 
         let result = future::try_join_all(hashes.iter().map(|hash| {
             let handle = self.handle.clone();
             let hash = *hash;
             async move {
-                match handle.get_block(hash).await {
-                    Ok(Some(block)) => Ok(block),
-                    Ok(None) => Err(NodeError::MissingBlock(hash)),
-                    Err(e) => Err(e.into()),
-                }
+                handle
+                    .get_block(hash)
+                    .await
+                    .map_err(NodeError::UnresponsiveNode)?
+                    .ok_or(NodeError::MissingBlock(hash))
             }
         }))
         .await;
-        self.untrack_action(&action);
+
+        for action in &actions {
+            self.untrack_action(action);
+        }
 
         result
     }
@@ -562,26 +574,14 @@ impl Node {
     /// Returns the [`Txid`], if the broadcast was successful.
     pub async fn broadcast_tx(&self, tx: Transaction) -> Result<Txid, NodeError> {
         let txid = tx.compute_txid();
-        let action = Action::BroadcastingTransaction(txid.to_string());
+        let action = Action::BroadcastingTransaction(txid);
         self.track_action(&action);
-
-        let result = match self.handle.broadcast_transaction(tx).await {
-            Ok(Ok(txid)) => {
-                info!("Successfully broadcast transaction with txid={}", txid);
-                Ok(txid)
-            }
-            Ok(Err(e)) => {
-                error!(
-                    "Failed to broadcast an invalid transaction with txid={}: {}",
-                    txid, e
-                );
-                Err(NodeError::Mempool(e))
-            }
-            Err(e) => {
-                error!("Failed to broadcast transaction with txid={}: {}", txid, e);
-                Err(NodeError::Receiver(e))
-            }
-        };
+        let result = self
+            .handle
+            .broadcast_transaction(tx)
+            .await
+            .map_err(NodeError::UnresponsiveNode)
+            .and_then(|inner| inner.map_err(NodeError::Mempool));
         self.untrack_action(&action);
 
         result
@@ -591,29 +591,15 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the connection was successful.
     pub async fn add_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let action = Action::ConnectingToPeer(socket.to_string());
+        let action = Action::ConnectingToPeer(*socket);
         self.track_action(&action);
-
-        let result = match self
+        let result = self
             .handle
             .add_peer(socket.ip(), socket.port(), self.config.allow_p2pv1_fallback)
             .await
-        {
-            Ok(true) => {
-                debug!("Connected to peer={}", socket);
-                Ok(true)
-            }
-            Ok(false) => {
-                warn!("Failed to connect to peer={}", socket);
-                Ok(false)
-            }
-            Err(e) => {
-                error!("Error whilst connecting to peer={}: {}", socket, e);
-                Err(NodeError::Receiver(e))
-            }
-        };
-
+            .map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
+
         result
     }
 
@@ -621,57 +607,30 @@ impl Node {
     ///
     /// Returns a `bool` indicating whether the [`Node`] successfully disconnected from the peer.
     pub async fn disconnect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let action = Action::DisconnectingFromPeer(socket.to_string());
+        let action = Action::DisconnectingFromPeer(*socket);
         self.track_action(&action);
-
-        let result = match self
+        let result = self
             .handle
             .disconnect_peer(socket.ip(), socket.port())
             .await
-        {
-            Ok(true) => {
-                debug!("Disconnected from peer={socket}");
-                Ok(true)
-            }
-            Ok(false) => {
-                error!("Failed to disconnect from peer={socket}");
-                Ok(false)
-            }
-            Err(e) => {
-                error!("Error whilst disconnecting from peer={socket}: {e}");
-                Err(NodeError::Receiver(e))
-            }
-        };
+            .map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
 
         result
     }
 
     /// Remove a specific peer's address from the [`Node`]'s
-    /// (address manager)[AddressMan], given its [`SocketAddr`].
+    /// [`AddressMan`], given its [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the address was successfully removed.
     pub async fn remove_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
-        let action = Action::RemovingPeer(socket.to_string());
+        let action = Action::RemovingPeer(*socket);
         self.track_action(&action);
-
-        let result = match self.handle.remove_peer(socket.ip(), socket.port()).await {
-            Ok(true) => {
-                debug!("Removed peer={} from the address manager", socket);
-                Ok(true)
-            }
-            Ok(false) => {
-                error!("Failed to remove peer={} from the address manager", socket);
-                Ok(false)
-            }
-            Err(e) => {
-                error!(
-                    "Failed to remove peer={} from the address manager: {}",
-                    socket, e
-                );
-                Err(NodeError::Receiver(e))
-            }
-        };
+        let result = self
+            .handle
+            .remove_peer(socket.ip(), socket.port())
+            .await
+            .map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
 
         result
@@ -681,21 +640,11 @@ impl Node {
     pub async fn ping(&self) -> Result<bool, NodeError> {
         let action = Action::Pinging;
         self.track_action(&action);
-
-        let result = match self.handle.ping().await {
-            Ok(true) => {
-                debug!("Sent a ping to all peers");
-                Ok(true)
-            }
-            Ok(false) => {
-                warn!("Failed to send a ping to all peers");
-                Ok(false)
-            }
-            Err(e) => {
-                error!("Error whilst receiving ping response: {e}");
-                Err(NodeError::Receiver(e))
-            }
-        };
+        let result = self
+            .handle
+            .ping()
+            .await
+            .map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
 
         result

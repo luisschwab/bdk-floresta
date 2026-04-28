@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Instantiate and run bdk_floresta
     info!("> Spawning bdk_floresta...");
-    let node = Builder::new().from_config(node_config).build()?;
+    let node = Builder::new().with_config(node_config).build()?;
     node.run().await?;
     info!("> bdk_floresta is spawned");
     std::thread::sleep(Duration::from_secs(2));

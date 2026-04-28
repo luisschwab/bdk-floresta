@@ -15,6 +15,7 @@ use core::fmt;
 use bitcoin::Block;
 #[allow(unused)]
 use floresta_wire::address_man::AddressMan;
+use tracing::warn;
 
 #[allow(unused)]
 use crate::node::Node;
@@ -32,7 +33,7 @@ const OPERATIONAL_TOLERANCE: u32 = 6;
 /// with the [`Node`] to when it's in a well-defined set of
 /// [`State`]s. Upstream applications can also use this to
 /// display the [`Node`]'s [`State`] to their users.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum State {
     /// S0: The [`Node`] is not running.
     Inactive,
@@ -45,13 +46,13 @@ pub enum State {
     DnsBootstrapping,
 
     /// S3: The [`Node`] is synchronizing headers from its peers.
-    HeaderSync(u32),
+    HeaderSync { height: u32 },
 
     /// S4: The [`Node`] is performing Initial Block Download.
-    InitialBlockDownload((u32, u32)),
+    InitialBlockDownload { node_height: u32, chain_height: u32 },
 
     /// S5: The [`Node`] is downloading Compact Block Filters from its peers.
-    CompactBlockFilterDownload(u32),
+    CompactBlockFilterDownload { filter_height: u32 },
 
     // TODO(@luisschwab): how do we figure out when we are in this state?
     /// S6: The [`Node`] is performing backfill.
@@ -64,28 +65,19 @@ pub enum State {
     ShuttingDown,
 }
 
+#[rustfmt::skip]
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Inactive => write!(f, "Inactive"),
             Self::Active => write!(f, "Active"),
-            Self::DnsBootstrapping => {
-                write!(f, "Address Manager Bootstrap")
-            }
-            Self::HeaderSync(height) => write!(f, "Header Synchronization at height={}", height),
-            Self::InitialBlockDownload((node_tip, chain_tip)) => {
-                write!(
-                    f,
-                    "Initial Block Download at node_tip={} and chain_tip={}",
-                    node_tip, chain_tip
-                )
-            }
-            Self::CompactBlockFilterDownload(height) => {
-                write!(f, "Compact Block Filter download at height={}", height)
-            }
+            Self::DnsBootstrapping => write!(f, "Address Manager Bootstrap"),
+            Self::HeaderSync { height } => write!(f, "Header Synchronization at height={height}"),
+            Self::InitialBlockDownload { node_height, chain_height } => write!(f, "Initial Block Download at node_height={node_height} and chain_height={chain_height}"),
+            Self::CompactBlockFilterDownload { filter_height } => write!(f, "Compact Block Filter Download at filter_height={filter_height}"),
             Self::Backfill => write!(f, "Backfilling"),
             Self::Operational => write!(f, "Operational"),
             Self::ShuttingDown => write!(f, "Shutting Down"),
-            Self::Inactive => write!(f, "Inactive"),
         }
     }
 }
@@ -102,16 +94,22 @@ impl fmt::Display for State {
 /// See `doc/FSM.md` for FSM modelling and next-state logic.
 pub fn compute_next_state(
     wire_ready: bool,
-    current_state: State,
-    node_tip: u32,
-    chain_tip: u32,
-    filter_tip: u32,
+    current_state: &State,
+    node_height: u32,
+    chain_height: u32,
+    filter_height: u32,
 ) -> State {
-    // Filter tip should not be greater than node tip.
+    // The filter tip should not be greater than node's tip
     //
     // Something went wrong if this is the case, so
     // fallback to the minimum between the two values.
-    let filter_tip = filter_tip.min(node_tip);
+    let filter_height = if filter_height > node_height {
+        warn!("The filter height={filter_height} is greater than the node height={node_height}");
+        warn!("Falling back to the node height={node_height}");
+        node_height
+    } else {
+        filter_height
+    };
 
     match current_state {
         // Skip these variants since their
@@ -126,20 +124,25 @@ pub fn compute_next_state(
         s @ State::ShuttingDown
         | s @ State::Inactive
         | s @ State::DnsBootstrapping
-        | s @ State::Backfill => s,
+        | s @ State::Backfill => s.clone(),
 
         _ => {
             // Wait for the inner node to be ready
             // before transitioning to the next state.
             if !wire_ready {
                 State::Active
-            } else if node_tip == 0 && chain_tip > 0 {
-                State::HeaderSync(chain_tip)
-            } else if node_tip + OPERATIONAL_TOLERANCE < chain_tip {
-                State::InitialBlockDownload((node_tip, chain_tip))
-            } else if filter_tip < chain_tip {
-                State::CompactBlockFilterDownload(filter_tip)
-            } else if node_tip > 0 {
+            } else if node_height == 0 && chain_height > 0 {
+                State::HeaderSync {
+                    height: chain_height,
+                }
+            } else if node_height + OPERATIONAL_TOLERANCE < chain_height {
+                State::InitialBlockDownload {
+                    node_height,
+                    chain_height,
+                }
+            } else if filter_height < chain_height {
+                State::CompactBlockFilterDownload { filter_height }
+            } else if node_height > 0 {
                 State::Operational
             } else {
                 State::Active

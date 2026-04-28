@@ -36,9 +36,6 @@ pub enum BuilderError {
     /// Failed to load or create a new chain store.
     ChainStoreInit(floresta_chain::FlatChainstoreError),
 
-    /// Node and Wallet are not on the same network.
-    NetworkMismatch,
-
     /// Compact Block Filter error.
     CompactBlockFilter(floresta_compact_filters::IterableFilterStoreError),
 
@@ -54,29 +51,19 @@ pub enum BuilderError {
     LoggerAlreadySetup,
 }
 
+#[rustfmt::skip]
 impl fmt::Display for BuilderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BuilderError::CreateDirectory(e) => {
-                write!(f, "Failed to create the data directory: {e:?}")
-            }
-            BuilderError::ChainState(e) => write!(f, "Failed to create a ChainState: {e:?}"),
-            BuilderError::ChainStoreInit(e) => {
-                write!(f, "Failed to load or create a new chain store: {e:?}")
-            }
-            BuilderError::NetworkMismatch => {
-                write!(f, "Node and Wallet are not on the same network")
-            }
-            BuilderError::CompactBlockFilter(e) => write!(f, "Compact Block Filter error: {e:?}"),
+            BuilderError::CreateDirectory(e) => write!(f, "Failed to create the data directory: {e}"),
+            BuilderError::ChainState(e) => write!(f, "Failed to create a chainstate: {e}"),
+            BuilderError::ChainStoreInit(e) => write!(f, "Failed to load or create a new chain store: {e}"),
+            BuilderError::CompactBlockFilter(e) => write!(f, "Compact Block Filter error: {e}"),
             BuilderError::BuildInner(e) => write!(f, "Failed to build the inner node: {e}"),
             #[cfg(feature = "logger")]
-            BuilderError::LoggerSetup(e) => {
-                write!(f, "Failed to setup the tracing subscriber logger: {e:?}")
-            }
+            BuilderError::LoggerSetup(e) => write!(f, "Failed to setup the tracing subscriber logger: {e}"),
             #[cfg(feature = "logger")]
-            BuilderError::LoggerAlreadySetup => {
-                write!(f, "Tracing subscriber logger already initialized")
-            }
+            BuilderError::LoggerAlreadySetup => write!(f, "A tracing subscriber logger is already initialized"),
         }
     }
 }
@@ -92,112 +79,58 @@ impl error::Error for BuilderError {
     }
 }
 
-impl From<io::Error> for BuilderError {
-    fn from(e: io::Error) -> Self {
-        BuilderError::CreateDirectory(e)
-    }
-}
-
-impl From<floresta_chain::BlockchainError> for BuilderError {
-    fn from(e: floresta_chain::BlockchainError) -> Self {
-        BuilderError::ChainState(e)
-    }
-}
-
-impl From<floresta_chain::FlatChainstoreError> for BuilderError {
-    fn from(e: floresta_chain::FlatChainstoreError) -> Self {
-        BuilderError::ChainStoreInit(e)
-    }
-}
-
-impl From<floresta_compact_filters::IterableFilterStoreError> for BuilderError {
-    fn from(e: floresta_compact_filters::IterableFilterStoreError) -> Self {
-        BuilderError::CompactBlockFilter(e)
-    }
-}
-
 /// Errors that can occur whilst interacting with the [`Node`].
 #[derive(Debug)]
 pub enum NodeError {
+    /// The [`Node`] is not running.
+    NotRunning,
+
     /// The [`Node`] is already running.
     AlreadyRunning,
 
     /// The [`Node`] failed to perform a clean shutdown.
-    Shutdown,
+    DirtyShutdown(io::Error),
 
     /// The [`Node`]'s sender dropped without sending.
-    Receiver(tokio::sync::oneshot::error::RecvError),
-
-    /// The [`Node`] failed to flush the chain state to disk.
-    Flush(floresta_chain::BlockchainError),
-
-    /// I/O error during persistence.
-    Io(io::Error),
+    UnresponsiveNode(tokio::sync::oneshot::error::RecvError),
 
     /// Blockchain related errors.
     Blockchain(floresta_chain::BlockchainError),
 
     /// Mempool related errors.
-    Mempool(floresta_mempool::mempool::AcceptToMempoolError),
+    Mempool(floresta_mempool::mempool::MempoolError),
 
     /// Failed to fetch all of the requested blocks.
     MissingBlock(bitcoin::BlockHash),
 
     /// The requested [`Action`] cannot be performed in the [`Node`]'s current [`State`].
-    IllegalAction,
+    IllegalAction { state: State, attempted: Action },
 
     /// No [script pubkeys](ScriptBuf) were provided.
     NoSpksProvided,
 
-    /// Error whilst scanning the blockchain with Compact Block Filters.
-    CompactFilterScan(floresta_compact_filters::IterableFilterStoreError),
-
-    /// Compact Block Filter-related errors.
-    CompactBlockFilterStore(floresta_compact_filters::IterableFilterStoreError),
+    /// Compact Block Filter related errors.
+    CompactBlockFilter(floresta_compact_filters::IterableFilterStoreError),
 
     /// The requested `stop_height` exceeds the Compact Block Filter store's height.
     StopHeightExceedsFilterTip { requested: u32, available: u32 },
-
-    /// Failed to join a task whilst fetching blocks.
-    FetchTask(tokio::task::JoinError),
 }
 
+#[rustfmt::skip]
 impl fmt::Display for NodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            NodeError::NotRunning => write!(f, "The node is not running"),
             NodeError::AlreadyRunning => write!(f, "The node is already running"),
-            NodeError::Shutdown => write!(f, "The node failed to perform a clean shutdown"),
-            NodeError::Receiver(e) => write!(f, "{e}"),
-            NodeError::Flush(e) => write!(f, "Failed to flush chain state: {e:?}"),
-            NodeError::Io(e) => write!(f, "I/O error: {e}"),
-            NodeError::Blockchain(e) => write!(f, "Blockchain error: {e:?}"),
-            NodeError::Mempool(e) => write!(f, "Mempool acceptance error: {e:?}"),
-            NodeError::MissingBlock(h) => {
-                write!(f, "The block with hash={h:?} does not exist in the chain)")
-            }
-            NodeError::IllegalAction => write!(
-                f,
-                "The requested action cannot be performed in the node's current state"
-            ),
-            NodeError::NoSpksProvided => write!(
-                f,
-                "No scriptPubkeys were provided when rescanning the blockchain"
-            ),
-            NodeError::CompactFilterScan(e) => write!(
-                f,
-                "Error whilst scanning the blockchain with Compact Block Filters: {e:?}"
-            ),
-            NodeError::CompactBlockFilterStore(e) => write!(f, "Compact Block Filter error: {e}"),
-            NodeError::StopHeightExceedsFilterTip {
-                requested,
-                available,
-            } => {
-                write!(
-                    f,
-                    "The provided stop_height={requested} exceeds filter store height={available}"
-                )
-            }
-            NodeError::FetchTask(e) => write!(f, "Block fetch task failed: {e}"),
+            NodeError::DirtyShutdown(e) => write!(f, "The node failed to perform a clean shutdown: {e}"),
+            NodeError::UnresponsiveNode(e) => write!(f, "The node is unresponsive: {e}"),
+            NodeError::Blockchain(e) => write!(f, "Blockchain error: {e}"),
+            NodeError::Mempool(e) => write!(f, "Mempool error: {e}"),
+            NodeError::MissingBlock(hash) => write!(f, "The block with hash={hash} does not exist in the chain"),
+            NodeError::IllegalAction { state, attempted} => write!(f, "The requested action={attempted} cannot be performed at the current state={state}"),
+            NodeError::NoSpksProvided => write!(f, "No spks were provided when rescanning the blockchain"),
+            NodeError::CompactBlockFilter(e) => write!(f, "Compact Block Filter error: {e}"),
+            NodeError::StopHeightExceedsFilterTip { requested, available } => write!(f, "The provided stop_height={requested} exceeds filter store height={available}"),
         }
     }
 }
@@ -205,46 +138,17 @@ impl fmt::Display for NodeError {
 impl error::Error for NodeError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            NodeError::Receiver(e) => Some(e),
-            NodeError::FetchTask(e) => Some(e),
-            NodeError::Io(e) => Some(e),
-            _ => None,
+            NodeError::NotRunning => None,
+            NodeError::AlreadyRunning => None,
+            NodeError::DirtyShutdown(_) => None,
+            NodeError::UnresponsiveNode(e) => Some(e),
+            NodeError::Blockchain(e) => Some(e),
+            NodeError::Mempool(e) => Some(e),
+            NodeError::MissingBlock(_) => None,
+            NodeError::IllegalAction { .. } => None,
+            NodeError::NoSpksProvided => None,
+            NodeError::CompactBlockFilter(e) => Some(e),
+            NodeError::StopHeightExceedsFilterTip { .. } => None,
         }
-    }
-}
-
-impl From<io::Error> for NodeError {
-    fn from(e: io::Error) -> Self {
-        NodeError::Io(e)
-    }
-}
-
-impl From<tokio::sync::oneshot::error::RecvError> for NodeError {
-    fn from(e: tokio::sync::oneshot::error::RecvError) -> Self {
-        NodeError::Receiver(e)
-    }
-}
-
-impl From<tokio::task::JoinError> for NodeError {
-    fn from(e: tokio::task::JoinError) -> Self {
-        NodeError::FetchTask(e)
-    }
-}
-
-impl From<floresta_chain::BlockchainError> for NodeError {
-    fn from(e: floresta_chain::BlockchainError) -> Self {
-        NodeError::Blockchain(e)
-    }
-}
-
-impl From<floresta_mempool::mempool::AcceptToMempoolError> for NodeError {
-    fn from(e: floresta_mempool::mempool::AcceptToMempoolError) -> Self {
-        NodeError::Mempool(e)
-    }
-}
-
-impl From<floresta_compact_filters::IterableFilterStoreError> for NodeError {
-    fn from(e: floresta_compact_filters::IterableFilterStoreError) -> Self {
-        NodeError::CompactBlockFilterStore(e)
     }
 }
