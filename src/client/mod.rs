@@ -428,12 +428,12 @@ pub enum ClientError {
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ClientError::NetworkMismatch { node_net, wallet_net } => write!(f, "Network mismatch between node={node_net} and wallet={wallet_net}"),
-            ClientError::ScanAborted => write!(f, "The scan was aborted"),
-            ClientError::InvalidRange { start_height, stop_height } => write!(f, "Invalid scan range: start_height={start_height} > stop_height={stop_height}"),
-            ClientError::NoExternalKeychain => write!(f, "The wallet has no external keychain"),
-            ClientError::UnresponsiveNode => write!(f, "The node is unresponsive"),
-            ClientError::Node(e) => write!(f, "Node Error: {e}"),
+            Self::NetworkMismatch { node_net, wallet_net } => write!(f, "Network mismatch between node={node_net} and wallet={wallet_net}"),
+            Self::ScanAborted => write!(f, "The scan was aborted"),
+            Self::InvalidRange { start_height, stop_height } => write!(f, "Invalid scan range: start_height={start_height} > stop_height={stop_height}"),
+            Self::NoExternalKeychain => write!(f, "The wallet has no external keychain"),
+            Self::UnresponsiveNode => write!(f, "The node is unresponsive"),
+            Self::Node(e) => write!(f, "Node Error: {e}"),
         }
     }
 }
@@ -441,18 +441,18 @@ impl fmt::Display for ClientError {
 impl error::Error for ClientError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            ClientError::NetworkMismatch { .. } => None,
-            ClientError::ScanAborted => None,
-            ClientError::InvalidRange { .. } => None,
-            ClientError::NoExternalKeychain => None,
-            ClientError::UnresponsiveNode => None,
-            ClientError::Node(e) => Some(e),
+            Self::NetworkMismatch { .. } => None,
+            Self::ScanAborted => None,
+            Self::InvalidRange { .. } => None,
+            Self::NoExternalKeychain => None,
+            Self::UnresponsiveNode => None,
+            Self::Node(e) => Some(e),
         }
     }
 }
 
 impl From<NodeError> for ClientError {
     fn from(e: NodeError) -> Self {
-        ClientError::Node(e)
+        Self::Node(e)
     }
 }

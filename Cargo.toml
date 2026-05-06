@@ -58,6 +58,7 @@ tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 [lints.clippy]
 uninlined_format_args = "deny"
 result_large_err = "allow"
+use_self = "deny"
 
 [package.metadata.docs.rs]
 all-features = true
