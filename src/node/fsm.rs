@@ -49,7 +49,7 @@ pub enum State {
     HeaderSync { height: u32 },
 
     /// S4: The [`Node`] is performing Initial Block Download.
-    InitialBlockDownload { node_height: u32, chain_height: u32 },
+    InitialBlockDownload { chain_height: u32, node_height: u32 },
 
     /// S5: The [`Node`] is downloading Compact Block Filters from its peers.
     CompactBlockFilterDownload { filter_height: u32 },
@@ -72,9 +72,9 @@ impl fmt::Display for State {
             Self::Inactive => write!(f, "Inactive"),
             Self::Active => write!(f, "Active"),
             Self::DnsBootstrapping => write!(f, "Address Manager Bootstrap"),
-            Self::HeaderSync { height } => write!(f, "Header Synchronization at height={height}"),
-            Self::InitialBlockDownload { node_height, chain_height } => write!(f, "Initial Block Download at node_height={node_height} and chain_height={chain_height}"),
-            Self::CompactBlockFilterDownload { filter_height } => write!(f, "Compact Block Filter Download at filter_height={filter_height}"),
+            Self::HeaderSync { height } => write!(f, "Header Sync at height={height}"),
+            Self::InitialBlockDownload { chain_height, node_height } => write!(f, "IBD at chain_height={chain_height} and node_height={node_height}"),
+            Self::CompactBlockFilterDownload { filter_height } => write!(f, "CBF Download at filter_height={filter_height}"),
             Self::Backfill => write!(f, "Backfilling"),
             Self::Operational => write!(f, "Operational"),
             Self::ShuttingDown => write!(f, "Shutting Down"),
@@ -121,10 +121,7 @@ pub fn compute_next_state(
         // state logic still needs figuring out
         // - S2 (DnsBootstrapping)
         // - S6 (Backfill)
-        s @ State::ShuttingDown
-        | s @ State::Inactive
-        | s @ State::DnsBootstrapping
-        | s @ State::Backfill => s.clone(),
+        s @ State::ShuttingDown | s @ State::Inactive | s @ State::DnsBootstrapping | s @ State::Backfill => s.clone(),
 
         _ => {
             // Wait for the inner node to be ready
@@ -132,13 +129,11 @@ pub fn compute_next_state(
             if !wire_ready {
                 State::Active
             } else if node_height == 0 && chain_height > 0 {
-                State::HeaderSync {
-                    height: chain_height,
-                }
+                State::HeaderSync { height: chain_height }
             } else if node_height + OPERATIONAL_TOLERANCE < chain_height {
                 State::InitialBlockDownload {
-                    node_height,
                     chain_height,
+                    node_height,
                 }
             } else if filter_height < chain_height {
                 State::CompactBlockFilterDownload { filter_height }

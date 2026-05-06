@@ -7,15 +7,13 @@
 //!
 //! ## Behavior
 //!
-//! - **Log level**: controlled by the `RUST_LOG` environment variable, falling back to
-//!   [`Logger::log_level`] if unset.
-//! - **Target formatting**: at `INFO` and above, well-known `floresta_*` module paths are shortened
-//!   to human-friendly aliases (e.g. `floresta_wire::p2p_wire::node` → `floresta::wire`). At
-//!   `DEBUG` and below, the full module path is preserved.
-//! - **Timestamp**: at `INFO` and above, timestamps are formatted as `YYYY-MM-DD HH:MM:SS`. At
-//!   `DEBUG` and below, milliseconds are included: `YYYY-MM-DD HH:MM:SS.mmm`.
-//! - **Color**: ANSI colors are applied when writing to an interactive terminal, and stripped when
-//!   writing to a file.
+//! - **Log level**: controlled by the `RUST_LOG` environment variable, falling back to [`Logger::log_level`] if unset.
+//! - **Target formatting**: at `INFO` and above, well-known `floresta_*` module paths are shortened to human-friendly
+//!   aliases (e.g. `floresta_wire::p2p_wire::node` → `floresta::wire`). At `DEBUG` and below, the full module path is
+//!   preserved.
+//! - **Timestamp**: at `INFO` and above, timestamps are formatted as `YYYY-MM-DD HH:MM:SS`. At `DEBUG` and below,
+//!   milliseconds are included: `YYYY-MM-DD HH:MM:SS.mmm`.
+//! - **Color**: ANSI colors are applied when writing to an interactive terminal, and stripped when writing to a file.
 //! - **Output**: events can be emitted to `stdout`, a log file, or both.
 //!
 //! ## Example
@@ -294,14 +292,11 @@ impl Logger {
     ///
     /// # Errors
     ///
-    /// - Returns [`BuilderError::LoggerAlreadySetup`] if a global tracing subscriber has already
-    ///   been registered.
+    /// - Returns [`BuilderError::LoggerAlreadySetup`] if a global tracing subscriber has already been registered.
     /// - Returns [`BuilderError::LoggerSetup`] if the log file cannot be created or opened.
     pub fn init(self) -> Result<Option<WorkerGuard>, BuilderError> {
-        let make_filter = || {
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(self.log_level.to_string()))
-        };
+        let make_filter =
+            || EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(self.log_level.to_string()));
 
         // Formatter for events destined to `stdout`.
         let ansi_tty = io::IsTerminal::is_terminal(&io::stdout());

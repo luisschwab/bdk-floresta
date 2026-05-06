@@ -79,8 +79,11 @@ pub enum Action {
     /// The [`Node`] is pinging all of its peers.
     Pinging,
 
-    /// The [`Node`] is fetching a [`Block`] from a peers.
+    /// The [`Node`] is fetching a [`Block`] from a peer.
     FetchingBlock(BlockHash),
+
+    /// The [`Node`] is fetching multiple [`Block`]s from peers.
+    FetchingBlocks(usize),
 
     /// The [`Node`] is broadcasting a [`Transaction`].
     BroadcastingTransaction(Txid),
@@ -97,6 +100,7 @@ impl fmt::Display for Action {
             Self::RemovingPeer(socket) => write!(f, "Removing peer={socket}"),
             Self::Pinging => write!(f, "Pinging all peers"),
             Self::FetchingBlock(hash) => write!(f, "Fetching block with hash={hash}"),
+            Self::FetchingBlocks(count) => write!(f, "Fetching {count} blocks"),
             Self::BroadcastingTransaction(txid) => {
                 write!(f, "Broadcasting transaction with txid={txid}")
             }
@@ -128,7 +132,7 @@ pub struct Node {
     pub(crate) started_at: OnceLock<Instant>,
 
     /// The set of [`Action`]s that the [`Node`] is currently performing.
-    pub(crate) action: Arc<watch::Sender<HashSet<Action>>>,
+    pub(crate) actions: Arc<watch::Sender<HashSet<Action>>>,
 
     /// A cancellation token used to signal shutdown to all tasks,
     /// Triggered via `SIGINT` or [`Node::shutdown()`].
@@ -161,10 +165,7 @@ impl Node {
         match tokio::time::timeout(timeout, rx).await {
             Ok(Ok(())) => {}
             Ok(Err(_)) => warn!("Shutdown channel closed without sending"),
-            Err(_) => error!(
-                "Shutdown channel timed out after {} seconds",
-                timeout.as_secs()
-            ),
+            Err(_) => error!("Shutdown channel timed out after {} seconds", timeout.as_secs()),
         }
     }
 
@@ -173,23 +174,20 @@ impl Node {
         match tokio::time::timeout(timeout, task).await {
             Ok(Ok(_)) => {}
             Ok(Err(e)) => error!("Node task failed during shutdown: {e:?}"),
-            Err(_) => warn!(
-                "Node task join timed out after {} seconds",
-                timeout.as_secs()
-            ),
+            Err(_) => warn!("Node task join timed out after {} seconds", timeout.as_secs()),
         }
     }
 
     /// Mark an [`Action`] as in-flight.
     fn track_action(&self, action: &Action) {
-        self.action.send_modify(|set| {
+        self.actions.send_modify(|set| {
             set.insert(action.clone());
         });
     }
 
     /// Mark an [`Action`] as no longer in-flight.
     fn untrack_action(&self, action: &Action) {
-        self.action.send_modify(|set| {
+        self.actions.send_modify(|set| {
             set.remove(action);
         });
     }
@@ -201,16 +199,11 @@ impl Node {
     /// This method will spawn three tasks:
     /// - A task that runs the inner [`UtreexoNode`].
     /// - A task that polls chain/filter state and updates the [`Node`]'s [`State`].
-    /// - A task for the shutdown handler, which reacts to a [`Node::shutdown`] call or a `SIGINT`
-    ///   signal, and performs the graceful shutdown routine.
+    /// - A task for the shutdown handler, which reacts to a [`Node::shutdown`] call or a `SIGINT` signal, and performs
+    ///   the graceful shutdown routine.
     pub async fn run(&self) -> Result<(), NodeError> {
         // `take()` the inner node to make sure `Node::run()` can only be called once
-        let inner_node = self
-            .inner
-            .lock()
-            .await
-            .take()
-            .ok_or(NodeError::AlreadyRunning)?;
+        let inner_node = self.inner.lock().await.take().ok_or(NodeError::AlreadyRunning)?;
 
         // Register the `Instant` the node started running
         self.started_at
@@ -362,10 +355,7 @@ impl Node {
 
     /// How [long](Duration) the [`Node`] has been running.
     pub fn uptime(&self) -> Result<Duration, NodeError> {
-        self.started_at
-            .get()
-            .map(|t| t.elapsed())
-            .ok_or(NodeError::NotRunning)
+        self.started_at.get().map(|t| t.elapsed()).ok_or(NodeError::NotRunning)
     }
 
     /// Subscribe to [`State`] transitions.
@@ -386,12 +376,12 @@ impl Node {
     /// Returns a [`watch::Receiver`] that yields the set
     /// of [`Action`]s currently being performed by the [`Node`].
     pub fn subscribe_action(&self) -> watch::Receiver<HashSet<Action>> {
-        self.action.subscribe()
+        self.actions.subscribe()
     }
 
     /// Get the [`Node`]'s currently in-flight [`Action`]s.
     pub fn get_actions(&self) -> HashSet<Action> {
-        self.action.borrow().clone()
+        self.actions.borrow().clone()
     }
 
     /// Get the [`Node`]'s current [`NodeConfig`].
@@ -411,16 +401,12 @@ impl Node {
 
     /// Get the [`Node`]'s validation height.
     pub fn get_node_height(&self) -> Result<u32, NodeError> {
-        self.chain_state
-            .get_validation_index()
-            .map_err(NodeError::Blockchain)
+        self.chain_state.get_validation_index().map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Node`]'s [`NetworkFilters`] height.
     pub fn get_filter_height(&self) -> Result<u32, NodeError> {
-        self.block_filters
-            .get_height()
-            .map_err(NodeError::CompactBlockFilter)
+        self.block_filters.get_height().map_err(NodeError::CompactBlockFilter)
     }
 
     /// Get the [`Node`]'s current accumulator, as a [`Stump`].
@@ -438,24 +424,17 @@ impl Node {
 
     /// Get the [`BlockHash`] of a [`Block`] at a given height.
     pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, NodeError> {
-        self.chain_state
-            .get_block_hash(height)
-            .map_err(NodeError::Blockchain)
+        self.chain_state.get_block_hash(height).map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Header`] of a [`Block`], given its [`BlockHash`].
     pub fn get_block_header(&self, hash: &BlockHash) -> Result<Header, NodeError> {
-        self.chain_state
-            .get_block_header(hash)
-            .map_err(NodeError::Blockchain)
+        self.chain_state.get_block_header(hash).map_err(NodeError::Blockchain)
     }
 
     /// Get information about peers the [`Node`] is currently connected to.
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
-        self.handle
-            .get_peer_info()
-            .await
-            .map_err(NodeError::UnresponsiveNode)
+        self.handle.get_peer_info().await.map_err(NodeError::UnresponsiveNode)
     }
 
     /// Subscribe and receive every new [`Block`] the [`Node`] validates.
@@ -485,10 +464,7 @@ impl Node {
         }
 
         // Get the filter tip height from the node
-        let filter_tip = self
-            .block_filters
-            .get_height()
-            .map_err(NodeError::CompactBlockFilter)?;
+        let filter_tip = self.block_filters.get_height().map_err(NodeError::CompactBlockFilter)?;
 
         // Can't perform CBF scans past the filter tip height
         if stop_height > filter_tip {
@@ -505,12 +481,7 @@ impl Node {
         let spks: Vec<&[u8]> = spks.iter().map(|s| s.as_bytes()).collect();
         let result = self
             .block_filters
-            .match_any(
-                spks,
-                Some(start_height),
-                Some(stop_height),
-                self.chain_state.clone(),
-            )
+            .match_any(spks, Some(start_height), Some(stop_height), self.chain_state.clone())
             .map_err(NodeError::CompactBlockFilter);
         self.untrack_action(&action);
 
@@ -544,10 +515,8 @@ impl Node {
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, they must be requested over the wire from a peer.
     pub async fn fetch_blocks(&self, hashes: &[BlockHash]) -> Result<Vec<Block>, NodeError> {
-        let actions: Vec<Action> = hashes.iter().map(|h| Action::FetchingBlock(*h)).collect();
-        for action in &actions {
-            self.track_action(action);
-        }
+        let action = Action::FetchingBlocks(hashes.len());
+        self.track_action(&action);
 
         let result = future::try_join_all(hashes.iter().map(|hash| {
             let handle = self.handle.clone();
@@ -561,10 +530,7 @@ impl Node {
             }
         }))
         .await;
-
-        for action in &actions {
-            self.untrack_action(action);
-        }
+        self.untrack_action(&action);
 
         result
     }
@@ -640,11 +606,7 @@ impl Node {
     pub async fn ping(&self) -> Result<bool, NodeError> {
         let action = Action::Pinging;
         self.track_action(&action);
-        let result = self
-            .handle
-            .ping()
-            .await
-            .map_err(NodeError::UnresponsiveNode);
+        let result = self.handle.ping().await.map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
 
         result

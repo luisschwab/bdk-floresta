@@ -201,13 +201,8 @@ impl Builder {
         };
 
         // Configure the node's chain store
-        let chain_store_config = FlatChainStoreConfig::new(
-            self.config
-                .data_directory
-                .join("chain")
-                .to_string_lossy()
-                .to_string(),
-        );
+        let chain_store_config =
+            FlatChainStoreConfig::new(self.config.data_directory.join("chain").to_string_lossy().to_string());
 
         // Try to load an existing chain store from the file system, or create a new one.
         let chain_store: FlatChainStore =
@@ -250,7 +245,7 @@ impl Builder {
             config: self.config,
             state: Arc::new(watch::Sender::new(State::Inactive)),
             started_at: OnceLock::new(),
-            action: Arc::new(watch::Sender::new(HashSet::new())),
+            actions: Arc::new(watch::Sender::new(HashSet::new())),
             cancellation_token: CancellationToken::new(),
             kill_signal,
             shutdown_task: Mutex::new(None),

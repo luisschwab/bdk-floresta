@@ -14,9 +14,9 @@
 //! 2. [`utreexod`] receives these blocks and builds Utreexo Merkle proofs for these blocks.
 //! 3. [`bdk_floresta`] requests blocks and Utreexo Merkle proofs (`uproof`) from [`utreexod`].
 //!
-//! [`bdk_floresta`]: bdk_floresta::Node
-//! [`bitcoind`]: halfin::BitcoinD
-//! [`utreexod`]: halfin::UtreexoD
+//! [`bdk_floresta`]: bdk_floresta::node::Node
+//! [`bitcoind`]: halfin::bitcoind::BitcoinD
+//! [`utreexod`]: halfin::utreexod::UtreexoD
 
 use std::path::PathBuf;
 use std::time::Duration;
