@@ -3,10 +3,9 @@ alias b := build
 alias c := check
 alias d := delete
 alias f := fmt
-alias fsm := example-fsm
 alias reg := example-regtest
 alias sig := example-signet
-#alias ws := example-wallet-sync
+alias cl := example-client
 alias l := lock
 alias t := test
 alias z := zizmor
@@ -53,10 +52,10 @@ doc:
 doc-open:
     cargo rbmt docs --open
 
-[doc: "Run the `fsm` example"]
-example-fsm:
-    rm -rf examples/data/fsm
-    cargo run --release --example fsm
+[doc: "Run the `client` example"]
+example-client:
+    #rm -rf examples/data/client
+    cargo run --release --example client
 
 [doc: "Run the `regtest` example"]
 example-regtest:
