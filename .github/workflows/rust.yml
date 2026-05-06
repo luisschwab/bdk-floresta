@@ -5,60 +5,69 @@ on:
       branches: [ master ]
     pull_request:
 
+permissions: {}
 env:
     CARGO_TERM_COLOR: always
     RUST_BACKTRACE: 1
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-permissions:
-    contents: read
 
 jobs:
     check:
-        name: Check - ${{ matrix.task }}
+        name: Check - ${{ matrix.name }}
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                task: [fmt --check, lint, docs]
+                include:
+                    - name: Check Formatting
+                      task: fmt --check
+                    - name: Lint
+                      task: lint
+                    - name: Build Documentation
+                      task: docsrs
+
         steps:
-            - name: Checkout repository
+            - name: Checkout Repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   persist-credentials: false
 
-            - name: Setup build cache
+            - name: Setup Build Cache
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-              with:
-                  cache-on-failure: false
 
             - name: Setup cargo-rbmt
-              uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
+              uses: ./.github/actions/setup-rbmt
 
             - name: Run ${{ matrix.task }}
               run: cargo rbmt ${{ matrix.task }}
 
     test:
-        name: Test - ${{ matrix.toolchain }} toolchain, ${{ matrix.lockfile }} deps
+        name: Test - ${{ matrix.name }}
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                toolchain: [stable, nightly, msrv]
-                lockfile: [minimal, recent]
-                exclude:
-                    - toolchain: msrv
+                include:
+                    - name: Stable Toolchain + Minimal Lockfile
+                      toolchain: stable
+                      lockfile: minimal
+                    - name: Stable Toolchain + Recent Lockfile
+                      toolchain: stable
                       lockfile: recent
+                    - name: MSRV Toolchain + Minimal Lockfile
+                      toolchain: msrv
+                      lockfile: minimal
+
         steps:
-            - name: Checkout repository
+            - name: Checkout Repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   persist-credentials: false
 
-            - name: Setup build cache
+            - name: Setup Build Cache
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
             - name: Setup cargo-rbmt
-              uses: rust-bitcoin/rust-bitcoin-maintainer-tools/.github/actions/setup-rbmt@6560b728ae6a81af9d92713b630ba26772fbd970
+              uses: ./.github/actions/setup-rbmt
 
-            - name: Run tests
+            - name: Run Tests
               run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lock-file ${{ matrix.lockfile }}

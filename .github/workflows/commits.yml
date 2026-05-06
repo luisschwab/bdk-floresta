@@ -5,23 +5,23 @@ on:
       branches: [ master ]
     pull_request:
 
+permissions: {}
 env:
     CARGO_TERM_COLOR: always
-permissions: {}
 
 jobs:
-    signed-commits:
-        name: Assert PGP-Signed Commits
+    signatures:
+        name: Check PGP Signatures
         runs-on: ubuntu-latest
 
         steps:
-            - name: Checkout Code
+            - name: Checkout Repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   persist-credentials: false
                   fetch-depth: 0
 
-            - name: Check Commit Signatures
+            - name: Assert Commits are Signed
               run: bash contrib/check-signatures.sh
 
     conventional-commits:

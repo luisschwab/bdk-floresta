@@ -2,22 +2,22 @@ name: Audit
 
 on:
     push:
-      branches: [ master ]
+        branches: [ master ]
     pull_request:
 
+permissions: {}
 env:
     CARGO_TERM_COLOR: always
-permissions: {}
 
 jobs:
     audit:
-        name: Run cargo-audit
+        name: Audit Rust Dependencies
         runs-on: ubuntu-latest
         permissions:
             contents: read
 
         steps:
-            - name: Checkout repository
+            - name: Checkout Repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   persist-credentials: false
@@ -25,9 +25,9 @@ jobs:
             - name: Install cargo-audit
               run: cargo install cargo-audit --locked
 
-            - name: Check for audit warnings
+            - name: Check for Audit Warnings
               run: cargo audit -D warnings
               continue-on-error: true
 
-            - name: Check for vulnerabilities
+            - name: Check for Audit Vulnerabilities
               run: cargo audit

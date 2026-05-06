@@ -13,20 +13,25 @@ permissions:
     contents: read
 
 jobs:
-    integration-tests:
-        name: Run ${{ matrix.example }} example
+    integration:
+        name: Run ${{ matrix.name }} Example
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                example: [regtest, client]
+                include:
+                    - name: Regtest
+                      example: regtest
+                    - name: Client (Signet)
+                      example: client
+
         steps:
-            - name: Checkout repository
+            - name: Checkout Repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   persist-credentials: false
 
-            - name: Setup build cache
+            - name: Setup Build Cache
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
               with:
                   cache-on-failure: false

@@ -46,11 +46,11 @@ delete item="data":
 
 [doc: "Generate documentation"]
 doc:
-    cargo rbmt docs
+    cargo rbmt docsrs
 
 [doc: "Generate and open documentation"]
 doc-open:
-    cargo rbmt docs --open
+    cargo rbmt docsrs --open
 
 [doc: "Run the `client` example"]
 example-client:
