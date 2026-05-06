@@ -55,15 +55,15 @@ pub enum BuilderError {
 impl fmt::Display for BuilderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BuilderError::CreateDirectory(e) => write!(f, "Failed to create the data directory: {e}"),
-            BuilderError::ChainState(e) => write!(f, "Failed to create a chainstate: {e}"),
-            BuilderError::ChainStoreInit(e) => write!(f, "Failed to load or create a new chain store: {e}"),
-            BuilderError::CompactBlockFilter(e) => write!(f, "Compact Block Filter error: {e}"),
-            BuilderError::BuildInner(e) => write!(f, "Failed to build the inner node: {e}"),
+            Self::CreateDirectory(e) => write!(f, "Failed to create the data directory: {e}"),
+            Self::ChainState(e) => write!(f, "Failed to create a chainstate: {e}"),
+            Self::ChainStoreInit(e) => write!(f, "Failed to load or create a new chain store: {e}"),
+            Self::CompactBlockFilter(e) => write!(f, "Compact Block Filter error: {e}"),
+            Self::BuildInner(e) => write!(f, "Failed to build the inner node: {e}"),
             #[cfg(feature = "logger")]
-            BuilderError::LoggerSetup(e) => write!(f, "Failed to setup the tracing subscriber logger: {e}"),
+            Self::LoggerSetup(e) => write!(f, "Failed to setup the tracing subscriber logger: {e}"),
             #[cfg(feature = "logger")]
-            BuilderError::LoggerAlreadySetup => write!(f, "A tracing subscriber logger is already initialized"),
+            Self::LoggerAlreadySetup => write!(f, "A tracing subscriber logger is already initialized"),
         }
     }
 }
@@ -71,9 +71,9 @@ impl fmt::Display for BuilderError {
 impl error::Error for BuilderError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            BuilderError::CreateDirectory(e) => Some(e),
+            Self::CreateDirectory(e) => Some(e),
             #[cfg(feature = "logger")]
-            BuilderError::LoggerSetup(e) => Some(e),
+            Self::LoggerSetup(e) => Some(e),
             _ => None,
         }
     }
@@ -120,17 +120,17 @@ pub enum NodeError {
 impl fmt::Display for NodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            NodeError::NotRunning => write!(f, "The node is not running"),
-            NodeError::AlreadyRunning => write!(f, "The node is already running"),
-            NodeError::DirtyShutdown(e) => write!(f, "The node failed to perform a clean shutdown: {e}"),
-            NodeError::UnresponsiveNode(e) => write!(f, "The node is unresponsive: {e}"),
-            NodeError::Blockchain(e) => write!(f, "Blockchain error: {e}"),
-            NodeError::Mempool(e) => write!(f, "Mempool error: {e}"),
-            NodeError::MissingBlock(hash) => write!(f, "The block with hash={hash} does not exist in the chain"),
-            NodeError::IllegalAction { state, attempted} => write!(f, "The requested action={attempted} cannot be performed at the current state={state}"),
-            NodeError::NoSpksProvided => write!(f, "No spks were provided when rescanning the blockchain"),
-            NodeError::CompactBlockFilter(e) => write!(f, "Compact Block Filter error: {e}"),
-            NodeError::StopHeightExceedsFilterTip { requested, available } => write!(f, "The provided stop_height={requested} exceeds filter store height={available}"),
+            Self::NotRunning => write!(f, "The node is not running"),
+            Self::AlreadyRunning => write!(f, "The node is already running"),
+            Self::DirtyShutdown(e) => write!(f, "The node failed to perform a clean shutdown: {e}"),
+            Self::UnresponsiveNode(e) => write!(f, "The node is unresponsive: {e}"),
+            Self::Blockchain(e) => write!(f, "Blockchain error: {e}"),
+            Self::Mempool(e) => write!(f, "Mempool error: {e}"),
+            Self::MissingBlock(hash) => write!(f, "The block with hash={hash} does not exist in the chain"),
+            Self::IllegalAction { state, attempted} => write!(f, "The requested action={attempted} cannot be performed at the current state={state}"),
+            Self::NoSpksProvided => write!(f, "No spks were provided when rescanning the blockchain"),
+            Self::CompactBlockFilter(e) => write!(f, "Compact Block Filter error: {e}"),
+            Self::StopHeightExceedsFilterTip { requested, available } => write!(f, "The provided stop_height={requested} exceeds filter store height={available}"),
         }
     }
 }
@@ -138,17 +138,17 @@ impl fmt::Display for NodeError {
 impl error::Error for NodeError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            NodeError::NotRunning => None,
-            NodeError::AlreadyRunning => None,
-            NodeError::DirtyShutdown(_) => None,
-            NodeError::UnresponsiveNode(e) => Some(e),
-            NodeError::Blockchain(e) => Some(e),
-            NodeError::Mempool(e) => Some(e),
-            NodeError::MissingBlock(_) => None,
-            NodeError::IllegalAction { .. } => None,
-            NodeError::NoSpksProvided => None,
-            NodeError::CompactBlockFilter(e) => Some(e),
-            NodeError::StopHeightExceedsFilterTip { .. } => None,
+            Self::NotRunning => None,
+            Self::AlreadyRunning => None,
+            Self::DirtyShutdown(_) => None,
+            Self::UnresponsiveNode(e) => Some(e),
+            Self::Blockchain(e) => Some(e),
+            Self::Mempool(e) => Some(e),
+            Self::MissingBlock(_) => None,
+            Self::IllegalAction { .. } => None,
+            Self::NoSpksProvided => None,
+            Self::CompactBlockFilter(e) => Some(e),
+            Self::StopHeightExceedsFilterTip { .. } => None,
         }
     }
 }
