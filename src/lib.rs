@@ -15,19 +15,13 @@ pub use floresta_wire::rustreexo;
 pub use floresta_wire::TransportProtocol;
 pub use floresta_wire::UtreexoNodeConfig;
 
-pub mod builder;
-pub mod error;
-pub mod fsm;
+pub mod client;
 #[cfg(feature = "logger")]
 pub mod logger;
 pub mod node;
-pub mod updater;
 
+pub use node::builder;
+pub use node::error;
+pub use node::fsm;
 #[cfg(feature = "logger")]
 pub use tracing::Level;
-
-pub use crate::builder::Builder;
-pub use crate::error::BuilderError;
-pub use crate::error::NodeError;
-pub use crate::node::Node;
-pub use crate::updater::WalletUpdate;

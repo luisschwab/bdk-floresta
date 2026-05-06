@@ -7,15 +7,13 @@
 //!
 //! ## Behavior
 //!
-//! - **Log level**: controlled by the `RUST_LOG` environment variable, falling back to
-//!   [`Logger::log_level`] if unset.
-//! - **Target formatting**: at `INFO` and above, well-known `floresta_*` module paths are shortened
-//!   to human-friendly aliases (e.g. `floresta_wire::p2p_wire::node` → `floresta::wire`). At
-//!   `DEBUG` and below, the full module path is preserved.
-//! - **Timestamp**: at `INFO` and above, timestamps are formatted as `YYYY-MM-DD HH:MM:SS`. At
-//!   `DEBUG` and below, milliseconds are included: `YYYY-MM-DD HH:MM:SS.mmm`.
-//! - **Color**: ANSI colors are applied when writing to an interactive terminal, and stripped when
-//!   writing to a file.
+//! - **Log level**: controlled by the `RUST_LOG` environment variable, falling back to [`Logger::log_level`] if unset.
+//! - **Target formatting**: at `INFO` and above, well-known `floresta_*` module paths are shortened to human-friendly
+//!   aliases (e.g. `floresta_wire::p2p_wire::node` → `floresta::wire`). At `DEBUG` and below, the full module path is
+//!   preserved.
+//! - **Timestamp**: at `INFO` and above, timestamps are formatted as `YYYY-MM-DD HH:MM:SS`. At `DEBUG` and below,
+//!   milliseconds are included: `YYYY-MM-DD HH:MM:SS.mmm`.
+//! - **Color**: ANSI colors are applied when writing to an interactive terminal, and stripped when writing to a file.
 //! - **Output**: events can be emitted to `stdout`, a log file, or both.
 //!
 //! ## Example
@@ -64,7 +62,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 
-use crate::error::BuilderError;
+use crate::node::error::BuilderError;
 
 /// The file which logging events are written to by default.
 pub const LOG_FILE: &str = "debug.log";
@@ -192,11 +190,11 @@ where
 
         // Timestamp (dimmed if the `tty` supports it).
         if writer_supports_ansi_escaping {
-            write!(writer, "{}", ANSI_DIM)?;
+            write!(writer, "{ANSI_DIM}")?;
         }
         self.timer.format_time(&mut writer)?;
         if writer_supports_ansi_escaping {
-            write!(writer, "{} ", ANSI_RESET)?;
+            write!(writer, "{ANSI_RESET} ")?;
         } else {
             write!(writer, " ")?;
         }
@@ -210,7 +208,7 @@ where
                 Level::DEBUG => COLORED_DEBUG,
                 Level::TRACE => COLORED_TRACE,
             };
-            write!(writer, "{} ", colored_level)?;
+            write!(writer, "{colored_level} ")?;
         } else {
             write!(writer, "{:>5} ", event_metadata.level())?;
         }
@@ -222,9 +220,9 @@ where
             Self::short_target(event_metadata.target())
         };
         if writer_supports_ansi_escaping {
-            write!(writer, "{}{}{}: ", ANSI_DIM, target, ANSI_RESET)?;
+            write!(writer, "{ANSI_DIM}{target}{ANSI_RESET}: ")?;
         } else {
-            write!(writer, "{}: ", target)?;
+            write!(writer, "{target}: ")?;
         }
 
         // Log message and fields.
@@ -233,10 +231,11 @@ where
     }
 }
 
-/// Logger configuration for the [`Node`](crate::Node).
+/// Logger configuration for the [`Node`](crate::node::Node).
 ///
-/// Controls the log level and output destinations. Can be passed to the
-/// [`Builder`](crate::Builder) via [`Builder::with_logger`](crate::Builder::with_logger),
+/// Controls the log level and output destinations.
+/// Can be passed to the [`Builder`](crate::builder::Builder)
+/// via [`Builder::with_logger`](crate::builder::Builder::with_logger),
 /// or used directly by calling [`Logger::init`].
 ///
 /// # Example
@@ -255,8 +254,10 @@ where
 pub struct Logger {
     /// The minimum log level to emit. Can be overridden at runtime via `RUST_LOG`.
     pub log_level: Level,
+
     /// Whether to emit log events to `stdout`.
     pub log_to_stdout: bool,
+
     /// The file where logging events should be written to.
     ///
     /// If `None`, log events will not be written to a file.
@@ -291,14 +292,11 @@ impl Logger {
     ///
     /// # Errors
     ///
-    /// - Returns [`BuilderError::LoggerAlreadySetup`] if a global tracing subscriber has already
-    ///   been registered.
+    /// - Returns [`BuilderError::LoggerAlreadySetup`] if a global tracing subscriber has already been registered.
     /// - Returns [`BuilderError::LoggerSetup`] if the log file cannot be created or opened.
     pub fn init(self) -> Result<Option<WorkerGuard>, BuilderError> {
-        let make_filter = || {
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(self.log_level.to_string()))
-        };
+        let make_filter =
+            || EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(self.log_level.to_string()));
 
         // Formatter for events destined to `stdout`.
         let ansi_tty = io::IsTerminal::is_terminal(&io::stdout());

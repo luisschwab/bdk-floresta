@@ -14,16 +14,16 @@
 //! 2. [`utreexod`] receives these blocks and builds Utreexo Merkle proofs for these blocks.
 //! 3. [`bdk_floresta`] requests blocks and Utreexo Merkle proofs (`uproof`) from [`utreexod`].
 //!
-//! [`bdk_floresta`]: bdk_floresta::Node
-//! [`bitcoind`]: halfin::BitcoinD
-//! [`utreexod`]: halfin::UtreexoD
+//! [`bdk_floresta`]: bdk_floresta::node::Node
+//! [`bitcoind`]: halfin::bitcoind::BitcoinD
+//! [`utreexod`]: halfin::utreexod::UtreexoD
 
 use std::path::PathBuf;
 use std::time::Duration;
 
+use bdk_floresta::builder::Builder;
 use bdk_floresta::builder::NodeConfig;
 use bdk_floresta::logger::Logger;
-use bdk_floresta::Builder;
 use bitcoin::Network;
 use halfin::bitcoind::BitcoinD;
 use halfin::bitcoind::BitcoinDConf;
@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Instantiate and run bdk_floresta
     info!("> Spawning bdk_floresta...");
-    let mut node = Builder::new().from_config(node_config).build()?;
+    let node = Builder::new().with_config(node_config).build()?;
     node.run().await?;
     info!("> bdk_floresta is spawned");
     std::thread::sleep(Duration::from_secs(2));

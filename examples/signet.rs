@@ -2,6 +2,8 @@
 
 //! Signet integration test between [`bdk_floresta`] and the greater Signet P2P network.
 
+use core::net::SocketAddr;
+use core::str::FromStr;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -15,6 +17,7 @@ use tracing::Level;
 
 const NETWORK: Network = Network::Signet;
 const DATA_DIR: &str = "./examples/data/signet/";
+const UTREEXOD_CASA21: &str = "189.44.63.101:38333";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -30,12 +33,13 @@ async fn main() -> anyhow::Result<()> {
     let config = NodeConfig {
         network: NETWORK,
         data_directory: PathBuf::from(DATA_DIR).join("bdk_floresta"),
+        fixed_peer: Some(SocketAddr::from_str(UTREEXOD_CASA21)?),
         ..Default::default()
     };
 
     // Instantiate and run the node
     info!("> Spawning the node...");
-    let mut node = Builder::new().from_config(config).build()?;
+    let node = Builder::new().with_config(config).build()?;
     node.run().await?;
     info!("> Node spawned");
 

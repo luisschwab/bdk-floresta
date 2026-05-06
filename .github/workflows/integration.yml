@@ -1,4 +1,4 @@
-name: Integration Tests
+name: Integration
 
 on:
     push:
@@ -14,12 +14,12 @@ permissions:
 
 jobs:
     integration-tests:
-        name: ${{ matrix.example }} example
+        name: Run ${{ matrix.example }} example
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                example: [regtest, signet]
+                example: [regtest, client]
         steps:
             - name: Checkout repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

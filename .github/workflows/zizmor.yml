@@ -12,7 +12,7 @@ permissions: {}
 
 jobs:
     zizmor:
-        name: Action Static Analysis
+        name: Run Action Static Analysis
         runs-on: ubuntu-latest
 
         steps:

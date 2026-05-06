@@ -16,7 +16,7 @@ default = ["logger"]
 logger = ["dep:tracing-appender", "dep:tracing-subscriber"]
 
 [[example]]
-name = "fsm"
+name = "client"
 required-features = ["logger"]
 
 [[example]]
@@ -33,10 +33,10 @@ toml = { version = "1.0" }
 [dependencies]
 bitcoin = { version = "0.32.8" }
 bdk_wallet = { version = "3.0" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "a244e9421af916680d3f17a8350a5040eefbdff5" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4" }
 futures = { version = "0.3.32" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }
@@ -54,6 +54,10 @@ time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 halfin = { version = "0.3.3" }
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
+
+[lints.clippy]
+uninlined_format_args = "deny"
+result_large_err = "allow"
 
 [package.metadata.docs.rs]
 all-features = true
