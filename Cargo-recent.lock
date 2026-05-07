@@ -121,6 +121,7 @@ dependencies = [
  "futures",
  "halfin",
  "lazy_static",
+ "rustls 0.23.40",
  "time",
  "tokio",
  "tokio-util",
@@ -659,7 +660,7 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bitcoin",
  "floresta-common",
@@ -675,7 +676,7 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bitcoin",
  "hashbrown 0.16.1",
@@ -687,7 +688,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -696,7 +697,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -709,7 +710,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -719,7 +720,7 @@ dependencies = [
  "floresta-compact-filters",
  "floresta-mempool",
  "rand",
- "rustls 0.23.27",
+ "rustls 0.23.40",
  "rustreexo",
  "serde",
  "serde_json",
@@ -1441,13 +1442,14 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.27"
+version = "0.23.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "730944ca083c1c233a75c09f199e973ca499344a2b7ba9e755c457e86fb4a321"
+checksum = "ef86cd5876211988985292b91c96a8f2d298df24e75989a43a3c73f2d4d8168b"
 dependencies = [
  "aws-lc-rs",
  "log",
  "once_cell",
+ "ring",
  "rustls-pki-types",
  "rustls-webpki 0.103.9",
  "subtle",
@@ -1981,7 +1983,7 @@ dependencies = [
  "cookie_store",
  "log",
  "percent-encoding",
- "rustls 0.23.27",
+ "rustls 0.23.40",
  "rustls-pki-types",
  "serde",
  "serde_json",

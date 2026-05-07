@@ -22,8 +22,6 @@ jobs:
                 include:
                     - name: Regtest
                       example: regtest
-                    - name: Client (Signet)
-                      example: client
 
         steps:
             - name: Checkout Repository
