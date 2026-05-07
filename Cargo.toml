@@ -33,25 +33,25 @@ toml = { version = "1.0" }
 [dependencies]
 bitcoin = { version = "0.32.8" }
 bdk_wallet = { version = "3.0" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "2fd61af08d403fab33b3da6589a2e93a6392cce4" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "22fa75a929f95d287806deed96f56619f36e7459", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "22fa75a929f95d287806deed96f56619f36e7459" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "22fa75a929f95d287806deed96f56619f36e7459" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "22fa75a929f95d287806deed96f56619f36e7459" }
 futures = { version = "0.3.32" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.41" }
 tracing-appender = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "chrono", "env-filter"], optional = true }
 tokio-util = { version = "0.7.18" }
-
 # These pins are needed for `Cargo-minimal.lock`:
 lazy_static = { version = "1.5.0" } # blame: sharded-slab = "0.1.7"
 dns-lookup = { version = "2.1.1" } # blame: floresta-wire
+rustls = { version = "0.23.40" } # blame: floresta-wire and ureq pin different versions
 # These pins are needed for MSRV + `Cargo-recent.lock`:
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
 [dev-dependencies]
-halfin = { version = "0.3.3" }
+halfin = { version = "0.3.4" }
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
@@ -76,6 +76,15 @@ allowed_duplicates = [
     "hex-conservative",
     "serde_core",
     "windows-sys",
+    "windows-targets",
+    "windows_aarch64_gnullvm",
+    "windows_aarch64_msvc",
+    "windows_i686_gnu",
+    "windows_i686_gnullvm",
+    "windows_i686_msvc",
+    "windows_x86_64_gnu",
+    "windows_x86_64_gnullvm",
+    "windows_x86_64_msvc",
 ]
 
 [package.metadata.rbmt.toolchains]

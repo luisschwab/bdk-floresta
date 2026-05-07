@@ -121,6 +121,7 @@ dependencies = [
  "futures",
  "halfin",
  "lazy_static",
+ "rustls",
  "time",
  "tokio",
  "tokio-util",
@@ -347,12 +348,12 @@ dependencies = [
 
 [[package]]
 name = "bitreq"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08221cf31c5f00fb6fc8fa697cea54176b06801a518bd9d3482aa27099827a3a"
+checksum = "6df90cd78f0510165fd370574676aeb57dbec0ee3bfff68645bb7b0e9a65dbd5"
 dependencies = [
- "rustls 0.21.12",
- "rustls-webpki 0.101.7",
+ "rustls",
+ "rustls-webpki",
  "webpki-roots",
 ]
 
@@ -659,7 +660,7 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bitcoin",
  "floresta-common",
@@ -675,7 +676,7 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bitcoin",
  "hashbrown 0.16.1",
@@ -687,7 +688,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -696,7 +697,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -709,7 +710,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=2fd61af08d403fab33b3da6589a2e93a6392cce4#2fd61af08d403fab33b3da6589a2e93a6392cce4"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -719,7 +720,7 @@ dependencies = [
  "floresta-compact-filters",
  "floresta-mempool",
  "rand",
- "rustls 0.23.27",
+ "rustls",
  "rustreexo",
  "serde",
  "serde_json",
@@ -872,13 +873,13 @@ dependencies = [
 
 [[package]]
 name = "halfin"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1e2b30a147bf3f01de87d42a4803d2826d746a314eacd7db3a4228f0ccc03c8"
+checksum = "c06499ea98b7b5d310c941e31f1acf62518f5762506a21029ae012215e93082e"
 dependencies = [
  "anyhow",
  "bitcoin_hashes 0.20.0",
- "bitreq 0.3.4",
+ "bitreq 0.3.5",
  "corepc-client",
  "flate2",
  "log",
@@ -1430,26 +1431,16 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.21.12"
+version = "0.23.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f56a14d1f48b391359b22f731fd4bd7e43c97f3c50eee276f3aa09c94784d3e"
-dependencies = [
- "ring",
- "rustls-webpki 0.101.7",
- "sct",
-]
-
-[[package]]
-name = "rustls"
-version = "0.23.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "730944ca083c1c233a75c09f199e973ca499344a2b7ba9e755c457e86fb4a321"
+checksum = "ef86cd5876211988985292b91c96a8f2d298df24e75989a43a3c73f2d4d8168b"
 dependencies = [
  "aws-lc-rs",
  "log",
  "once_cell",
+ "ring",
  "rustls-pki-types",
- "rustls-webpki 0.103.9",
+ "rustls-webpki",
  "subtle",
  "zeroize",
 ]
@@ -1465,19 +1456,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.101.7"
+version = "0.103.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b6275d1ee7a1cd780b64aca7726599a1dbc893b1e64144529e55c3c2f745765"
-dependencies = [
- "ring",
- "untrusted",
-]
-
-[[package]]
-name = "rustls-webpki"
-version = "0.103.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7df23109aa6c1567d1c575b9952556388da57401e4ace1d15f79eedad0d8f53"
+checksum = "61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e"
 dependencies = [
  "aws-lc-rs",
  "ring",
@@ -1502,16 +1483,6 @@ name = "rustversion"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
-
-[[package]]
-name = "sct"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da046153aa2352493d6cb7da4b6e5c0c057d8a1d0a9aa8560baffdd945acd414"
-dependencies = [
- "ring",
- "untrusted",
-]
 
 [[package]]
 name = "secp256k1"
@@ -1981,7 +1952,7 @@ dependencies = [
  "cookie_store",
  "log",
  "percent-encoding",
- "rustls 0.23.27",
+ "rustls",
  "rustls-pki-types",
  "serde",
  "serde_json",
@@ -2100,9 +2071,12 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "0.25.4"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
+checksum = "52f5ee44c96cf55f1b349600768e3ece3a8f26010c05265ab73f945bb1a2eb9d"
+dependencies = [
+ "rustls-pki-types",
+]
 
 [[package]]
 name = "which"
