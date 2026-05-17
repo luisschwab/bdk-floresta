@@ -4,13 +4,14 @@ on:
     push:
       branches: [ master ]
     pull_request:
+    workflow_dispatch:
 
+permissions:
+    contents: read
 env:
     CARGO_TERM_COLOR: always
     RUST_BACKTRACE: 1
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-permissions:
-    contents: read
 
 jobs:
     integration:
