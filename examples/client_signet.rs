@@ -1,6 +1,29 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-//! An example showcasing wallet syncing via the [`Client`].
+//! # [`Wallet`] synchronization via the [`Client`] on [`Network::Signet`].
+//!
+//! ## Architectural Diagram
+//!
+//! ```text
+//!                                                    Programatically trigger a
+//!                                                    wallet scan via [`Client::scan`]
+//!  Utreexo Bridge                  bdk_floresta                    |
+//!  ┌────────────┐                   ┌────────┐   Scan Request  ┌───+────┐                 ┌────────┐
+//!  |            |       P2P         |        | <-------------- |        |     Channel     |        |
+//!  │ `utreexod` │ <---------------> │  Node  |                 | Client | --------------> | Wallet |
+//!  |            |      Blocks       |        | --------------> |        |  Wallet Update  |        |
+//!  └────────────┘  Utreexo Proofs   └────────┘     Blocks      └────────┘                 └────────┘
+//! ```
+//!
+//! ## Wallet Scan Workflow
+//!
+//! 1. Create a [`Wallet].
+//! 2. Create and run a [`Node`].
+//! 3. Create a [`Client`] associated with the [`Node`] and [`Wallet`].
+//! 4. Trigger a wallet scan via [`Client::scan`].
+//! 5. Listen for [`ScanEvent`]s via the [`Client::event_tx`] channel and apply them via [`Wallet::apply_update`].
+//!
+//! [`Node`]: bdk_floresta::node::Node
 
 use std::env;
 use std::net::SocketAddr;
@@ -14,7 +37,6 @@ use bdk_floresta::client::Client;
 use bdk_floresta::client::ScanEvent;
 use bdk_floresta::client::ScanKind;
 use bdk_floresta::logger::Logger;
-use bdk_floresta::logger::LOG_FILE;
 use bdk_floresta::node::fsm::State;
 use bdk_wallet::Wallet;
 use bitcoin::Network;
@@ -24,10 +46,10 @@ use tracing::info;
 use tracing::warn;
 use tracing::Level;
 
-const UTREEXO_BRIDGE: &str = "189.44.63.101:38333";
+const UTREEXO_BRIDGE: &str = "195.26.240.213:38433";
 
 const NETWORK: Network = Network::Signet;
-const DATA_DIR: &str = "./examples/data/client/";
+const DATA_DIR: &str = "./examples/data/client_signet/";
 
 const DESC_EXT: &str = "wpkh([9cee26c8/84h/1h/0h]tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/0/*)";
 const DESC_INT: &str = "wpkh([9cee26c8/84h/1h/0h]tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/1/*)";
@@ -35,13 +57,13 @@ const DESC_INT: &str = "wpkh([9cee26c8/84h/1h/0h]tpubDDuCfGKBYo4pQjNcpVkdLktdYm9
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Only display the example's own logs
-    env::set_var("RUST_LOG", "client=info");
+    env::set_var("RUST_LOG", "client_signet=info");
 
     // Set up the logger
     let _logger = Logger {
         log_level: Level::INFO,
         log_to_stdout: true,
-        log_file: Some(PathBuf::from(DATA_DIR).join("bdk_floresta").join(LOG_FILE)),
+        log_file: Some(PathBuf::from(DATA_DIR).join("client_signet.log")),
     }
     .init()?;
 
@@ -98,7 +120,11 @@ async fn main() -> anyhow::Result<()> {
     let (mut client, mut update_events) = Client::new(node.clone(), &wallet)?;
 
     // Display pre-scan balance
-    info!("> PRE-SCAN BALANCE: {} BTC", wallet.balance().total().to_btc());
+    info!(
+        "> PRE-SCAN BALANCE: {} BTC, {} UTXOs",
+        wallet.balance().total().to_btc(),
+        wallet.list_unspent().count()
+    );
 
     // Arc the wallet to allow shared access
     let wallet = Arc::new(RwLock::new(wallet));
@@ -130,23 +156,30 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
+            info!("> RECEIVED `SIGINT`");
+            scan_task.abort();
+            node.shutdown().await?;
             info!("> /exit");
+
+            return Ok(());
         }
         result = async {
-            // Wait for the node to reach operational state before requesting a scan
+            // Subscribe to the node's state changes
             let mut state_rx = node.subscribe_state();
-            loop {
-                let state = state_rx.borrow_and_update().clone();
-                if state == State::Operational { break; }
+            // Wait for the node to reach operational state before requesting a scan
+            while *state_rx.borrow_and_update() != State::Operational {
+                if state_rx.changed().await.is_err() {
+                    return Ok::<(), anyhow::Error>(());
+                }
             }
 
-            // Perform a full scan
+            // Perform a full scan (genesis to tip)
             let scan_params = ScanKind::FullScan { custom_lookahead: None };
             info!("> STARTING FULLSCAN FROM CHECKPOINT=[height={} hash={}]", client.checkpoint().height(), client.checkpoint().hash());
             client.scan(scan_params).await?;
             info!("> FINISHED FULLSCAN AT CHECKPOINT=[height={} hash={}]", client.checkpoint().height(), client.checkpoint().hash());
 
-            // Perform a sync from the latest checkpoint
+            // Perform a sync from where the full scan left off (up to tip)
             let scan_params = ScanKind::Sync;
             info!("> STARTING SYNC FROM CHECKPOINT=[height={} hash={}]", client.checkpoint().height(), client.checkpoint().hash());
             client.scan(scan_params).await?;
@@ -163,9 +196,13 @@ async fn main() -> anyhow::Result<()> {
     // Wait for the scan task to finish
     scan_task.await?;
 
-    // Display post-scan balance
+    // Display the post-scan balance
     let wallet = Arc::try_unwrap(wallet).expect("ref count is non-zero").into_inner();
-    info!("> POST-SCAN BALANCE: {} BTC", wallet.balance().total().to_btc());
+    info!(
+        "> POST-SCAN BALANCE: {} BTC, {} UTXOs",
+        wallet.balance().total().to_btc(),
+        wallet.list_unspent().count()
+    );
 
     // Shut the node down
     node.shutdown().await?;

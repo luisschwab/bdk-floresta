@@ -16,15 +16,11 @@ default = ["logger"]
 logger = ["dep:tracing-appender", "dep:tracing-subscriber"]
 
 [[example]]
-name = "client"
+name = "client_regtest"
 required-features = ["logger"]
 
 [[example]]
-name = "regtest"
-required-features = ["logger"]
-
-[[example]]
-name = "signet"
+name = "client_signet"
 required-features = ["logger"]
 
 [build-dependencies]

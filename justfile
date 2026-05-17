@@ -3,9 +3,8 @@ alias b := build
 alias c := check
 alias d := delete
 alias f := fmt
-alias reg := example-regtest
-alias sig := example-signet
-alias cl := example-client
+alias cr := example-client-regtest
+alias cs := example-client-signet
 alias l := lock
 alias t := test
 alias z := zizmor
@@ -52,20 +51,15 @@ doc:
 doc-open:
     cargo rbmt docsrs --open
 
-[doc: "Run the `client` example"]
-example-client:
-    #rm -rf examples/data/client
-    cargo run --release --example client
+[doc: "Run the `client_regtest` example"]
+example-client-regtest:
+    rm -rf examples/data/client_regtest
+    cargo run --release --example client_regtest
 
-[doc: "Run the `regtest` example"]
-example-regtest:
-    rm -rf examples/data/regtest
-    cargo run --release --example regtest
-
-[doc: "Run the `signet` example"]
-example-signet:
-    rm -rf examples/data/signet
-    cargo run --release --example signet
+[doc: "Run the `client_signet` example"]
+example-client-signet:
+    #rm -rf examples/data/client_signet
+    cargo run --release --example client_signet
 
 [doc: "Format code"]
 fmt:
