@@ -3,8 +3,6 @@ alias b := build
 alias c := check
 alias d := delete
 alias f := fmt
-alias reg := example-regtest
-alias sig := example-signet
 alias cr := example-client-regtest
 alias cs := example-client-signet
 alias l := lock
@@ -62,16 +60,6 @@ example-client-regtest:
 example-client-signet:
     #rm -rf examples/data/client_signet
     cargo run --release --example client_signet
-
-[doc: "Run the `regtest` example"]
-example-regtest:
-    rm -rf examples/data/regtest
-    cargo run --release --example regtest
-
-[doc: "Run the `signet` example"]
-example-signet:
-    rm -rf examples/data/signet
-    cargo run --release --example signet
 
 [doc: "Format code"]
 fmt:

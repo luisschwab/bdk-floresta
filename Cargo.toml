@@ -23,14 +23,6 @@ required-features = ["logger"]
 name = "client_signet"
 required-features = ["logger"]
 
-[[example]]
-name = "regtest"
-required-features = ["logger"]
-
-[[example]]
-name = "signet"
-required-features = ["logger"]
-
 [build-dependencies]
 toml = { version = "1.0" }
 
