@@ -15,14 +15,14 @@ env:
 
 jobs:
     integration:
-        name: Run ${{ matrix.name }} Example
+        name: ${{ matrix.name }}
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
                 include:
-                    - name: Regtest
-                      example: regtest
+                    - name: Regtest Client Example
+                      example: client_regtest
 
         steps:
             - name: Checkout Repository
@@ -37,4 +37,4 @@ jobs:
 
             - name: Run ${{ matrix.example }} example
               run: cargo run --release --example ${{ matrix.example }}
-              timeout-minutes: 15
+              timeout-minutes: 5
