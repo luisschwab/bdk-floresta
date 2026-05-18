@@ -1,8 +1,4 @@
 [advisories]
 ignore = [
-    "RUSTSEC-2026-0049", # blame: floresta-wire
-    "RUSTSEC-2026-0097", # blame: rand 0.8.5
-    "RUSTSEC-2026-0098", # blame: floresta-wire
-    "RUSTSEC-2026-0099", # blame: floresta-wire
-    "RUSTSEC-2026-0104", # blame: floresta-wire
+    "RUSTSEC-2026-0097", # blame: rand 0.8.5 -> floresta-wire v0.5.0 / bitcoin v0.32.8
 ]

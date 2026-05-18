@@ -79,12 +79,14 @@ zizmor:
 
 [doc: "Run pre-push checks"]
 pre-push:
+    @just lock
     @just check-sigs
     @just check
     @just doc
     @just test
     @just zizmor
     @just audit
+    @just example-client-regtest
 
 _delete-data:
     rm -rf examples/data
