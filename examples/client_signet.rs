@@ -17,7 +17,7 @@
 //!
 //! ## Wallet Scan Workflow
 //!
-//! 1. Create a [`Wallet].
+//! 1. Create a [`Wallet`].
 //! 2. Create and run a [`Node`].
 //! 3. Create a [`Client`] associated with the [`Node`] and [`Wallet`].
 //! 4. Trigger a wallet scan via [`Client::scan`].

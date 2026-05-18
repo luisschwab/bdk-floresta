@@ -39,10 +39,12 @@ tracing = { version = "0.1.41" }
 tracing-appender = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "chrono", "env-filter"], optional = true }
 tokio-util = { version = "0.7.18" }
+
 # These pins are needed for `Cargo-minimal.lock`:
-lazy_static = { version = "1.5.0" } # blame: sharded-slab = "0.1.7"
-dns-lookup = { version = "2.1.1" } # blame: floresta-wire
-rustls = { version = "0.23.40" } # blame: floresta-wire and ureq pin different versions
+lazy_static = { version = "1.5.0" } # blame: sharded-slab v0.1.7
+dns-lookup = { version = "2.1.1" } # blame: floresta-wire v0.5.0
+rustls = { version = "0.23.40" } # blame: floresta-wire v0.5.0 and ureq pin different versions
+
 # These pins are needed for MSRV + `Cargo-recent.lock`:
 time = { version = "0.3.45" } # time 0.3.47+ requires 1.88.0, but MSRV is 1.85.0
 
@@ -85,4 +87,4 @@ allowed_duplicates = [
 
 [package.metadata.rbmt.toolchains]
 stable = "1.95.0"
-nightly = "nightly-2026-03-18"
+nightly = "nightly-2026-05-17"
