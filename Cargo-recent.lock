@@ -642,7 +642,7 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d#d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d"
 dependencies = [
  "bitcoin",
  "floresta-common",
@@ -658,11 +658,10 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d#d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d"
 dependencies = [
  "bitcoin",
  "hashbrown 0.16.1",
- "miniscript",
  "sha2",
  "spin",
 ]
@@ -670,7 +669,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d#d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -679,7 +678,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d#d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -692,7 +691,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=22fa75a929f95d287806deed96f56619f36e7459#22fa75a929f95d287806deed96f56619f36e7459"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d#d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d"
 dependencies = [
  "bip324",
  "bitcoin",

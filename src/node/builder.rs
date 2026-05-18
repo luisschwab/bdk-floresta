@@ -189,7 +189,7 @@ impl Builder {
     ///
     /// It will not run the [`Node`]. To run it, call [`Node::run()`].
     pub fn build(self) -> Result<Node, BuilderError> {
-        // Create the data directory for node data.
+        // Create a directory for node data.
         fs::create_dir_all(&self.config.data_directory).map_err(BuilderError::CreateDirectory)?;
 
         // Init the logger and keep a guard to it, if logging to a file is enabled
@@ -201,8 +201,7 @@ impl Builder {
         };
 
         // Configure the node's chain store
-        let chain_store_config =
-            FlatChainStoreConfig::new(self.config.data_directory.join("chain").to_string_lossy().to_string());
+        let chain_store_config = FlatChainStoreConfig::new(self.config.data_directory.join("chain"));
 
         // Try to load an existing chain store from the file system, or create a new one.
         let chain_store: FlatChainStore =
@@ -215,7 +214,7 @@ impl Builder {
         );
 
         // Configure the compact block filter store
-        let block_filter_store = FlatFiltersStore::new(self.config.data_directory.join("cbf"));
+        let block_filter_store = FlatFiltersStore::new(self.config.data_directory.join("filters"));
         let block_filters = Arc::new(NetworkFilters::new(block_filter_store));
 
         // A kill signal that keeps track of whether the node should shutdown
