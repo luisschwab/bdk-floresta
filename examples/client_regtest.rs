@@ -44,16 +44,13 @@ use halfin::bitcoind::BitcoinDConf;
 use halfin::connect;
 use halfin::utreexod::UtreexoD;
 use halfin::utreexod::UtreexoDConf;
+use halfin::wait_for_filter_height;
 use halfin::wait_for_height;
-use halfin::Node;
 use tokio::sync::RwLock;
 use tracing::error;
 use tracing::info;
 use tracing::warn;
 use tracing::Level;
-
-const BLOCK_COUNT: u32 = 200;
-const EXPECTED_BALANCE: Amount = Amount::from_int_btc(552);
 
 const NETWORK: Network = Network::Regtest;
 const DATA_DIR: &str = "./examples/data/client_regtest/";
@@ -82,10 +79,8 @@ async fn main() -> anyhow::Result<()> {
         .create_wallet_no_persist()?;
 
     // Get external and internal addresses from the wallet
-    let address_ext_0 = wallet.reveal_next_address(bdk_wallet::KeychainKind::External).address;
-    let address_ext_1 = wallet.reveal_next_address(bdk_wallet::KeychainKind::External).address;
-    let address_int_0 = wallet.reveal_next_address(bdk_wallet::KeychainKind::Internal).address;
-    let address_int_1 = wallet.reveal_next_address(bdk_wallet::KeychainKind::Internal).address;
+    let address_ext = wallet.reveal_next_address(bdk_wallet::KeychainKind::External).address;
+    let address_int = wallet.reveal_next_address(bdk_wallet::KeychainKind::Internal).address;
 
     // Configure the bitcoind node
     let bitcoind_conf = BitcoinDConf {
@@ -106,38 +101,24 @@ async fn main() -> anyhow::Result<()> {
     let utreexod = UtreexoD::new_with_conf(&utreexod_conf)?;
     info!("> UTREEXOD: SPAWNED");
 
-    info!("> BITCOIND: MINING {BLOCK_COUNT} BLOCKS");
-    bitcoind.generate(BLOCK_COUNT)?;
+    info!("> BITCOIND: MINING 100 BLOCKS");
+    bitcoind.generate(100).unwrap();
 
-    info!("> BITCOIND: SENDING 21 BTC TO ADDRESS={} [EXTERNAL]", address_ext_0);
-    bitcoind.call("sendtoaddress", &[address_ext_0.to_string().into(), 21.into()])?;
+    info!("> BITCOIND: MINING 69 BLOCKS TO EXTERNAL ADDRESS={}", address_ext);
+    bitcoind.generate_to_address(69, &address_ext).unwrap();
 
-    info!("> BITCOIND: MINING 1 BLOCK");
-    bitcoind.generate(1)?;
+    info!("> BITCOIND: MINING 42 BLOCKS TO INTERNAL ADDRESS={}", address_int);
+    bitcoind.generate_to_address(42, &address_int).unwrap();
 
-    info!("> BITCOIND: SENDING 42 BTC TO ADDRESS={} [EXTERNAL]", address_ext_1);
-    bitcoind.call("sendtoaddress", &[address_ext_1.to_string().into(), 42.into()])?;
-
-    info!("> BITCOIND: MINING 1 BLOCK");
-    bitcoind.generate(1)?;
-
-    info!("> BITCOIND: SENDING 69 BTC TO ADDRESS={} [INTERNAL]", address_int_0);
-    bitcoind.call("sendtoaddress", &[address_int_0.to_string().into(), 69.into()])?;
-
-    info!("> BITCOIND: MINING 1 BLOCK");
-    bitcoind.generate(1)?;
-
-    info!("> BITCOIND: SENDING 420 BTC TO ADDRESS={} [INTERNAL]", address_int_1);
-    bitcoind.call("sendtoaddress", &[address_int_1.to_string().into(), 420.into()])?;
-
-    info!("> BITCOIND: MINING 1 BLOCK");
-    bitcoind.generate(1)?;
+    info!("> BITCOIND: MINING 100 BLOCKS");
+    bitcoind.generate(100).unwrap();
 
     info!("> CONNECTING BITCOIND TO UTREEXOD");
     connect(&bitcoind, &utreexod)?;
 
     info!("> WAITING FOR UTREEXOD TO SYNC UP WITH BITCOIND");
     wait_for_height(&utreexod, bitcoind.get_chain_tip()?)?;
+    wait_for_filter_height(&utreexod, bitcoind.get_filter_tip()?)?;
 
     // Configure bdk_floresta
     let config = NodeConfig {
@@ -271,7 +252,7 @@ async fn main() -> anyhow::Result<()> {
         post_scan_balance.to_btc(),
         wallet.list_unspent().count()
     );
-    assert_eq!(post_scan_balance, EXPECTED_BALANCE);
+    assert_eq!(post_scan_balance, Amount::from_int_btc(4_000));
 
     // Shut the node down
     node.shutdown().await?;
