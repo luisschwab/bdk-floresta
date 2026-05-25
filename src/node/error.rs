@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-//! # Errors
+//! # Builder and Node Errors
 //!
-//! This module holds error enums for [`Builder`]
-//! and [`Node`]-related along with their `From` implementations.
+//! Error types related to the [`Builder`] and [`Node`] types.
 
 use core::error;
 use core::fmt;

@@ -5,8 +5,6 @@
 //! This module implements a [`Client`], used to request
 //! and subscribe to [`Update`]s from a [`Node`].
 
-use core::error;
-use core::fmt;
 use core::mem;
 use std::sync::Arc;
 
@@ -20,7 +18,6 @@ use bdk_wallet::chain::TxUpdate;
 use bdk_wallet::KeychainKind;
 use bdk_wallet::Update;
 use bdk_wallet::Wallet;
-use bitcoin::Network;
 use bitcoin::ScriptBuf;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -29,9 +26,11 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
-use crate::node::error::NodeError;
+use crate::client::error::ClientError;
 use crate::node::fsm::State;
 use crate::node::Node;
+
+pub mod error;
 
 /// The lookahead value to derive spks during [`ScanKind::FullScan`].
 pub const FULL_SCAN_LOOKAHEAD: u32 = 1_000;
@@ -399,60 +398,5 @@ impl Drop for Client {
 
         // Abort the client's node shutdown watcher task
         self.shutdown_watcher.abort();
-    }
-}
-
-/// Errors that can occur when interacting with a [`Client`].
-#[derive(Debug)]
-pub enum ClientError {
-    /// The [`Node`] and the [`Wallet`] are not on the same network.
-    NetworkMismatch { node_net: Network, wallet_net: Network },
-
-    /// The scan has been aborted by the caller, or the [`Node`] was [`Drop`]ed.
-    ScanAborted,
-
-    /// The start height is greater than the stop height.
-    InvalidRange { start_height: u32, stop_height: u32 },
-
-    /// The [`Wallet`] has no [external keychain](KeychainKind::External).
-    NoExternalKeychain,
-
-    /// The associated [`Node`] is shutting down or inactive.
-    UnresponsiveNode,
-
-    /// An error originating from the underlying [`Node`].
-    Node(NodeError),
-}
-
-#[rustfmt::skip]
-impl fmt::Display for ClientError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::NetworkMismatch { node_net, wallet_net } => write!(f, "Network mismatch between node={node_net} and wallet={wallet_net}"),
-            Self::ScanAborted => write!(f, "The scan was aborted"),
-            Self::InvalidRange { start_height, stop_height } => write!(f, "Invalid scan range: start_height={start_height} > stop_height={stop_height}"),
-            Self::NoExternalKeychain => write!(f, "The wallet has no external keychain"),
-            Self::UnresponsiveNode => write!(f, "The node is unresponsive"),
-            Self::Node(e) => write!(f, "Node Error: {e}"),
-        }
-    }
-}
-
-impl error::Error for ClientError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Self::NetworkMismatch { .. } => None,
-            Self::ScanAborted => None,
-            Self::InvalidRange { .. } => None,
-            Self::NoExternalKeychain => None,
-            Self::UnresponsiveNode => None,
-            Self::Node(e) => Some(e),
-        }
-    }
-}
-
-impl From<NodeError> for ClientError {
-    fn from(e: NodeError) -> Self {
-        Self::Node(e)
     }
 }
