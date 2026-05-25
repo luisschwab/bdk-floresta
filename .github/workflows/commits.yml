@@ -9,7 +9,7 @@ env:
 
 jobs:
     signatures:
-        name: Check PGP Signatures
+        name: Signatures
         runs-on: ubuntu-latest
 
         steps:
@@ -23,7 +23,7 @@ jobs:
               run: bash contrib/check-signatures.sh
 
     conventional-commits:
-        name: Assert Conventinal Commits
+        name: Conventional Commits
         runs-on: ubuntu-latest
 
         steps:
