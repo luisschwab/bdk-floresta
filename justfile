@@ -16,29 +16,29 @@ _default:
     @echo "> A Floresta-powered chain-source crate for BDK\n"
     @just --list
 
-[doc: "Run `cargo audit`"]
+[doc: "Run `cargo audit` on all lockfiles and prune ignored advisories"]
 audit:
-    cargo audit
+    bash contrib/run-cargo-audit.sh
+    bash contrib/prune-audit-ignores.sh
 
 [doc: "Build `bdk-floresta` and examples"]
 build:
-    cargo build --release
-    cargo build --release --examples
+    RBMT_LOG_LEVEL=verbose cargo rbmt build --release
+    RBMT_LOG_LEVEL=verbose cargo rbmt build --release --examples
 
-[doc: "Check code formatting, compilation, linting, and commit signatures"]
+[doc: "Check code formatting, compilation, linting"]
 check:
-    cargo rbmt fmt --check
-    cargo rbmt lint
-    cargo rbmt docs
-    just check-sigs
+    RBMT_LOG_LEVEL=verbose cargo rbmt fmt --check
+    RBMT_LOG_LEVEL=verbose cargo rbmt lint
+    RBMT_LOG_LEVEL=verbose cargo rbmt docsrs
 
 [doc: "Check that all feature combinations compile"]
 check-features:
-    cargo rbmt test --toolchain stable --lock-file recent
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lock-file recent
 
 [doc: "Check if commits are PGP-signed"]
-check-sigs:
-    bash contrib/check-signatures.sh
+check-commit-signatures:
+    bash contrib/check-commit-signatures.sh
 
 [doc: "Delete files: data, target, lockfiles"]
 delete item="data":
@@ -46,11 +46,11 @@ delete item="data":
 
 [doc: "Generate documentation"]
 doc:
-    cargo rbmt docsrs
+    RBMT_LOG_LEVEL=verbose cargo rbmt docsrs
 
 [doc: "Generate and open documentation"]
 doc-open:
-    cargo rbmt docsrs --open
+    RBMT_LOG_LEVEL=verbose cargo rbmt docsrs --open
 
 [doc: "Run the `client_regtest` example"]
 example-client-regtest:
@@ -60,25 +60,25 @@ example-client-regtest:
 [doc: "Run the `client_signet` example"]
 example-client-signet:
     #rm -rf examples/data/client_signet
-    cargo run --release --example client_signet
+    RBMT_LOG_LEVEL=progress cargo rbmt run --release --example client_signet
 
 [doc: "Format code"]
 fmt:
-    cargo rbmt fmt
+    RBMT_LOG_LEVEL=verbose cargo rbmt fmt
 
 [doc: "Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`"]
 lock:
-  cargo +nightly rbmt lock
+  RBMT_LOG_LEVEL=verbose cargo rbmt lock
 
 [doc: "Run tests across all toolchains and lockfiles"]
 test:
-    cargo rbmt test
+    RBMT_LOG_LEVEL=verbose cargo rbmt test
 
 [doc: "Install and/or Update `cargo-rbmt` and Stable and Nightly toolchains"]
 toolchains:
     bash contrib/install-cargo-rbmt.sh
-    RBMT_LOG_LEVEL=progress cargo rbmt toolchains --update-stable
-    RBMT_LOG_LEVEL=progress cargo rbmt toolchains --update-nightly
+    RBMT_LOG_LEVEL=verbose cargo rbmt toolchains --update-stable
+    RBMT_LOG_LEVEL=verbose cargo rbmt toolchains --update-nightly
 
 [doc: "Run ShellCheck"]
 shellcheck:
@@ -92,13 +92,13 @@ zizmor:
 [doc: "Run pre-push checks"]
 pre-push:
     @just lock
-    @just check-sigs
     @just check
     @just doc
     @just test
     @just shellcheck
     @just zizmor
     @just audit
+    @just check-commit-signatures
     @just example-client-regtest
 
 _delete-data:
