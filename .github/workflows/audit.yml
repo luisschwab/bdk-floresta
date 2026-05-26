@@ -33,6 +33,18 @@ jobs:
             - name: Check for Audit Vulnerabilities
               run: cargo audit
 
+    shellcheck:
+        name: ShellCheck
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
+
+            - name: Run ShellCheck
+              run: shellcheck **/*.sh
+
     zizmor:
         name: Zizmor
         runs-on: ubuntu-latest

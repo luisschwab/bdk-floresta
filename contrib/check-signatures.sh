@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
 # This script will check if all commits in this branch are PGP-signed.
