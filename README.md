@@ -63,7 +63,7 @@ Available recipes:
     lock                    # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock` [alias: l]
     pre-push                # Run pre-push checks [alias: p]
     shellcheck              # Run ShellCheck [alias: sc]
-    test                    # Run tests across all toolchains and lockfiles [alias: t]
+    test                    # Run tests across with relevant toolchain and lockfile combinations [alias: t]
     toolchains              # Install and/or Update `cargo-rbmt` and Stable and Nightly toolchains
     zizmor                  # Run Zizmor [alias: z]
 ```

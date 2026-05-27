@@ -70,9 +70,12 @@ fmt:
 lock:
   RBMT_LOG_LEVEL=verbose cargo rbmt lock
 
-[doc: "Run tests across all toolchains and lockfiles"]
+[doc: "Run tests across with relevant toolchain and lockfile combinations"]
 test:
-    RBMT_LOG_LEVEL=verbose cargo rbmt test
+    @just lock
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lock-file recent
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lock-file minimal
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain msrv --lock-file minimal
 
 [doc: "Install and/or Update `cargo-rbmt` and Stable and Nightly toolchains"]
 toolchains:
