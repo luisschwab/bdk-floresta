@@ -123,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
     // Configure bdk_floresta
     let config = NodeConfig {
         network: NETWORK,
-        data_directory: PathBuf::from(DATA_DIR).join("bdk_floresta"),
+        datadir: PathBuf::from(DATA_DIR).join("bdk_floresta"),
         fixed_peer: Some(utreexod.get_p2p_socket()),
         ..Default::default()
     };

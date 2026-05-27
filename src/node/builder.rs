@@ -24,7 +24,6 @@ use floresta_compact_filters::network_filters::NetworkFilters;
 use floresta_mempool::Mempool;
 use floresta_wire::address_man::AddressMan;
 use floresta_wire::address_man::ReachableNetworks;
-use floresta_wire::address_man::SUPPORTED_NETWORKS;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node_interface::NodeInterface;
@@ -50,7 +49,7 @@ pub struct NodeConfig {
     pub network: Network,
 
     /// The path to the directory where [`Node`] data will be persisted to.
-    pub data_directory: PathBuf,
+    pub datadir: PathBuf,
 
     /// Proof-of-Work Fraud Proofs allow skipping verification of the
     /// entire blockchain with a better trust assumption than bare SPV.
@@ -107,7 +106,7 @@ impl Default for NodeConfig {
     fn default() -> Self {
         Self {
             network: Network::Signet,
-            data_directory: PathBuf::from(format!("./data/{}", Network::Signet)),
+            datadir: PathBuf::from("./data/{}").join(Network::Signet.to_string()),
             enable_powfps: true,
             assume_valid: None,
             assume_utreexo: true,
@@ -120,7 +119,7 @@ impl Default for NodeConfig {
             allow_p2pv1_fallback: true,
             mempool_size: 100,
             address_man_size: None,
-            reachable_nets: SUPPORTED_NETWORKS.to_vec(),
+            reachable_nets: ReachableNetworks::SUPPORTED.to_vec(),
         }
     }
 }
@@ -138,7 +137,7 @@ impl From<NodeConfig> for UtreexoNodeConfig {
             compact_filters: true,
             fixed_peer: value.fixed_peer.map(|addr| addr.to_string()),
             max_banscore: value.max_banscore,
-            datadir: value.data_directory.to_string_lossy().to_string(),
+            datadir: value.datadir,
             proxy: value.socks5_proxy,
             assume_utreexo,
             backfill: value.perform_backfill,
@@ -190,7 +189,7 @@ impl Builder {
     /// It will not run the [`Node`]. To run it, call [`Node::run()`].
     pub fn build(self) -> Result<Node, BuilderError> {
         // Create a directory for node data.
-        fs::create_dir_all(&self.config.data_directory).map_err(BuilderError::CreateDirectory)?;
+        fs::create_dir_all(&self.config.datadir).map_err(BuilderError::CreateDirectory)?;
 
         // Init the logger and keep a guard to it, if logging to a file is enabled
         #[cfg(feature = "logger")]
@@ -201,7 +200,7 @@ impl Builder {
         };
 
         // Configure the node's chain store
-        let chain_store_config = FlatChainStoreConfig::new(self.config.data_directory.join("chain"));
+        let chain_store_config = FlatChainStoreConfig::new(self.config.datadir.join("chain"));
 
         // Try to load an existing chain store from the file system, or create a new one.
         let chain_store: FlatChainStore =
@@ -214,7 +213,7 @@ impl Builder {
         );
 
         // Configure the compact block filter store
-        let block_filter_store = FlatFiltersStore::new(self.config.data_directory.join("filters"));
+        let block_filter_store = FlatFiltersStore::new(self.config.datadir.join("filters"));
         let block_filters = Arc::new(NetworkFilters::new(block_filter_store));
 
         // A kill signal that keeps track of whether the node should shutdown
