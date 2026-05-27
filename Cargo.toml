@@ -29,10 +29,10 @@ toml = { version = "1.0" }
 [dependencies]
 bitcoin = { version = "0.32.8" }
 bdk_wallet = { version = "3.0" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "d1ea3e9e841d40cbef50cd24ca9b8a50a4469d9d" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "55c563d29763621ff394ae1fd0f2cab02ab988ce", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "55c563d29763621ff394ae1fd0f2cab02ab988ce" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "55c563d29763621ff394ae1fd0f2cab02ab988ce" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "55c563d29763621ff394ae1fd0f2cab02ab988ce" }
 futures = { version = "0.3.32" }
 tokio = { version = "1.50", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "0.1.43" }
@@ -47,7 +47,7 @@ dns-lookup = { version = "2.1.1" } # blame: floresta-wire v0.5.0
 bitcoin-consensus-encoding = { version = "=1.0.0-rc.3" } # blame: bitcoin-io v0.3.0 (Encodable->Encode/Decodable->Decode)
 
 [dev-dependencies]
-halfin = { version = "0.3.5" }
+halfin = { version = "0.3.7" }
 anyhow = { version = "1.0.75" } # v1.0.75 is needed for `anyhow::Ok()`
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 
@@ -70,6 +70,9 @@ allowed_duplicates = [
     "bitcoin-io",
     "getrandom",
     "hex-conservative",
+    "rand",
+    "rand_core",
+    "rand_chacha",
     "serde_core",
     "windows-sys",
     "windows-targets",
