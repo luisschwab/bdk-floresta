@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
 # This script will install/update `cargo-rbmt`
@@ -15,7 +17,6 @@ set -euo pipefail
 RBMT_VERSION=$(cat rbmt-version)
 RBMT_VERSION="${RBMT_VERSION#cargo-rbmt-}"
 RBMT_VERSION="${RBMT_VERSION#v}"
-RBMT_VERSION="$RBMT_VERSION"
 
 echo "> Installing cargo-rbmt @ v$RBMT_VERSION"
 cargo install cargo-rbmt --version "$RBMT_VERSION" --locked

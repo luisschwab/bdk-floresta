@@ -47,12 +47,13 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use time::format_description::BorrowedFormatItem;
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::layer;
-use tracing_subscriber::fmt::time::ChronoLocal;
 use tracing_subscriber::fmt::time::FormatTime;
+use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::fmt::FmtContext;
 use tracing_subscriber::fmt::FormatEvent;
 use tracing_subscriber::fmt::FormatFields;
@@ -64,19 +65,10 @@ use tracing_subscriber::Layer;
 
 use crate::node::error::BuilderError;
 
+type Timer = OffsetTime<&'static [BorrowedFormatItem<'static>]>;
+
 /// The file which logging events are written to by default.
 pub const LOG_FILE: &str = "debug.log";
-
-/// The string used to format the timestamp, via [`ChronoLocal`].
-///
-/// Format: `YYYY-MM-DD HH:mm:ss`
-pub(crate) const CHRONO_FORMATTER: &str = "%Y-%m-%d %H:%M:%S";
-
-/// The string used to format the timestamp when
-/// the log level [`Level::DEBUG`] or higher, via [`ChronoLocal`].
-///
-/// Format: `YYYY-MM-DD HH:mm:ss.sss`
-pub(crate) const CHRONO_FORMATTER_DEBUG: &str = "%Y-%m-%d %H:%M:%S%.3f";
 
 /// ANSI escape code to begin dimmed text.
 pub(crate) const ANSI_DIM: &str = "\x1b[2m";
@@ -127,13 +119,17 @@ pub(crate) const COLORED_TRACE: &str = "\x1b[0;35mTRACE\x1b[0m";
 ///
 /// [`tracing-subscriber`]: https://crates.io/crates/tracing-subscriber
 pub struct ShortTargetFormatter {
-    timer: ChronoLocal,
+    timer: Timer,
 }
 
 impl Default for ShortTargetFormatter {
     fn default() -> Self {
+        let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
         Self {
-            timer: ChronoLocal::new(CHRONO_FORMATTER.to_string()),
+            timer: OffsetTime::new(
+                offset,
+                time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"),
+            ),
         }
     }
 }
@@ -143,14 +139,23 @@ impl ShortTargetFormatter {
     ///
     /// At [`Level::DEBUG`] and below, the timestamp will include milliseconds.
     pub fn new(level: Level) -> Self {
-        let time_fmt = if level >= Level::DEBUG {
-            CHRONO_FORMATTER_DEBUG
+        let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
+        if level >= Level::DEBUG {
+            Self {
+                timer: OffsetTime::new(
+                    offset,
+                    time::macros::format_description!(
+                        "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]"
+                    ),
+                ),
+            }
         } else {
-            CHRONO_FORMATTER
-        };
-
-        Self {
-            timer: ChronoLocal::new(time_fmt.to_string()),
+            Self {
+                timer: OffsetTime::new(
+                    offset,
+                    time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"),
+                ),
+            }
         }
     }
 
