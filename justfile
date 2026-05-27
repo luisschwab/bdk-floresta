@@ -70,7 +70,7 @@ fmt:
 lock:
   RBMT_LOG_LEVEL=verbose cargo rbmt lock
 
-[doc: "Run tests across with relevant toolchain and lockfile combinations"]
+[doc: "Run tests with relevant toolchain and lockfile combinations"]
 test:
     @just lock
     RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lock-file recent

@@ -301,9 +301,9 @@ checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
 
 [[package]]
 name = "bitreq"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6df90cd78f0510165fd370574676aeb57dbec0ee3bfff68645bb7b0e9a65dbd5"
+checksum = "212aa2d0cd15d0f5c24d42cdc48f87016660d78ac031bd84a1440a51b46cf7f6"
 dependencies = [
  "rustls",
  "rustls-webpki",
@@ -765,9 +765,9 @@ dependencies = [
 
 [[package]]
 name = "halfin"
-version = "0.3.5"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd3c29d5d698b53e6596001ff470404c822678a145e58f456702f63b2766f569"
+checksum = "07d8fe72e08a2f5c95880ca97840449f7ace1e7ae59dbc0433667ba34c4f4562"
 dependencies = [
  "anyhow",
  "bitcoin_hashes 0.20.0",

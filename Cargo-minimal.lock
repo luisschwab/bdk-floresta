@@ -158,7 +158,7 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes 0.15.0",
  "chacha20-poly1305",
- "rand 0.8.0",
+ "rand",
  "tokio",
 ]
 
@@ -322,21 +322,15 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5cde24d1b2e2216a726368b2363a273739c91f4e3eb4e0dd12d672d396ad989"
-
-[[package]]
-name = "bitflags"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
 
 [[package]]
 name = "bitreq"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6df90cd78f0510165fd370574676aeb57dbec0ee3bfff68645bb7b0e9a65dbd5"
+checksum = "212aa2d0cd15d0f5c24d42cdc48f87016660d78ac031bd84a1440a51b46cf7f6"
 dependencies = [
  "rustls",
  "rustls-webpki",
@@ -559,13 +553,19 @@ checksum = "88bffebc5d80432c9b140ee17875ff173a8ab62faad5b257da912bd2f6c1c0a1"
 
 [[package]]
 name = "errno"
-version = "0.3.8"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a258e46cdc063eb8519c00b9fc845fc47bcfca4130e2f08e88665ceda8474245"
+checksum = "33d852cb9b869c2a9b3df2f71a3074817f01e1844f839a144f5fcef059a4eb5d"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
 ]
+
+[[package]]
+name = "fastrand"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8c02a5121d4ea3eb16a80748c74f5549a5665e4c21333c6098f283870fbdea6"
 
 [[package]]
 name = "filetime"
@@ -634,7 +634,7 @@ dependencies = [
  "ahash",
  "bitcoin",
  "floresta-chain",
- "rand 0.8.0",
+ "rand",
  "rustreexo",
  "tracing",
 ]
@@ -651,7 +651,7 @@ dependencies = [
  "floresta-common",
  "floresta-compact-filters",
  "floresta-mempool",
- "rand 0.8.0",
+ "rand",
  "rustls",
  "rustreexo",
  "serde",
@@ -687,22 +687,6 @@ checksum = "a9c384f161156f5260c24a097c56119f9be8c798586aecc13afbcbe7b7e26bf8"
 dependencies = [
  "percent-encoding",
 ]
-
-[[package]]
-name = "fuchsia-zircon"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b5365afd01fdf916e775a224e844f80b3b9710d0f4f00903e219e859474d7ae"
-dependencies = [
- "bitflags 1.0.0",
- "fuchsia-zircon-sys",
-]
-
-[[package]]
-name = "fuchsia-zircon-sys"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "069def9a0e5feb7e9120635f6ebad24d853a6affbb077fec84d0888316cf9ae6"
 
 [[package]]
 name = "futures"
@@ -815,9 +799,9 @@ dependencies = [
 
 [[package]]
 name = "halfin"
-version = "0.3.5"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd3c29d5d698b53e6596001ff470404c822678a145e58f456702f63b2766f569"
+checksum = "07d8fe72e08a2f5c95880ca97840449f7ace1e7ae59dbc0433667ba34c4f4562"
 dependencies = [
  "anyhow",
  "bitcoin_hashes 0.20.0",
@@ -1098,9 +1082,9 @@ checksum = "775bf80d5878ab7c2b1080b5351a48b2f737d9f6f8b383574eebcc22be0dfccb"
 
 [[package]]
 name = "libc"
-version = "0.2.172"
+version = "0.2.182"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
+checksum = "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
 
 [[package]]
 name = "libz-rs-sys"
@@ -1116,6 +1100,12 @@ name = "linux-raw-sys"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "969488b55f8ac402214f3f5fd243ebb7206cf82de60d3172994707a4bcc2b829"
+
+[[package]]
+name = "linux-raw-sys"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b83b49c75b50cb715b09d337b045481493a8ada2bb3e872f2bae71db45b27696"
 
 [[package]]
 name = "litemap"
@@ -1232,9 +1222,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
+checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "percent-encoding"
@@ -1276,16 +1266,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "rand"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d5f78082e6a6d042862611e9640cf20776185fee506cf6cf67e93c6225cee31"
-dependencies = [
- "fuchsia-zircon",
- "libc",
 ]
 
 [[package]]
@@ -1352,15 +1332,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3cbb081b9784b07cceb8824c8583f86db4814d172ab043f3c23f7dc600bf83d"
 
 [[package]]
-name = "remove_dir_all"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfc5b3ce5d5ea144bb04ebd093a9e14e9765bcfec866aecda9b6dec43b3d1e24"
-dependencies = [
- "winapi",
-]
-
-[[package]]
 name = "ring"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1380,10 +1351,23 @@ version = "0.38.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72e572a5e8ca657d7366229cdde4bd14c4eb5499a9573d4d366fe1b599daa316"
 dependencies = [
- "bitflags 2.4.0",
+ "bitflags",
  "errno",
  "libc",
- "linux-raw-sys",
+ "linux-raw-sys 0.4.11",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rustix"
+version = "1.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+dependencies = [
+ "bitflags",
+ "errno",
+ "libc",
+ "linux-raw-sys 0.12.0",
  "windows-sys 0.52.0",
 ]
 
@@ -1457,7 +1441,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e0cc0f1cf93f4969faf3ea1c7d8a9faed25918d96affa959720823dfe86d4f3"
 dependencies = [
  "bitcoin_hashes 0.12.0",
- "rand 0.8.0",
+ "rand",
  "secp256k1-sys",
  "serde",
 ]
@@ -1665,9 +1649,9 @@ dependencies = [
 
 [[package]]
 name = "tar"
-version = "0.4.42"
+version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ff6c40d3aedb5e06b57c6f669ad17ab063dd1e63d977c6a88e7f4dfa4f04020"
+checksum = "22692a6476a21fa75fdfc11d452fda482af402c008cdbaf3476414e122040973"
 dependencies = [
  "filetime",
  "libc",
@@ -1676,15 +1660,14 @@ dependencies = [
 
 [[package]]
 name = "tempfile"
-version = "3.0.2"
+version = "3.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47776f63b85777d984a50ce49d6b9e58826b6a3766a449fc95bc66cd5663c15b"
+checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
- "libc",
- "rand 0.4.1",
- "redox_syscall",
- "remove_dir_all",
- "winapi",
+ "fastrand",
+ "once_cell",
+ "rustix 1.1.4",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2344,8 +2327,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7dae5072fe1f8db8f8d29059189ac175196e410e40ba42d5d4684ae2f750995"
 dependencies = [
  "libc",
- "linux-raw-sys",
- "rustix",
+ "linux-raw-sys 0.4.11",
+ "rustix 0.38.28",
 ]
 
 [[package]]
