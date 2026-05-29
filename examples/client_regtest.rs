@@ -61,9 +61,7 @@ const DESC_INT: &str = "tr([697412fb/86h/1h/0h]tpubDD5LyUwjWvkndncfQqMcNko6coES1
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Only display the example's own logs
-    // `warn` is there so the subscriber is
-    // not buried by hyper/bitreq/jsonrcp logs
-    env::set_var("RUST_LOG", "client_regtest=info,warn");
+    env::set_var("RUST_LOG", "client_regtest=info");
 
     // Set up the logger
     let _logger = Logger {
