@@ -38,7 +38,7 @@ tokio = { version = "=1.52.3", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "=0.1.44" }
 tracing-appender = { version = "=0.2.5", optional = true }
 tracing-subscriber = { version = "=0.3.23", features = ["ansi", "env-filter", "time"], optional = true }
-time = { version = "=0.3.45", features = ["macros", "local-offset"], optional = true } # time >0.3.45 requires Rust 1.88.0
+time = { version = "=0.3.47", features = ["macros", "local-offset"], optional = true } # time >0.3.45 requires Rust 1.88.0
 tokio-util = { version = "=0.7.18" }
 
 # These pins are needed for `Cargo-minimal.lock`:
