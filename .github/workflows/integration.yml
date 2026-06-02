@@ -37,4 +37,6 @@ jobs:
 
             - name: Run ${{ matrix.example }} example
               run: cargo run --release --example ${{ matrix.example }}
+              env:
+                  BLOCKS: 50
               timeout-minutes: 5
