@@ -6,7 +6,9 @@
 //! and subscribe to [`Update`]s from a [`Node`].
 
 use core::mem;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use bdk_wallet::chain::keychain_txout::KeychainTxOutIndex;
 use bdk_wallet::chain::BlockId;
@@ -18,11 +20,15 @@ use bdk_wallet::chain::TxUpdate;
 use bdk_wallet::KeychainKind;
 use bdk_wallet::Update;
 use bdk_wallet::Wallet;
+use bitcoin::Block;
+use bitcoin::OutPoint;
 use bitcoin::ScriptBuf;
+use floresta_chain::BlockConsumer;
+use floresta_chain::UtxoData;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::Mutex;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
@@ -37,9 +43,8 @@ pub const FULL_SCAN_LOOKAHEAD: u32 = 1_000;
 
 /// The kind of scan to perform on the [`Wallet`].
 ///
-/// The chosen variant will define how Compact Block Filter
-/// scanning will be performed; newly validated blocks will always
-/// be used to generate wallet updates after the initial scan finishes.
+/// The chosen variant will define how
+/// Compact Block Filter scanning will be performed.
 #[derive(Debug)]
 pub enum ScanKind {
     /// Scan from the [`Wallet`]'s latest checkpoint up to the chain tip.
@@ -60,19 +65,95 @@ pub enum ScanKind {
 #[derive(Clone, Debug)]
 pub enum ScanEvent {
     /// An [`Update`] for the [`Wallet`].
-    Update(Update),
+    WalletUpdate(Update),
 
     /// The scan has finished.
-    Finished,
+    ///
+    /// For continuous synching, `keep_going` is set to `true`.
+    Finished { keep_going: bool },
 
     /// An error happened whilst scanning.
     Error(String),
 }
 
+/// A handle to a [`Client::scan`] or [`Client::scan_continuous`] task.
+///
+/// Call [`Client::cancellation_token`] to get the [`CancellationToken`]
+/// and create a [`ScanHandle`] with itbefore spawning the scan in an async task.
+///
+/// An ongoing scan can then be cancelled via [`ScanHandle::stop`].
+pub struct ScanHandle {
+    token: CancellationToken,
+    inner: Option<JoinHandle<Result<(), ClientError>>>,
+}
+
+impl ScanHandle {
+    /// Create a new [`ScanHandle`] from a [`CancellationToken`] and a join handle.
+    pub fn new(token: CancellationToken, inner: JoinHandle<Result<(), ClientError>>) -> Self {
+        Self {
+            token,
+            inner: Some(inner),
+        }
+    }
+
+    /// Await a scan task to complete.
+    ///
+    /// Returns [`ClientError::ScanAborted`] if the task was aborted or panicked.
+    pub async fn join(&mut self) -> Result<(), ClientError> {
+        let Some(inner) = self.inner.as_mut() else {
+            return Ok(());
+        };
+        let result = inner.await.unwrap_or(Err(ClientError::ScanAborted));
+        self.inner = None;
+        result
+    }
+
+    /// Cancel the scan task and immediately return.
+    pub fn cancel(&self) {
+        self.token.cancel();
+    }
+
+    /// Cancel the scan task and wait until it exits.
+    pub async fn stop(&mut self) {
+        self.token.cancel();
+        if let Some(inner) = self.inner.take() {
+            let _ = inner.await;
+        }
+    }
+}
+
+impl Drop for ScanHandle {
+    fn drop(&mut self) {
+        self.token.cancel();
+        if let Some(inner) = self.inner.take() {
+            inner.abort();
+        }
+    }
+}
+
+/// Forwards validated [`Block`]s from the [`Node`]
+/// into a channel read by [`Client::scan_continuous`].
+struct BlockSink {
+    block_tx: UnboundedSender<(Block, u32)>,
+}
+
+impl BlockConsumer for BlockSink {
+    fn on_block(&self, block: &Block, height: u32, _spent_utxos: Option<&HashMap<OutPoint, UtxoData>>) {
+        let _ = self.block_tx.send((block.clone(), height));
+    }
+
+    fn wants_spent_utxos(&self) -> bool {
+        false
+    }
+}
+
 /// A [`Client`] used to request [`Update`]s from a given [`Node`].
 pub struct Client {
-    /// The associated [`Node`] the [`Client`] will submit requests to.
+    /// The associated [`Node`] which this [`Client`] will submit scan requests to.
     node: Arc<Node>,
+
+    /// A subscriber for new [`Block`]s that the [`Node`] validates whist a scan is in progress.
+    block_subscriber: Arc<AsyncMutex<UnboundedReceiver<(Block, u32)>>>,
 
     /// The [`Client`]'s latest [`CheckPoint`].
     checkpoint: CheckPoint,
@@ -125,7 +206,9 @@ impl Client {
         let shutdown_watcher = tokio::spawn(async move {
             node_cancellation_token.cancelled().await;
             client_cancellation_token.cancel();
-            shutdown_watcher_tx.lock().await.take();
+            if let Ok(mut guard) = shutdown_watcher_tx.lock() {
+                guard.take();
+            }
         });
 
         // Clone the wallet's `IndexedTxGraph`
@@ -134,8 +217,14 @@ impl Client {
         // Used to set the starting height for client scan requests
         let checkpoint = wallet.latest_checkpoint();
 
+        // Create a channel for receiving new blocks;
+        let (block_tx, block_rx) = mpsc::unbounded_channel::<(Block, u32)>();
+        let block_subscriber = Arc::new(AsyncMutex::new(block_rx));
+        node.block_subscriber(Arc::new(BlockSink { block_tx }));
+
         let client = Self {
             node,
+            block_subscriber,
             checkpoint,
             tx_graph,
             event_tx,
@@ -151,6 +240,14 @@ impl Client {
         self.checkpoint.clone()
     }
 
+    /// Returns a clone of this [`Client`]'s [`CancellationToken`].
+    ///
+    /// Cancelling the token aborts any in-progress [`scan`](Self::scan)
+    /// or [`scan_continuous`](Self::scan_continuous).
+    pub fn cancellation_token(&self) -> CancellationToken {
+        self.cancellation_token.clone()
+    }
+
     /// Request the [`Node`] to perform a scan using the [`Wallet`] associated with this [`Client`].
     ///
     /// The [`kind`](ScanKind) parameter dictates which kind of scan will be performed:
@@ -159,34 +256,92 @@ impl Client {
     ///  - [`ScanKind::Custom`]: scan from a custom start height up to the chain tip
     pub async fn scan(&mut self, scan_params: ScanKind) -> Result<(), ClientError> {
         // Wait for the node to reach operational
-        // state before submitting a scan request to it
+        // state before submitting a scan request
         self.wait_until_ready().await?;
 
         // Submit a scan request to the node and wait for the result
         let scan_result = self.scan_inner(scan_params).await;
 
         // Broadcast a notification if the scan is done or an error occurred
-        // Actual wallet updates are sent through the channel by `scan_inner`
+        // Actual wallet updates are sent over the channel by `scan_inner`
         let event = match &scan_result {
-            // The scan was successful and is now finished
-            Ok(()) => ScanEvent::Finished,
-            // An error occurred whilst scanning
+            Ok(()) => ScanEvent::Finished { keep_going: false },
             Err(e) => ScanEvent::Error(e.to_string()),
         };
+
         // Send the final scan event over the channel
-        self.send_event(event).await;
+        self.send_event(event)?;
 
         scan_result
     }
 
-    /// Send a [`ScanEvent`] through the channel.
+    /// Request the [`Node`] to perform a continuous scan using the [`Wallet`] associated with this [`Client`].
     ///
-    /// This is a no-op in the case that the `event_tx` channel
-    /// is dropped, usually caused by the [`Node`] being shutdown.
-    async fn send_event(&self, event: ScanEvent) {
-        if let Some(tx) = self.event_tx.lock().await.as_ref() {
+    /// This scan happens in two stages:
+    /// 1. Scan from either genesis or the [`Wallet`]'s latest checkpoint up to the chain tip with Compact Block Filters
+    /// 2. Subscribe to new blocks validated by the `Node` and apply them to the [`Wallet`]
+    ///
+    /// The [`kind`](ScanKind) parameter dictates which kind of scan will be performed:
+    ///  - [`ScanKind::Sync`]: scan from the [`Wallet`]'s latest checkpoint up to the chain tip
+    ///  - [`ScanKind::FullScan`]: scan from genesis up to the chain tip
+    ///  - [`ScanKind::Custom`]: scan from a custom start height up to the chain tip
+    pub async fn scan_continuous(&mut self, scan_params: ScanKind) -> Result<(), ClientError> {
+        // Wait for the node to reach operational
+        // state before submitting a scan request
+        self.wait_until_ready().await?;
+
+        // Run the initial CBF scan; new blocks arriving via `on_block`
+        // queue up in `block_subscriber` while this runs
+        let scan_result = self.scan_inner(scan_params).await;
+
+        // Broadcast a notification if the CBF scan is done or an error occurred
+        // Actual wallet updates are sent over the channel by `scan_inner`
+        let event = match &scan_result {
+            Ok(()) => ScanEvent::Finished { keep_going: true },
+            Err(e) => ScanEvent::Error(e.to_string()),
+        };
+        self.send_event(event)?;
+        scan_result?;
+
+        // Subscribe to new blocks validated by the `Node`
+        let block_subscriber = self.block_subscriber.clone();
+        loop {
+            let (block, height) = {
+                let mut guard = block_subscriber.lock().await;
+                tokio::select! {
+                    biased;
+                    _ = self.cancellation_token.cancelled() => {
+                        return Err(ClientError::ScanAborted);
+                    }
+                    b = guard.recv() => match b {
+                        Some(b) => b,
+                        None => return Err(ClientError::UnresponsiveNode),
+                    },
+                }
+            };
+
+            // Skip blocks that are already known to the `Wallet`
+            if height <= self.checkpoint.height() {
+                continue;
+            }
+
+            // Apply the block to the `tx_graph` and update the `checkpoint`
+            let hash = block.block_hash();
+            let _ = self.tx_graph.apply_block_relevant(&block, height);
+            self.checkpoint = self.checkpoint.clone().insert(BlockId { height, hash });
+            let update = self.finish_update();
+
+            self.send_event(ScanEvent::WalletUpdate(update))?;
+        }
+    }
+
+    /// Send a [`ScanEvent`] over the channel.
+    fn send_event(&self, event: ScanEvent) -> Result<(), ClientError> {
+        let guard = self.event_tx.lock().map_err(|_| ClientError::PoisonedLock)?;
+        if let Some(tx) = guard.as_ref() {
             let _ = tx.send(event);
         }
+        Ok(())
     }
 
     /// Wait for the [`Node`] to reach [`State::Operational`] before
@@ -250,21 +405,22 @@ impl Client {
 
         // Derive `external_index` + `custom_lookahead` spks from the external keychain
         let external_index = last_revealed_indices.get(&KeychainKind::External).copied().unwrap_or(0);
-        let ext_key_iter = keychain_index
+        let external_key_iter = keychain_index
             .unbounded_spk_iter(KeychainKind::External)
             .ok_or(ClientError::NoExternalKeychain)?;
         let bound = external_index.saturating_add(custom_lookahead) as usize;
         // Add the external spks to the spk store
-        spks.extend(ext_key_iter.take(bound).map(|(_, s)| s));
+        spks.extend(external_key_iter.take(bound).map(|(_, s)| s));
 
         // Derive `internal_index` + `custom_lookahead` spks from the internal keychain
         let internal_index = last_revealed_indices.get(&KeychainKind::Internal).copied().unwrap_or(0);
         // The internal keychain is optional
-        if let Some(int_key_iter) = keychain_index.unbounded_spk_iter(KeychainKind::Internal) {
+        if let Some(internal_key_iter) = keychain_index.unbounded_spk_iter(KeychainKind::Internal) {
             let bound = internal_index.saturating_add(custom_lookahead) as usize;
             // Add the internal spks to the spk store
-            spks.extend(int_key_iter.take(bound).map(|(_, s)| s));
+            spks.extend(internal_key_iter.take(bound).map(|(_, s)| s));
         }
+
         Ok(spks)
     }
 
@@ -363,7 +519,7 @@ impl Client {
             let update = self.finish_update();
 
             // Send the update to subscribers over the channel
-            self.send_event(ScanEvent::Update(update)).await;
+            self.send_event(ScanEvent::WalletUpdate(update))?;
         }
 
         // A checkpoint below the stop height means there are no
@@ -381,8 +537,7 @@ impl Client {
             // Finalize the update
             let update = self.finish_update();
 
-            // Send the update to subscribers over the channel
-            self.send_event(ScanEvent::Update(update)).await;
+            self.send_event(ScanEvent::WalletUpdate(update))?;
         }
 
         Ok(())
@@ -391,12 +546,10 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        // Cancel the client's token when the client is dropped
-        // This will trickle down to any child tokens derived by
-        // `Client::scan` invocations, aborting any ongoing scans
         self.cancellation_token.cancel();
-
-        // Abort the client's node shutdown watcher task
         self.shutdown_watcher.abort();
+        if let Ok(mut guard) = self.event_tx.lock() {
+            guard.take();
+        }
     }
 }

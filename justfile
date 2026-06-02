@@ -60,7 +60,7 @@ example-client-regtest:
 [doc: "Run the `client_signet` example"]
 example-client-signet:
     #rm -rf examples/data/client_signet
-    RBMT_LOG_LEVEL=progress cargo rbmt run --release --example client_signet
+    cargo run --release --example client_signet
 
 [doc: "Format code"]
 fmt:

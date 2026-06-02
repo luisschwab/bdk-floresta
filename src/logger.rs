@@ -61,7 +61,6 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::Layer;
 
 use crate::node::error::BuilderError;
 
@@ -310,7 +309,6 @@ impl Logger {
                 .with_writer(io::stdout)
                 .with_ansi(ansi_tty)
                 .event_format(ShortTargetFormatter::new(self.log_level))
-                .with_filter(make_filter())
         });
 
         // Formatter for events destined to file.
@@ -337,12 +335,12 @@ impl Logger {
                 Ok(layer()
                     .with_writer(non_blocking)
                     .with_ansi(false)
-                    .event_format(ShortTargetFormatter::new(self.log_level))
-                    .with_filter(make_filter()))
+                    .event_format(ShortTargetFormatter::new(self.log_level)))
             })
             .transpose()?;
 
         tracing_subscriber::registry()
+            .with(make_filter())
             .with(fmt_layer_stdout)
             .with(fmt_layer_logfile)
             .try_init()

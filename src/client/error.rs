@@ -37,6 +37,9 @@ pub enum ClientError {
     /// The associated [`Node`] is shutting down or inactive.
     UnresponsiveNode,
 
+    /// The lock is poisoned.
+    PoisonedLock,
+
     /// An error originating from the underlying [`Node`].
     Node(NodeError),
 }
@@ -50,6 +53,7 @@ impl fmt::Display for ClientError {
             Self::InvalidRange { start_height, stop_height } => write!(f, "Invalid scan range: start_height={start_height} > stop_height={stop_height}"),
             Self::NoExternalKeychain => write!(f, "The wallet has no external keychain"),
             Self::UnresponsiveNode => write!(f, "The node is unresponsive"),
+            Self::PoisonedLock => write!(f, "The event channel's lock is poisoned"),
             Self::Node(e) => write!(f, "Node Error: {e}"),
         }
     }
@@ -63,6 +67,7 @@ impl error::Error for ClientError {
             Self::InvalidRange { .. } => None,
             Self::NoExternalKeychain => None,
             Self::UnresponsiveNode => None,
+            Self::PoisonedLock => None,
             Self::Node(e) => Some(e),
         }
     }
