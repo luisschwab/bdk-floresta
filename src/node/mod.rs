@@ -5,6 +5,7 @@
 //! This module holds all the logic needed to interact with the [`Node`].
 
 use core::fmt;
+use core::net::IpAddr;
 use core::net::SocketAddr;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -13,6 +14,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use bitcoin::block::Header;
+use bitcoin::p2p::address::AddrV2;
 use bitcoin::Block;
 use bitcoin::BlockHash;
 use bitcoin::ScriptBuf;
@@ -30,9 +32,13 @@ use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
 use floresta_compact_filters::network_filters::NetworkFilters;
 #[allow(unused)]
 use floresta_wire::address_man::AddressMan;
+use floresta_wire::bitcoin_socket_addr::BitcoinSocketAddr;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
-use floresta_wire::node_interface::NodeInterface;
+use floresta_wire::node_handle::NodeHandle;
+use floresta_wire::node_interface::ChainMethods;
+use floresta_wire::node_interface::MempoolMethods;
+use floresta_wire::node_interface::NetworkMethods;
 use floresta_wire::node_interface::PeerInfo;
 use floresta_wire::rustreexo::stump::Stump;
 use futures::future;
@@ -120,7 +126,7 @@ pub struct Node {
     pub(crate) inner: Mutex<Option<NodeInner>>,
 
     /// A handle used to interact with the [`UtreexoNode`].
-    pub(crate) handle: NodeInterface,
+    pub(crate) handle: NodeHandle,
 
     /// The [`Node`]'s configuration settings.
     pub(crate) config: NodeConfig,
@@ -561,7 +567,7 @@ impl Node {
         self.track_action(&action);
         let result = self
             .handle
-            .add_peer(socket.ip(), socket.port(), self.config.allow_p2pv1_fallback)
+            .add_peer(to_bitcoin_socket_addr(socket), self.config.allow_p2pv1_fallback)
             .await
             .map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
@@ -577,7 +583,7 @@ impl Node {
         self.track_action(&action);
         let result = self
             .handle
-            .disconnect_peer(socket.ip(), socket.port())
+            .disconnect_peer(to_bitcoin_socket_addr(socket))
             .await
             .map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
@@ -594,7 +600,7 @@ impl Node {
         self.track_action(&action);
         let result = self
             .handle
-            .remove_peer(socket.ip(), socket.port())
+            .remove_peer(to_bitcoin_socket_addr(socket))
             .await
             .map_err(NodeError::UnresponsiveNode);
         self.untrack_action(&action);
@@ -611,4 +617,13 @@ impl Node {
 
         result
     }
+}
+
+/// Convert a [`SocketAddr`] into a [`BitcoinSocketAddr`].
+fn to_bitcoin_socket_addr(socket: &SocketAddr) -> BitcoinSocketAddr {
+    let address = match socket.ip() {
+        IpAddr::V4(ip) => AddrV2::Ipv4(ip),
+        IpAddr::V6(ip) => AddrV2::Ipv6(ip),
+    };
+    BitcoinSocketAddr::new(address, socket.port())
 }

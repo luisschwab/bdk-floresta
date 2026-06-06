@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
     let config = NodeConfig {
         network: NETWORK,
         datadir: PathBuf::from(DATA_DIR).join("bdk_floresta"),
-        fixed_peer: Some(SocketAddr::from_str(UTREEXO_BRIDGE)?),
+        fixed_peers: Some(vec![SocketAddr::from_str(UTREEXO_BRIDGE)?]),
         ..Default::default()
     };
 

@@ -1,13 +1,11 @@
 [advisories]
 ignore = [
     # Cargo-recent.lock
-    "RUSTSEC-2025-0134", # blame: floresta-wire@v0.5.0 -> ureq@v3.1.0 -> rustls-pemfile@v2.1.2
     "RUSTSEC-2026-0097", # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.5
 
     # Cargo-minimal.lock
     "RUSTSEC-2024-0421", # blame: floresta-wire@v0.5.0 -> ureq@v3.1.0 -> cookie_store@v0.22.0 -> url@v2.3.1 -> idna@v0.3.0
     "RUSTSEC-2025-0009", # blame: floresta-wire@v0.5.0 -> rustls@v0.23.40 -> ring@v0.17.0
-    "RUSTSEC-2026-0002", # blame: floresta-chain@v0.5.0 -> lru@v0.16.0
     "RUSTSEC-2026-0007", # blame: floresta-wire@v0.5.0 -> ureq@v3.1.0 -> ureq-proto@v0.5.0 -> http@v1.1.0 -> bytes@v1.5.0
     "RUSTSEC-2026-0009", # note: time@v0.3.46 requires MSRV >= 1.86.0
     "RUSTSEC-2024-0332", # blame: floresta-wire@v0.5.0 -> tonic@v0.14.5 -> hyper-timeout@v0.5.0 -> hyper@v1.6.0 -> h2@v0.4.2
