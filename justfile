@@ -55,7 +55,7 @@ doc-open:
 [doc: "Run the `client_regtest` example"]
 example-client-regtest:
     rm -rf examples/data/client_regtest
-    cargo run --release --example client_regtest
+    BLOCKS=25 cargo run --release --example client_regtest
 
 [doc: "Run the `client_signet` example"]
 example-client-signet:
@@ -72,7 +72,6 @@ lock:
 
 [doc: "Run tests with relevant toolchain and lockfile combinations"]
 test:
-    @just lock
     RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lock-file recent
     RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lock-file minimal
     RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain msrv --lock-file minimal

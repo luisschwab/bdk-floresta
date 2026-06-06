@@ -26,7 +26,7 @@ use floresta_wire::address_man::AddressMan;
 use floresta_wire::address_man::ReachableNetworks;
 use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
-use floresta_wire::node_interface::NodeInterface;
+use floresta_wire::node_handle::NodeHandle;
 use floresta_wire::UtreexoNodeConfig;
 use tokio::sync::watch;
 use tokio::sync::Mutex;
@@ -71,8 +71,8 @@ pub struct NodeConfig {
     /// The user agent that will be sent to peers in the `version` message.
     pub user_agent: String,
 
-    /// Connect to a single, pre-defined peer. If set, no other P2P connections will be made.
-    pub fixed_peer: Option<SocketAddr>,
+    /// Connect to a pre-defined set of peers. If set, no other P2P connections will be made.
+    pub fixed_peers: Option<Vec<SocketAddr>>,
 
     /// The maximum banscore a peer can reach before he is banned.
     pub max_banscore: u32,
@@ -112,7 +112,7 @@ impl Default for NodeConfig {
             assume_utreexo: true,
             perform_backfill: false,
             user_agent: env!("USER_AGENT").to_string(),
-            fixed_peer: None,
+            fixed_peers: None,
             max_banscore: 100,
             socks5_proxy: None,
             disable_dns_seeds: false,
@@ -135,7 +135,12 @@ impl From<NodeConfig> for UtreexoNodeConfig {
             network: value.network,
             pow_fraud_proofs: value.enable_powfps,
             compact_filters: true,
-            fixed_peer: value.fixed_peer.map(|addr| addr.to_string()),
+            fixed_peers: value
+                .fixed_peers
+                .into_iter()
+                .flatten()
+                .map(|addr| addr.to_string())
+                .collect(),
             max_banscore: value.max_banscore,
             datadir: value.datadir,
             proxy: value.socks5_proxy,
@@ -235,7 +240,7 @@ impl Builder {
         .map_err(BuilderError::BuildInner)?;
 
         // Get a handle to interact with the node
-        let handle: NodeInterface = inner.get_handle();
+        let handle: NodeHandle = inner.get_handle();
 
         Ok(Node {
             inner: Mutex::new(Some(inner)),

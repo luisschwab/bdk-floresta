@@ -104,7 +104,7 @@ async fn main() -> anyhow::Result<()> {
     let config = NodeConfig {
         network: NETWORK,
         datadir: PathBuf::from(DATA_DIR).join("bdk_floresta"),
-        fixed_peer: Some(utreexod.get_p2p_socket()),
+        fixed_peers: Some(vec![utreexod.get_p2p_socket()]),
         ..Default::default()
     };
     let node = Builder { config, logger: None }.build()?;
