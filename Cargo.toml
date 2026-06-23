@@ -47,7 +47,7 @@ dns-lookup = { version = "=2.1.1" } # blame: floresta-wire 55c563
 bitcoin-consensus-encoding = { version = "=1.0.0-rc.3" } # blame: bitcoin-io v0.3.0 (Encodable->Encode/Decodable->Decode)
 
 [dev-dependencies]
-halfin = { version = "=0.3.7" }
+halfin = { version = "=0.4.0" }
 anyhow = { version = "=1.0.102" }
 tokio = { version = "=1.52.3", features = ["macros", "rt-multi-thread"] }
 
