@@ -13,11 +13,12 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-    audit:
+    cargo-audit:
         name: Cargo Audit - ${{ matrix.name }}
         runs-on: ubuntu-latest
         permissions:
             contents: read
+            checks: write
             issues: write
         strategy:
             fail-fast: false
@@ -47,7 +48,8 @@ jobs:
               if: ${{ matrix.lockfile != 'Cargo.lock' }}
               run: cp ${{ matrix.lockfile }} Cargo.lock
 
-            - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+            - name: Audit Rust Dependencies
+              uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
