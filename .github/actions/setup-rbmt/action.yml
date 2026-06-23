@@ -1,19 +1,13 @@
 name: Setup cargo-rbmt
-description: Install cargo-rbmt
-
-inputs:
-    rbmt-version:
-        description:
-            "Which version of `cargo-rbmt` to install (e.g.: 0.3.0, v0.3.0, cargo-rbmt-0.3.0 or cargo-rbmt-v0.3.0).
-            If not provided, reads from `rbmt-version` in the repository root."
-        required: false
+description: Install cargo-rbmt from crates.io
 
 runs:
     using: "composite"
+
     steps:
         - name: Install cargo-rbmt
           shell: bash
-          run: bash contrib/install-cargo-rbmt.sh
+          run: cargo install cargo-rbmt --version "$(cat rbmt-version)" --locked
 
         - name: Install Rust Toolchains
           shell: bash
