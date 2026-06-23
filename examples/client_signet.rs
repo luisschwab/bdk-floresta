@@ -26,9 +26,7 @@
 //! [`Node`]: bdk_floresta::node::Node
 
 use std::env;
-use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use bdk_floresta::builder::Builder;
@@ -46,8 +44,6 @@ use tracing::error;
 use tracing::info;
 use tracing::warn;
 use tracing::Level;
-
-const UTREEXO_BRIDGE: &str = "utreexod.signet.lab.vinteum.org";
 
 const NETWORK: Network = Network::Signet;
 const DATA_DIR: &str = "./examples/data/client_signet/";
@@ -69,7 +65,6 @@ async fn main() -> anyhow::Result<()> {
     let config = NodeConfig {
         network: NETWORK,
         datadir: PathBuf::from(DATA_DIR).join("bdk_floresta"),
-        fixed_peers: Some(vec![SocketAddr::from_str(UTREEXO_BRIDGE)?]),
         ..Default::default()
     };
 
