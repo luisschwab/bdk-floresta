@@ -61,6 +61,10 @@ use_self = "deny"
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.rbmt.toolchains]
+stable = "1.96.0"
+nightly = "nightly-2026-06-23"
+
 # Allow packages of different versions in the dependency tree
 [package.metadata.rbmt.lint]
 allowed_duplicates = [
@@ -75,7 +79,6 @@ allowed_duplicates = [
     "rand",                       # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 (v0.8) vs floresta-wire@v0.5.0 -> rand@v0.9.4 (v0.9)
     "rand_core",                  # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_core@v0.6.4 (v0.6) vs floresta-wire@v0.5.0 -> rand@v0.9.4 -> rand_core@v0.9.5 (v0.9)
     "rand_chacha",                # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_chacha@v0.3.1 (v0.3) vs floresta-wire@v0.5.0 -> rand@v0.9.4 -> rand_chacha@v0.9.0 (v0.9)
-    "serde_core",
     "windows-sys",                # blame: floresta-wire@v0.5.0 -> ring@v0.17.14 (v0.52), dns-lookup@v2.1.1 (v0.60), tokio@v1.52.3 (v0.61)
     "windows-targets",            # blame: cascades from windows-sys versions above
     "windows_aarch64_gnullvm",    # blame: cascades from windows-targets versions above
@@ -87,7 +90,3 @@ allowed_duplicates = [
     "windows_x86_64_gnullvm",     # blame: cascades from windows-targets versions above
     "windows_x86_64_msvc",        # blame: cascades from windows-targets versions above
 ]
-
-[package.metadata.rbmt.toolchains]
-stable = "1.95.0"
-nightly = "nightly-2026-05-17"

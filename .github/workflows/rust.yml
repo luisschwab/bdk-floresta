@@ -71,4 +71,4 @@ jobs:
               uses: ./.github/actions/setup-rbmt
 
             - name: Run Tests
-              run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lock-file ${{ matrix.lockfile }}
+              run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lockfile ${{ matrix.lockfile }}
