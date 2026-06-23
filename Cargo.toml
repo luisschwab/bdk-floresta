@@ -29,10 +29,11 @@ toml = { version = "=1.1.2" }
 [dependencies]
 bitcoin = { version = "=0.32.8" }
 bdk_wallet = { version = "=3.0.0" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "3c038fac86d85777148a20944f77dfe17c2d9518", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "3c038fac86d85777148a20944f77dfe17c2d9518" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "3c038fac86d85777148a20944f77dfe17c2d9518" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "3c038fac86d85777148a20944f77dfe17c2d9518" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97", features = ["flat-chainstore"] }
+floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
 futures = { version = "=0.3.32" }
 tokio = { version = "=1.52.3", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "=0.1.44" }
