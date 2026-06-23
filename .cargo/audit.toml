@@ -13,4 +13,5 @@ ignore = [
     "RUSTSEC-2026-0007", # blame: floresta-wire@v0.5.0 -> ureq@v3.1.0 -> ureq-proto@v0.5.0 -> http@v1.1.0 -> bytes@v1.5.0
     "RUSTSEC-2026-0009", # note: time@v0.3.46 requires MSRV >= 1.86.0
     "RUSTSEC-2024-0332", # blame: floresta-wire@v0.5.0 -> tonic@v0.14.5 -> hyper-timeout@v0.5.0 -> hyper@v1.6.0 -> h2@v0.4.2
+    "RUSTSEC-2026-0012", # blame: floresta-wire@v0.5.0 -> sha3@v0.10.7 -> keccak@v0.1.3
 ]

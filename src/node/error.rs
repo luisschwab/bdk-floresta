@@ -97,7 +97,7 @@ pub enum NodeError {
     Blockchain(floresta_chain::BlockchainError),
 
     /// Mempool related errors.
-    Mempool(floresta_mempool::mempool::MempoolError),
+    Mempool(floresta_domain::mempool::error::MempoolError),
 
     /// Failed to fetch all of the requested blocks.
     MissingBlock(bitcoin::BlockHash),
