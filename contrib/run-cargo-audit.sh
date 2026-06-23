@@ -8,7 +8,7 @@
 # Vulnerabilities and warnings which do not stem from direct
 # dependencies show the full dependency tree for the affected package.
 
-set -uo pipefail
+set -euo pipefail
 
 # Check if `cargo-audit`, `cargo-rbmt`, `jq`, and `python3` are installed
 command -v cargo-audit >/dev/null 2>&1 || { echo "cargo-audit was not found on \$PATH"; exit 1; }
@@ -17,6 +17,7 @@ command -v jq >/dev/null 2>&1 || { echo "jq was not found on \$PATH"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "python3 was not found on \$PATH"; exit 1; }
 
 WARNING_COUNTER=0
+WARNING_FAILURE_COUNTER=0
 VULNERABILITY_COUNTER=0
 
 LOCKFILES=("Cargo.lock" "Cargo-recent.lock" "Cargo-minimal.lock")
@@ -141,10 +142,17 @@ format_findings() {
         local package_name
         local package_version
         local title
-        advisory_id=$(echo "$finding" | jq -r '.advisory.id')
+        advisory_id=$(echo "$finding" | jq -r '.advisory.id // (.kind | ascii_upcase) // "UNKNOWN"')
         package_name=$(echo "$finding" | jq -r '.package.name')
         package_version=$(echo "$finding" | jq -r '.package.version')
-        title=$(echo "$finding" | jq -r '.advisory.title')
+        title=$(echo "$finding" | jq -r '
+            .advisory.title //
+            if .kind == "yanked" then
+                "crate version was yanked"
+            else
+                "non-advisory cargo-audit warning"
+            end
+        ')
 
         local branch
         local branch_transitive
@@ -170,6 +178,8 @@ format_findings() {
 
         [ "$index" -lt $((total - 1)) ] && echo "${indent}│"
     done
+
+    return 0
 }
 
 # Copy the given lockfile to `Cargo.lock`, run `cargo audit`,
@@ -183,6 +193,10 @@ process_lockfile() {
 
     local audit_output
     audit_output=$(cargo audit --json 2>/dev/null) || true
+    if [ -z "$audit_output" ] || ! jq -e . >/dev/null <<< "$audit_output"; then
+        echo "cargo audit failed for $lockfile" >&2
+        exit 1
+    fi
 
     local vulnerabilities
     vulnerabilities=$(echo "$audit_output" | jq '.vulnerabilities.count // 0')
@@ -190,7 +204,11 @@ process_lockfile() {
     local warnings
     warnings=$(echo "$audit_output" | jq '[.warnings | to_entries[] | .value | length] | add // 0')
 
+    local warning_failures
+    warning_failures=$(echo "$audit_output" | jq '[.warnings | to_entries[] | .value[] | select(.kind != "yanked")] | length')
+
     WARNING_COUNTER=$((WARNING_COUNTER + warnings))
+    WARNING_FAILURE_COUNTER=$((WARNING_FAILURE_COUNTER + warning_failures))
     VULNERABILITY_COUNTER=$((VULNERABILITY_COUNTER + vulnerabilities))
 
     WARNING_COUNT[$lockfile]=$warnings
@@ -250,7 +268,7 @@ process_lockfile "Cargo-minimal.lock"
 
 echo ""
 
-if [ "$WARNING_COUNTER" -gt 0 ] || [ "$VULNERABILITY_COUNTER" -gt 0 ]; then
+if [ "$WARNING_FAILURE_COUNTER" -gt 0 ] || [ "$VULNERABILITY_COUNTER" -gt 0 ]; then
     echo "> Audit Status: FAILED"
 else
     echo "> Audit Status: SUCCESS"
@@ -282,6 +300,6 @@ for ((i=0; i<lockfile_total; i++)); do
     fi
 done
 
-if [ "$WARNING_COUNTER" -gt 0 ] || [ "$VULNERABILITY_COUNTER" -gt 0 ]; then
+if [ "$WARNING_FAILURE_COUNTER" -gt 0 ] || [ "$VULNERABILITY_COUNTER" -gt 0 ]; then
     exit 1
 fi
