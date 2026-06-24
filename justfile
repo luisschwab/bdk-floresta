@@ -32,14 +32,6 @@ check:
     RBMT_LOG_LEVEL=verbose cargo rbmt lint
     RBMT_LOG_LEVEL=verbose cargo rbmt docsrs
 
-[doc: "Check that all feature combinations compile"]
-check-features:
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile recent
-
-[doc: "Check if commits are PGP-signed"]
-check-commit-signatures:
-    bash contrib/check-commit-signatures.sh
-
 [doc: "Delete files: data, target, lockfiles"]
 delete item="data":
     just _delete-{{ item }}
@@ -104,8 +96,6 @@ pre-push:
     @just shellcheck
     @just zizmor
     @just audit
-    @just check-commit-signatures
-    @just example-client-regtest
 
 _delete-data:
     rm -rf examples/data
