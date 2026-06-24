@@ -7,6 +7,7 @@
     <a href="https://github.com/luisschwab/bdk-floresta/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-red.svg"/></a>
     <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml/badge.svg"></a>
     <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/integration.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/integration.yml/badge.svg"></a>
+    <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/cross.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/cross.yml/badge.svg"></a>
 </p>
 
 A Floresta-powered chain-source crate for BDK.

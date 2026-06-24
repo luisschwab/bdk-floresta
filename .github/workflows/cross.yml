@@ -1,0 +1,56 @@
+name: Cross-Testing
+
+on:
+    push:
+        branches: [ master ]
+    pull_request:
+    workflow_dispatch:
+
+permissions: {}
+env:
+    CARGO_TERM_COLOR: always
+    RUST_BACKTRACE: 1
+
+jobs:
+    cross:
+        name: ${{ matrix.os }} + ${{ matrix.arch }}
+        runs-on: ${{ matrix.runner }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - runner: macos-latest
+                      target: aarch64-apple-darwin
+                      os: MacOS
+                      arch: Apple Silicon (ARM64)
+
+                    - runner: ubuntu-latest
+                      target: x86_64-unknown-linux-gnu
+                      os: Linux
+                      arch: x86_64
+
+                    - runner: ubuntu-24.04-arm
+                      target: aarch64-unknown-linux-gnu
+                      os: Linux
+                      arch: ARM64
+
+                    - runner: windows-2022
+                      target: x86_64-pc-windows-msvc
+                      os: Windows
+                      arch: x86_64
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+              with:
+                  persist-credentials: false
+
+            - name: Setup Rust Cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+            - name: Setup cargo-rbmt
+              uses: ./.github/actions/setup-rbmt
+
+            - name: Run Tests
+              shell: bash
+              run: cargo rbmt test
