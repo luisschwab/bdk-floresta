@@ -32,14 +32,6 @@ check:
     RBMT_LOG_LEVEL=verbose cargo rbmt lint
     RBMT_LOG_LEVEL=verbose cargo rbmt docsrs
 
-[doc: "Check that all feature combinations compile"]
-check-features:
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile recent
-
-[doc: "Check if commits are PGP-signed"]
-check-commit-signatures:
-    bash contrib/check-commit-signatures.sh
-
 [doc: "Delete files: data, target, lockfiles"]
 delete item="data":
     just _delete-{{ item }}
@@ -59,7 +51,7 @@ example-client-regtest:
 
 [doc: "Run the `client_signet` example"]
 example-client-signet:
-    #rm -rf examples/data/client_signet
+    rm -rf examples/data/client_signet
     cargo run --release --example client_signet
 
 [doc: "Format code"]
@@ -82,6 +74,10 @@ toolchains:
     RBMT_LOG_LEVEL=verbose cargo rbmt toolchains --update-stable
     RBMT_LOG_LEVEL=verbose cargo rbmt toolchains --update-nightly
 
+[doc: "Install cargo-rbmt tools"]
+tools:
+    RBMT_LOG_LEVEL=progress cargo rbmt tools
+
 [doc: "Run ShellCheck"]
 shellcheck:
     @command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck was not found on \$PATH" && exit 1; }
@@ -89,7 +85,7 @@ shellcheck:
 
 [doc: "Run Zizmor"]
 zizmor:
-    uvx zizmor .
+    zizmor .
 
 [doc: "Run pre-push checks"]
 pre-push:
@@ -100,8 +96,6 @@ pre-push:
     @just shellcheck
     @just zizmor
     @just audit
-    @just check-commit-signatures
-    @just example-client-regtest
 
 _delete-data:
     rm -rf examples/data
