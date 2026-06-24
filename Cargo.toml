@@ -61,6 +61,13 @@ use_self = "deny"
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.rbmt.test]
+sample_strategy = "all"
+
+[package.metadata.rbmt.tools]
+cargo-audit = "=0.22.2"
+zizmor = "=1.26.1"
+
 [package.metadata.rbmt.toolchains]
 stable = "1.96.0"
 nightly = "nightly-2026-06-23"
