@@ -40,10 +40,10 @@ use bdk_wallet::Wallet;
 use bdk_wallet::WalletEvent;
 use bitcoin::Network;
 use tokio::sync::RwLock;
+use tracing::Level;
 use tracing::error;
 use tracing::info;
 use tracing::warn;
-use tracing::Level;
 
 const NETWORK: Network = Network::Signet;
 const DATA_DIR: &str = "./examples/data/client_signet/";
@@ -53,7 +53,9 @@ const DESC_INT: &str = "wpkh([9cee26c8/84h/1h/0h]tpubDDuCfGKBYo4pQjNcpVkdLktdYm9
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    env::set_var("RUST_LOG", "client_signet=info");
+    unsafe {
+        env::set_var("RUST_LOG", "client_signet=info");
+    }
 
     let _logger = Logger {
         log_level: Level::INFO,

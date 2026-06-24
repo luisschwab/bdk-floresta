@@ -7,40 +7,32 @@
 use core::error;
 use core::fmt;
 
-#[allow(unused)]
-use bdk_wallet::KeychainKind;
-#[allow(unused)]
-use bdk_wallet::Wallet;
 use bitcoin::Network;
 
-#[allow(unused)]
-use crate::client::Client;
 use crate::node::error::NodeError;
-#[allow(unused)]
-use crate::node::Node;
 
-/// Errors that can occur when interacting with a [`Client`].
+/// Errors that can occur when interacting with a [`Client`](crate::client::Client).
 #[derive(Debug)]
 pub enum ClientError {
-    /// The [`Node`] and the [`Wallet`] are not on the same network.
+    /// The [`Node`](crate::node::Node) and the [`Wallet`](bdk_wallet::Wallet) are not on the same network.
     NetworkMismatch { node_net: Network, wallet_net: Network },
 
-    /// The scan has been aborted by the caller, or the [`Node`] was [`Drop`]ed.
+    /// The scan has been aborted by the caller, or the [`Node`](crate::node::Node) was [`Drop`]ed.
     ScanAborted,
 
     /// The start height is greater than the stop height.
     InvalidRange { start_height: u32, stop_height: u32 },
 
-    /// The [`Wallet`] has no [external keychain](KeychainKind::External).
+    /// The [`Wallet`] has no [external keychain](bdk_wallet::KeychainKind::External).
     NoExternalKeychain,
 
-    /// The associated [`Node`] is shutting down or inactive.
+    /// The associated [`Node`](crate::node::Node) is shutting down or inactive.
     UnresponsiveNode,
 
     /// The lock is poisoned.
     PoisonedLock,
 
-    /// An error originating from the underlying [`Node`].
+    /// An error originating from the underlying [`Node`](crate::node::Node).
     Node(NodeError),
 }
 

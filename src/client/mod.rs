@@ -10,31 +10,31 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use bdk_wallet::chain::keychain_txout::KeychainTxOutIndex;
+use bdk_wallet::KeychainKind;
+use bdk_wallet::Update;
+use bdk_wallet::Wallet;
 use bdk_wallet::chain::BlockId;
 use bdk_wallet::chain::CheckPoint;
 use bdk_wallet::chain::ConfirmationBlockTime;
 use bdk_wallet::chain::IndexedTxGraph;
 use bdk_wallet::chain::Merge;
 use bdk_wallet::chain::TxUpdate;
-use bdk_wallet::KeychainKind;
-use bdk_wallet::Update;
-use bdk_wallet::Wallet;
+use bdk_wallet::chain::keychain_txout::KeychainTxOutIndex;
 use bitcoin::Block;
 use bitcoin::OutPoint;
 use bitcoin::ScriptBuf;
 use floresta_chain::BlockConsumer;
 use floresta_chain::UtxoData;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::Mutex as AsyncMutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use crate::client::error::ClientError;
-use crate::node::fsm::State;
 use crate::node::Node;
+use crate::node::fsm::State;
 
 pub mod error;
 

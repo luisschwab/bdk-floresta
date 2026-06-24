@@ -13,28 +13,28 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
 
-use bitcoin::block::Header;
-use bitcoin::p2p::address::AddrV2;
 use bitcoin::Block;
 use bitcoin::BlockHash;
 use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
 use bitcoin::Txid;
+use bitcoin::block::Header;
+use bitcoin::p2p::address::AddrV2;
 use builder::Builder;
 use builder::NodeConfig;
 use error::NodeError;
-use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
-use floresta_chain::pruned_utreexo::BlockchainInterface;
-use floresta_chain::pruned_utreexo::UpdatableChainstate;
 use floresta_chain::BlockConsumer;
 use floresta_chain::ChainState;
+use floresta_chain::pruned_utreexo::BlockchainInterface;
+use floresta_chain::pruned_utreexo::UpdatableChainstate;
+use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
 use floresta_compact_filters::network_filters::NetworkFilters;
 #[allow(unused)]
 use floresta_wire::address_man::AddressMan;
 use floresta_wire::bitcoin_socket_addr::BitcoinSocketAddr;
-use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
+use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node_handle::NodeHandle;
 use floresta_wire::node_interface::ChainMethods;
 use floresta_wire::node_interface::MempoolMethods;
@@ -42,10 +42,10 @@ use floresta_wire::node_interface::NetworkMethods;
 use floresta_wire::node_interface::PeerInfo;
 use floresta_wire::rustreexo::stump::Stump;
 use futures::future;
-use tokio::sync::oneshot;
-use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
+use tokio::sync::oneshot;
+use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
@@ -54,8 +54,8 @@ use tracing::warn;
 #[cfg(feature = "logger")]
 use tracing_appender::non_blocking::WorkerGuard;
 
-use crate::node::fsm::compute_next_state;
 use crate::node::fsm::State;
+use crate::node::fsm::compute_next_state;
 
 pub mod builder;
 pub mod error;

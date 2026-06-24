@@ -50,17 +50,17 @@ use std::path::PathBuf;
 use time::format_description::BorrowedFormatItem;
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::FmtContext;
+use tracing_subscriber::fmt::FormatEvent;
+use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::fmt::time::FormatTime;
 use tracing_subscriber::fmt::time::OffsetTime;
-use tracing_subscriber::fmt::FmtContext;
-use tracing_subscriber::fmt::FormatEvent;
-use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
 
 use crate::node::error::BuilderError;
 

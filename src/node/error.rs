@@ -15,13 +15,13 @@ use bitcoin::ScriptBuf;
 #[allow(unused)]
 use crate::logger::Logger;
 #[allow(unused)]
-use crate::node::fsm::State;
-#[allow(unused)]
 use crate::node::Action;
 #[allow(unused)]
 use crate::node::Builder;
 #[allow(unused)]
 use crate::node::Node;
+#[allow(unused)]
+use crate::node::fsm::State;
 
 /// Errors which might occur when building the [`Node`] or [`Logger`].
 #[derive(Debug)]
