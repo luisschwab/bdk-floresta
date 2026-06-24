@@ -2,34 +2,23 @@
 
 //! # Builder and Node Errors
 //!
-//! Error types related to the [`Builder`] and [`Node`] types.
+//! Error types related to the [`Builder`](crate::node::builder::Builder) and [`Node`](crate::node::Node) types.
 
 use core::error;
 use core::fmt;
 use std::io;
 
-#[allow(unused)]
-use bitcoin::ScriptBuf;
-
-#[cfg(feature = "logger")]
-#[allow(unused)]
-use crate::logger::Logger;
-#[allow(unused)]
 use crate::node::Action;
-#[allow(unused)]
-use crate::node::Builder;
-#[allow(unused)]
-use crate::node::Node;
-#[allow(unused)]
 use crate::node::fsm::State;
 
-/// Errors which might occur when building the [`Node`] or [`Logger`].
+/// Errors which might occur when building the [`Node`](crate::node::Node) or
+/// [`Logger`](crate::logger::Logger).
 #[derive(Debug)]
 pub enum BuilderError {
     /// Failed to create the data directory.
     CreateDirectory(io::Error),
 
-    /// Failed to create a ChainState.
+    /// Failed to create a `ChainState`.
     ChainState(floresta_chain::BlockchainError),
 
     /// Failed to load or create a new chain store.
@@ -78,19 +67,19 @@ impl error::Error for BuilderError {
     }
 }
 
-/// Errors that can occur whilst interacting with the [`Node`].
+/// Errors that can occur whilst interacting with the [`Node`](crate::node::Node).
 #[derive(Debug)]
 pub enum NodeError {
-    /// The [`Node`] is not running.
+    /// The [`Node`](crate::node::Node) is not running.
     NotRunning,
 
-    /// The [`Node`] is already running.
+    /// The [`Node`](crate::node::Node) is already running.
     AlreadyRunning,
 
-    /// The [`Node`] failed to perform a clean shutdown.
+    /// The [`Node`](crate::node::Node) failed to perform a clean shutdown.
     DirtyShutdown(io::Error),
 
-    /// The [`Node`]'s sender dropped without sending.
+    /// The [`Node`](crate::node::Node)'s sender dropped without sending.
     UnresponsiveNode(tokio::sync::oneshot::error::RecvError),
 
     /// Blockchain related errors.
@@ -102,17 +91,27 @@ pub enum NodeError {
     /// Failed to fetch all of the requested blocks.
     MissingBlock(bitcoin::BlockHash),
 
-    /// The requested [`Action`] cannot be performed in the [`Node`]'s current [`State`].
-    IllegalAction { state: State, attempted: Action },
+    /// The requested [`Action`] cannot be performed in the [`Node`](crate::node::Node)'s current [`State`].
+    IllegalAction {
+        /// The current [`Node`](crate::node::Node) state.
+        state: State,
+        /// The attempted [`Action`] that was attempted.
+        attempted: Action,
+    },
 
-    /// No [script pubkeys](ScriptBuf) were provided.
+    /// No [script pubkeys](bitcoin::ScriptBuf) were provided.
     NoSpksProvided,
 
     /// Compact Block Filter related errors.
     CompactBlockFilter(floresta_compact_filters::IterableFilterStoreError),
 
     /// The requested `stop_height` exceeds the Compact Block Filter store's height.
-    StopHeightExceedsFilterTip { requested: u32, available: u32 },
+    StopHeightExceedsFilterTip {
+        /// The requested stop height.
+        requested: u32,
+        /// The available compact block filter height.
+        available: u32,
+    },
 }
 
 #[rustfmt::skip]

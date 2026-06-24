@@ -20,7 +20,6 @@ use bitcoin::Transaction;
 use bitcoin::Txid;
 use bitcoin::block::Header;
 use bitcoin::p2p::address::AddrV2;
-use builder::Builder;
 use builder::NodeConfig;
 use error::NodeError;
 use floresta_chain::BlockConsumer;
@@ -30,8 +29,6 @@ use floresta_chain::pruned_utreexo::UpdatableChainstate;
 use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
 use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
 use floresta_compact_filters::network_filters::NetworkFilters;
-#[allow(unused)]
-use floresta_wire::address_man::AddressMan;
 use floresta_wire::bitcoin_socket_addr::BitcoinSocketAddr;
 use floresta_wire::node::UtreexoNode;
 use floresta_wire::node::running_ctx::RunningNode;
@@ -79,7 +76,8 @@ pub enum Action {
     /// The [`Node`] is disconnecting from a peer.
     DisconnectingFromPeer(SocketAddr),
 
-    /// The [`Node`] is removing a peer from its [address manager](AddressMan).
+    /// The [`Node`] is removing a peer from its
+    /// [address manager](floresta_wire::address_man::AddressMan).
     RemovingPeer(SocketAddr),
 
     /// The [`Node`] is pinging all of its peers.
@@ -178,7 +176,7 @@ impl Node {
     /// Await the [`JoinHandle`] task for a timeout.
     async fn join_with_timeout(task: JoinHandle<()>, timeout: Duration) {
         match tokio::time::timeout(timeout, task).await {
-            Ok(Ok(_)) => {}
+            Ok(Ok(())) => {}
             Ok(Err(e)) => error!("Node task failed during shutdown: {e:?}"),
             Err(_) => warn!("Node task join timed out after {} seconds", timeout.as_secs()),
         }
@@ -207,6 +205,10 @@ impl Node {
     /// - A task that polls chain/filter state and updates the [`Node`]'s [`State`].
     /// - A task for the shutdown handler, which reacts to a [`Node::shutdown`] call or a `SIGINT` signal, and performs
     ///   the graceful shutdown routine.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the node is already running.
     pub async fn run(&self) -> Result<(), NodeError> {
         // `take()` the inner node to make sure `Node::run()` can only be called once
         let inner_node = self.inner.lock().await.take().ok_or(NodeError::AlreadyRunning)?;
@@ -232,17 +234,15 @@ impl Node {
         let state_update_task = tokio::task::spawn(async move {
             loop {
                 tokio::select! {
-                    _ = cancellation_token.cancelled() => break,
+                    () = cancellation_token.cancelled() => break,
                     // Sleep for `STATUS_UPDATE_POLL_PERIOD` between polls
-                    _ = tokio::time::sleep(STATUS_UPDATE_POLL_PERIOD) => {
+                    () = tokio::time::sleep(STATUS_UPDATE_POLL_PERIOD) => {
                         // Check if the inner node is ready to receive requests
                         //
                         // This is a best-effort way to detect if it's ready
                         // To implement this with 100% certainty, FSM logic
                         // would need to be upstreamed to `floresta-wire`
-                        let wire_ready = node_handle.get_peer_info().await
-                            .map(|peers| !peers.is_empty())
-                            .unwrap_or(false);
+                        let wire_ready = node_handle.get_peer_info().await.is_ok_and(|peers| !peers.is_empty());
 
                         // Get the chain's tip
                         let chain_tip = match chain_state.get_best_block() {
@@ -277,11 +277,11 @@ impl Node {
                                 return false;
                             }
                             let next_state = compute_next_state(wire_ready, current_state, node_tip, chain_tip, filter_tip);
-                            if *current_state != next_state {
+                            if *current_state == next_state {
+                                false
+                            } else {
                                 *current_state = next_state;
                                 true
-                            } else {
-                                false
                             }
                         });
                     }
@@ -297,8 +297,13 @@ impl Node {
 
         let shutdown_task = tokio::task::spawn(async move {
             let reason = tokio::select! {
-                _ = tokio::signal::ctrl_c() => "SIGINT",
-                _ = cancellation_token.cancelled() => "SHUTDOWN request"
+                result = tokio::signal::ctrl_c() => {
+                    if let Err(e) = result {
+                        error!("Failed to listen for SIGINT: {e}");
+                    }
+                    "SIGINT"
+                },
+                () = cancellation_token.cancelled() => "SHUTDOWN request"
             };
             info!("Received {}, shutting the node down...", reason);
 
@@ -335,11 +340,19 @@ impl Node {
     ///
     /// This is triggered automatically during shutdown,
     /// but can also be invoked while the [`Node`] is running.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if flushing the chain state fails.
     pub fn flush(&self) -> Result<(), NodeError> {
         self.chain_state.flush().map_err(NodeError::Blockchain)
     }
 
     /// Programatically request the [node](`Node`) to shutdown.
+    ///
+    /// # Errors
+    ///
+    /// This method currently does not return an error.
     pub async fn shutdown(&self) -> Result<(), NodeError> {
         self.cancellation_token.cancel();
         if let Some(task) = self.shutdown_task.lock().await.take() {
@@ -360,8 +373,15 @@ impl Node {
     // ----> LOCAL METHODS
 
     /// How [long](Duration) the [`Node`] has been running.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`NodeError::NotRunning`] if the [`Node`] has not been started.
     pub fn uptime(&self) -> Result<Duration, NodeError> {
-        self.started_at.get().map(|t| t.elapsed()).ok_or(NodeError::NotRunning)
+        self.started_at
+            .get()
+            .map(std::time::Instant::elapsed)
+            .ok_or(NodeError::NotRunning)
     }
 
     /// Subscribe to [`State`] transitions.
@@ -401,16 +421,28 @@ impl Node {
     }
 
     /// Get the [`Node`]'s header height.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the chain state cannot report its header height.
     pub fn get_chain_height(&self) -> Result<u32, NodeError> {
         self.chain_state.get_height().map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Node`]'s validation height.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the chain state cannot report its validation height.
     pub fn get_node_height(&self) -> Result<u32, NodeError> {
         self.chain_state.get_validation_index().map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Node`]'s [`NetworkFilters`] height.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the compact block filter store cannot report its height.
     pub fn get_filter_height(&self) -> Result<u32, NodeError> {
         self.block_filters.get_height().map_err(NodeError::CompactBlockFilter)
     }
@@ -421,6 +453,10 @@ impl Node {
     }
 
     /// Get the height of a [`Block`] given its [`BlockHash`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the block is missing or the chain state lookup fails.
     pub fn get_block_height(&self, hash: &BlockHash) -> Result<u32, NodeError> {
         self.chain_state
             .get_block_height(hash)
@@ -429,16 +465,28 @@ impl Node {
     }
 
     /// Get the [`BlockHash`] of a [`Block`] at a given height.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the chain state cannot find a block hash for the height.
     pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, NodeError> {
         self.chain_state.get_block_hash(height).map_err(NodeError::Blockchain)
     }
 
     /// Get the [`Header`] of a [`Block`], given its [`BlockHash`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the chain state cannot find a header for the hash.
     pub fn get_block_header(&self, hash: &BlockHash) -> Result<Header, NodeError> {
         self.chain_state.get_block_header(hash).map_err(NodeError::Blockchain)
     }
 
     /// Get information about peers the [`Node`] is currently connected to.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the inner node does not respond.
     pub async fn get_peer_info(&self) -> Result<Vec<PeerInfo>, NodeError> {
         self.handle.get_peer_info().await.map_err(NodeError::UnresponsiveNode)
     }
@@ -454,9 +502,14 @@ impl Node {
     /// to a given set of [`ScriptBuf`].
     ///
     /// Returns an error if the Compact Block Filters are not yet downloaded.
-    pub async fn match_filters(
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the node is not operational, the requested range
+    /// exceeds the filter tip, or filter matching fails.
+    pub fn match_filters(
         &self,
-        spks: Vec<ScriptBuf>,
+        spks: &[ScriptBuf],
         start_height: u32,
         stop_height: u32,
     ) -> Result<Vec<BlockHash>, NodeError> {
@@ -500,6 +553,10 @@ impl Node {
     ///
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, it must be requested over the wire from a peer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the peer request fails or the block is unavailable.
     pub async fn fetch_block(&self, hash: BlockHash) -> Result<Block, NodeError> {
         let action = Action::FetchingBlock(hash);
         self.track_action(&action);
@@ -520,6 +577,10 @@ impl Node {
     ///
     /// Since [`floresta-chain`](floresta_chain) does not persist any
     /// [`Block`]s, they must be requested over the wire from a peer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any peer request fails or any block is unavailable.
     pub async fn fetch_blocks(&self, hashes: &[BlockHash]) -> Result<Vec<Block>, NodeError> {
         let action = Action::FetchingBlocks(hashes.len());
         self.track_action(&action);
@@ -544,6 +605,10 @@ impl Node {
     /// Broadcast a [`Transaction`] to the [`Node`]'s peers.
     ///
     /// Returns the [`Txid`], if the broadcast was successful.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the inner node does not respond or rejects the transaction.
     pub async fn broadcast_tx(&self, tx: Transaction) -> Result<Txid, NodeError> {
         let txid = tx.compute_txid();
         let action = Action::BroadcastingTransaction(txid);
@@ -562,6 +627,10 @@ impl Node {
     /// Manually connect to a specific peer, given its [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the connection was successful.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the inner node does not respond.
     pub async fn add_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
         let action = Action::ConnectingToPeer(*socket);
         self.track_action(&action);
@@ -578,6 +647,10 @@ impl Node {
     /// Disconnect from a peer, given its [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the [`Node`] successfully disconnected from the peer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the inner node does not respond.
     pub async fn disconnect_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
         let action = Action::DisconnectingFromPeer(*socket);
         self.track_action(&action);
@@ -592,9 +665,13 @@ impl Node {
     }
 
     /// Remove a specific peer's address from the [`Node`]'s
-    /// [`AddressMan`], given its [`SocketAddr`].
+    /// [`AddressMan`](floresta_wire::address_man::AddressMan), given its [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the address was successfully removed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the inner node does not respond.
     pub async fn remove_peer(&self, socket: &SocketAddr) -> Result<bool, NodeError> {
         let action = Action::RemovingPeer(*socket);
         self.track_action(&action);
@@ -609,6 +686,10 @@ impl Node {
     }
 
     /// Send a `ping` to all of the [`Node`]'s peers.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the inner node does not respond.
     pub async fn ping(&self) -> Result<bool, NodeError> {
         let action = Action::Pinging;
         self.track_action(&action);

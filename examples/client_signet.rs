@@ -45,13 +45,20 @@ use tracing::error;
 use tracing::info;
 use tracing::warn;
 
+/// Network used by this example.
 const NETWORK: Network = Network::Signet;
+
+/// Directory used for node data and logs.
 const DATA_DIR: &str = "./examples/data/client_signet/";
 
+/// External descriptor used by the [`Client`]'s wallet.
 const DESC_EXT: &str = "wpkh([9cee26c8/84h/1h/0h]tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/0/*)";
+
+/// Internal descriptor used by the [`Client`]'s wallet.
 const DESC_INT: &str = "wpkh([9cee26c8/84h/1h/0h]tpubDDuCfGKBYo4pQjNcpVkdLktdYm9wZiowEXMKM4Nn9QBcbnu5ikxmqZyXuhDgcdfr8zcuR66iLCmManN9XguSpP2m2SZyUsJsdCKQkcru6VG/1/*)";
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> anyhow::Result<()> {
     unsafe {
         env::set_var("RUST_LOG", "client_signet=info");

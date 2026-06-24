@@ -64,6 +64,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::node::error::BuilderError;
 
+/// Timestamp formatter used by [`ShortTargetFormatter`].
 type Timer = OffsetTime<&'static [BorrowedFormatItem<'static>]>;
 
 /// The file which logging events are written to by default.
@@ -118,6 +119,7 @@ pub(crate) const COLORED_TRACE: &str = "\x1b[0;35mTRACE\x1b[0m";
 ///
 /// [`tracing-subscriber`]: https://crates.io/crates/tracing-subscriber
 pub struct ShortTargetFormatter {
+    /// Timestamp formatter used for each log line.
     timer: Timer,
 }
 

@@ -1,67 +1,72 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-//! # Finite-State Machine Logic for the [`Node`]
+//! # Finite-State Machine Logic for the [`Node`](crate::node::Node)
 //!
-//! The [`Node`] can be thought of as a [Finite-State Machine].
+//! The [`Node`](crate::node::Node) can be thought of as a [Finite-State Machine].
 //!
 //! This module implements all of the possible [`State`]s that the
-//! [`Node`] can be in, as well as the corresponding next-state logic.
+//! [`Node`](crate::node::Node) can be in, as well as the corresponding next-state logic.
 //!
 //! [Finite-State Machine]: https://en.wikipedia.org/wiki/Finite-state_machine
 
 use core::fmt;
 
-#[allow(unused)]
-use bitcoin::Block;
-#[allow(unused)]
-use floresta_wire::address_man::AddressMan;
 use tracing::warn;
-
-#[allow(unused)]
-use crate::node::Node;
 
 /// How many blocks behind the chain tip the node can be while still being
 /// considered [`State::Operational`]. Prevents flapping at the chain tip
 /// when a new block arrives and validation briefly lags.
 const OPERATIONAL_TOLERANCE: u32 = 6;
 
-/// The set of [`State`]s the [`Node`] can possibly be in.
+/// The set of [`State`]s the [`Node`](crate::node::Node) can possibly be in.
 ///
-/// The [`Node`] can be modelled as a Finite State Machine.
+/// The [`Node`](crate::node::Node) can be modelled as a Finite State Machine.
 /// As such, we can enumerate the set of possible states it
 /// can be in. This allows restricting certain interactions
-/// with the [`Node`] to when it's in a well-defined set of
-/// [`State`]s. Upstream applications can also use this to
-/// display the [`Node`]'s [`State`] to their users.
+/// with the [`Node`](crate::node::Node) to when it's in a well-defined
+/// set of [`State`]s. Upstream applications can also use this to
+/// display the [`Node`](crate::node::Node)'s [`State`] to their users.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum State {
-    /// S0: The [`Node`] is not running.
+    /// S0: The [`Node`](crate::node::Node) is not running.
     Inactive,
 
-    /// S1: The [`Node`] is active, but not in a well-defined state.
+    /// S1: The [`Node`](crate::node::Node) is active, but not in a well-defined state.
     Active,
 
     // TODO(@luisschwab): how do we figure out when we are in this state?
-    /// S2: The [`Node`] is bootstrapping its [address manager](AddressMan) from DNS seeders.
+    /// S2: The [`Node`](crate::node::Node) is bootstrapping its
+    /// [address manager](floresta_wire::address_man::AddressMan) from DNS seeders.
     DnsBootstrapping,
 
-    /// S3: The [`Node`] is synchronizing headers from its peers.
-    HeaderSync { height: u32 },
+    /// S3: The [`Node`](crate::node::Node) is synchronizing headers from its peers.
+    HeaderSync {
+        /// The current header sync height.
+        height: u32,
+    },
 
-    /// S4: The [`Node`] is performing Initial Block Download.
-    InitialBlockDownload { chain_height: u32, node_height: u32 },
+    /// S4: The [`Node`](crate::node::Node) is performing Initial Block Download.
+    InitialBlockDownload {
+        /// The best known chain height.
+        chain_height: u32,
+        /// The node's current validation height.
+        node_height: u32,
+    },
 
-    /// S5: The [`Node`] is downloading Compact Block Filters from its peers.
-    CompactBlockFilterDownload { filter_height: u32 },
+    /// S5: The [`Node`](crate::node::Node) is downloading Compact Block Filters from its peers.
+    CompactBlockFilterDownload {
+        /// The current compact block filter height.
+        filter_height: u32,
+    },
 
     // TODO(@luisschwab): how do we figure out when we are in this state?
-    /// S6: The [`Node`] is performing backfill.
+    /// S6: The [`Node`](crate::node::Node) is performing backfill.
     Backfill,
 
-    /// S7: The [`Node`] is fully operational.
+    /// S7: The [`Node`](crate::node::Node) is fully operational.
     Operational,
 
-    /// S8: The [`Node`] is in the process of shutting down.
+    /// S8: The [`Node`](crate::node::Node) is in the process of shutting down.
     ShuttingDown,
 }
 
@@ -85,9 +90,9 @@ impl fmt::Display for State {
 // TODO(@luisschwab): missing
 // - S2 (DNS Bootstrap)
 // - S6 (Backfill)
-/// Continuously update the [`Node`]'s [`State`].
+/// Continuously update the [`Node`](crate::node::Node)'s [`State`].
 ///
-/// Since the [`Node`] can be modelled as a Finite State Machine,
+/// Since the [`Node`](crate::node::Node) can be modelled as a Finite State Machine,
 /// we compute the next [`State`] from the current [`State`] and
 /// external inputs.
 ///
@@ -121,7 +126,7 @@ pub fn compute_next_state(
         // state logic still needs figuring out
         // - S2 (DnsBootstrapping)
         // - S6 (Backfill)
-        s @ State::ShuttingDown | s @ State::Inactive | s @ State::DnsBootstrapping | s @ State::Backfill => s.clone(),
+        s @ (State::ShuttingDown | State::Inactive | State::DnsBootstrapping | State::Backfill) => s.clone(),
 
         _ => {
             // Wait for the inner node to be ready
