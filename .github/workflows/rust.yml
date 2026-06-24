@@ -1,4 +1,4 @@
-name: Rust CI
+name: Rust
 
 on:
     push:
@@ -12,6 +12,49 @@ env:
     RUST_BACKTRACE: 1
 
 jobs:
+    bisectable:
+        name: Bisectable PR
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request'
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+              with:
+                  persist-credentials: false
+                  fetch-depth: 0
+                  ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+            - name: Setup Rust Cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+            - name: Setup cargo-rbmt
+              uses: ./.github/actions/setup-rbmt
+
+            - name: Assert the PR is Bisectable
+              shell: bash
+              env:
+                  RBMT_LOG_LEVEL: quiet
+              run: |
+                  mapfile -t commits < <(git rev-list --reverse "${{ github.event.pull_request.base.sha }}..HEAD")
+                  commit_count="${#commits[@]}"
+
+                  for index in "${!commits[@]}"; do
+                      commit_sha="${commits[$index]}"
+                      commit_sha_short="$(git rev-parse --short "${commit_sha}")"
+                      commit_title="$(git log -1 --format=%s "${commit_sha}")"
+
+                      git checkout --quiet --detach "${commit_sha}"
+                      if ! cargo rbmt run build --quiet >build.log 2>&1; then
+                          printf '\n[%d/%d] %s: %s [FAIL]\n' "$((index + 1))" "${commit_count}" "${commit_sha_short}" "${commit_title}"
+                          printf '\n'
+                          cat build.log
+                          exit 1
+                      fi
+
+                      printf '\n[%d/%d] %s: %s [OK]\n' "$((index + 1))" "${commit_count}" "${commit_sha_short}" "${commit_title}"
+                  done
+
     check:
         name: Check - ${{ matrix.name }}
         runs-on: ubuntu-latest
@@ -19,16 +62,15 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    - name: Check Formatting
+                    - name: Formatting
                       task: fmt --check
-                    - name: Lint
+                    - name: Linting
                       task: lint
-                    - name: Build Documentation
+                    - name: Documentation
                       task: docsrs
-
         steps:
             - name: Checkout Repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
               with:
                   persist-credentials: false
 
@@ -39,6 +81,7 @@ jobs:
               uses: ./.github/actions/setup-rbmt
 
             - name: Run ${{ matrix.task }}
+              shell: bash
               run: cargo rbmt ${{ matrix.task }}
 
     test:
@@ -60,7 +103,7 @@ jobs:
 
         steps:
             - name: Checkout Repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
               with:
                   persist-credentials: false
 
@@ -71,4 +114,5 @@ jobs:
               uses: ./.github/actions/setup-rbmt
 
             - name: Run Tests
+              shell: bash
               run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lockfile ${{ matrix.lockfile }}
