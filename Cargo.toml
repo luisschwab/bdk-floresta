@@ -1,15 +1,15 @@
 [package]
-version = "0.1.0"
 name = "bdk-floresta"
+version = "0.0.0"
 description = "A Floresta-powered chain-source crate for BDK"
 authors = ["Luis Schwab <dev@luisschwab.net"]
-repository = "https://github.com/luisschwab/bdk-floresta"
 documentation = "https://docs.rs/bdk-floresta"
+repository = "https://github.com/luisschwab/bdk-floresta"
 keywords = ["bdk", "bitcoin", "floresta", "utreexo"]
-readme = "README.md"
 license = "MIT OR Apache-2.0"
-edition = "2021"
+readme = "README.md"
 rust-version = "1.85.0" # MSRV
+edition = "2024"
 
 [features]
 default = ["logger"]
@@ -22,9 +22,6 @@ required-features = ["logger"]
 [[example]]
 name = "client_signet"
 required-features = ["logger"]
-
-[build-dependencies]
-toml = { version = "=1.1.2" }
 
 [dependencies]
 bitcoin = { version = "=0.32.8" }
@@ -41,39 +38,27 @@ tracing-appender = { version = "=0.2.5", optional = true }
 tracing-subscriber = { version = "=0.3.23", features = ["ansi", "env-filter", "time"], optional = true }
 time = { version = "=0.3.45", features = ["macros", "local-offset"], optional = true } # time >0.3.45 requires Rust 1.88.0
 tokio-util = { version = "=0.7.18" }
-
-# These pins are needed for `Cargo-minimal.lock`:
+# Pinned transitive deps:
 lazy_static = { version = "=1.5.0" } # blame: sharded-slab@v0.1.7 -> tracing-subscriber@v0.3.23
 bitcoin-consensus-encoding = { version = "=1.0.0-rc.3" } # blame: bitcoin-io v0.3.0 (Encodable->Encode/Decodable->Decode)
+
+[build-dependencies]
+toml = { version = "=1.1.2" }
 
 [dev-dependencies]
 halfin = { version = "=0.4.0" }
 anyhow = { version = "=1.0.102" }
 tokio = { version = "=1.52.3", features = ["macros", "rt-multi-thread"] }
 
-[lints.clippy]
-uninlined_format_args = "deny"
-result_large_err = "allow"
-use_self = "deny"
-
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
-[package.metadata.rbmt.test]
-sample_strategy = "all"
-
-[package.metadata.rbmt.tools]
-cargo-audit = "=0.22.2"
-zizmor = "=1.26.1"
-
-[package.metadata.rbmt.toolchains]
-stable = "1.96.0"
-nightly = "nightly-2026-06-23"
-
-# Allow packages of different versions in the dependency tree
-[package.metadata.rbmt.lint]
-allowed_duplicates = [
+[package.metadata.rbmt]
+toolchains = { stable = "1.96.0", nightly = "nightly-2026-06-23" }
+tools = { cargo-audit = "=0.22.2", zizmor = "=1.26.1" }
+test = { sample_strategy = "all" }
+lint = { allowed_duplicates = [
     "base64",                     # blame: bitcoin@v0.32.8 (v0.21) vs floresta-wire@v0.5.0 -> tonic@v0.14.5 (v0.22)
     "bitcoin_hashes",             # blame: bitcoin@v0.32.8 (v0.14), floresta-wire@v0.5.0 -> bip324@v0.10.0 (v0.15), floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v0.20)
     "bitcoin-consensus-encoding", # blame: floresta-chain@v0.5.0 -> rustreexo@v0.5.0 -> bitcoin_hashes@v0.20.0 (v0.1.0) vs bitcoin-io@v0.3.0 / bitcoin_hashes@v1.0.0 (v1.0.0)
@@ -95,4 +80,138 @@ allowed_duplicates = [
     "windows_x86_64_gnu",         # blame: cascades from windows-targets versions above
     "windows_x86_64_gnullvm",     # blame: cascades from windows-targets versions above
     "windows_x86_64_msvc",        # blame: cascades from windows-targets versions above
-]
+] }
+
+[lints.rust]
+missing_docs = "warn"
+
+# Copied over from `rust-bitcoin`
+[lints.clippy]
+# Exclude lints we don't think are valuable.
+needless_question_mark = "allow" # https://github.com/rust-bitcoin/rust-bitcoin/pull/2134
+manual_range_contains = "allow" # More readable than clippy's format.
+# Exhaustive list of pedantic clippy lints
+assigning_clones = "warn"
+bool_to_int_with_if = "warn"
+borrow_as_ptr = "warn"
+case_sensitive_file_extension_comparisons = "warn"
+cast_lossless = "warn"
+cast_possible_truncation = "allow" # All casts should include a code comment (except test code).
+cast_possible_wrap = "allow" # Same as above re code comment.
+cast_precision_loss = "warn"
+cast_ptr_alignment = "warn"
+cast_sign_loss = "allow" # All casts should include a code comment (except in test code).
+checked_conversions = "warn"
+cloned_instead_of_copied = "warn"
+copy_iterator = "warn"
+default_trait_access = "warn"
+doc_link_with_quotes = "warn"
+doc_markdown = "warn"
+empty_enums = "warn"
+enum_glob_use = "warn"
+expl_impl_clone_on_copy = "warn"
+explicit_deref_methods = "warn"
+explicit_into_iter_loop = "warn"
+explicit_iter_loop = "warn"
+filter_map_next = "warn"
+flat_map_option = "warn"
+float_cmp = "allow" # Bitcoin floats are typically limited to 8 decimal places and we want them exact.
+fn_params_excessive_bools = "warn"
+if_not_else = "warn"
+ignored_unit_patterns = "warn"
+implicit_clone = "warn"
+implicit_hasher = "warn"
+inconsistent_struct_constructor = "warn"
+index_refutable_slice = "warn"
+inefficient_to_string = "warn"
+inline_always = "warn"
+into_iter_without_iter = "warn"
+invalid_upcast_comparisons = "warn"
+items_after_statements = "warn"
+iter_filter_is_ok = "warn"
+iter_filter_is_some = "warn"
+iter_not_returning_iterator = "warn"
+iter_without_into_iter = "warn"
+large_digit_groups = "warn"
+large_futures = "warn"
+large_stack_arrays = "warn"
+large_types_passed_by_value = "warn"
+linkedlist = "warn"
+macro_use_imports = "warn"
+manual_assert = "warn"
+manual_instant_elapsed = "warn"
+manual_is_power_of_two = "warn"
+manual_is_variant_and = "warn"
+manual_let_else = "warn"
+manual_ok_or = "warn"
+manual_string_new = "warn"
+many_single_char_names = "warn"
+map_unwrap_or = "warn"
+match_bool = "allow" # Adds extra indentation and LOC.
+match_same_arms = "allow" # Collapses things that are conceptually unrelated to each other.
+match_wild_err_arm = "warn"
+match_wildcard_for_single_variants = "warn"
+maybe_infinite_iter = "warn"
+mismatching_type_param_order = "warn"
+missing_errors_doc = "warn"
+missing_fields_in_debug = "warn"
+missing_panics_doc = "warn"
+missing_safety_doc = "warn"
+missing_docs_in_private_items = "warn"
+must_use_candidate = "allow" # Useful for audit but many false positives.
+mut_mut = "warn"
+naive_bytecount = "warn"
+needless_bitwise_bool = "warn"
+needless_continue = "warn"
+needless_for_each = "warn"
+needless_pass_by_value = "warn"
+needless_raw_string_hashes = "warn"
+no_effect_underscore_binding = "warn"
+no_mangle_with_rust_abi = "warn"
+option_as_ref_cloned = "warn"
+option_option = "warn"
+ptr_as_ptr = "warn"
+ptr_cast_constness = "warn"
+pub_underscore_fields = "warn"
+range_minus_one = "warn"
+range_plus_one = "warn"
+redundant_clone = "warn"
+redundant_closure_for_method_calls = "warn"
+redundant_else = "warn"
+ref_as_ptr = "warn"
+ref_binding_to_reference = "warn"
+ref_option = "warn"
+ref_option_ref = "warn"
+return_self_not_must_use = "warn"
+same_functions_in_if_condition = "warn"
+semicolon_if_nothing_returned = "warn"
+should_panic_without_expect = "warn"
+similar_names = "allow" # Too many (subjectively) false positives.
+single_char_pattern = "warn"
+single_match_else = "warn"
+stable_sort_primitive = "warn"
+str_split_at_newline = "warn"
+string_add_assign = "warn"
+struct_excessive_bools = "warn"
+struct_field_names = "allow" # dumb
+too_many_lines = "warn"
+transmute_ptr_to_ptr = "warn"
+trivially_copy_pass_by_ref = "warn"
+unchecked_time_subtraction = "warn"
+unicode_not_nfc = "warn"
+uninlined_format_args = "allow" # This is a subjective style choice.
+unnecessary_box_returns = "warn"
+unnecessary_join = "warn"
+unnecessary_literal_bound = "warn"
+unnecessary_wraps = "warn"
+unnested_or_patterns = "warn"
+unreadable_literal = "warn"
+unsafe_derive_deserialize = "warn"
+unused_async = "warn"
+unused_self = "warn"
+use_self = "warn"
+used_underscore_binding = "warn"
+used_underscore_items = "warn"
+verbose_bit_mask = "warn"
+wildcard_imports = "warn"
+zero_sized_map_values = "warn"

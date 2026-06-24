@@ -50,20 +50,21 @@ use std::path::PathBuf;
 use time::format_description::BorrowedFormatItem;
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::FmtContext;
+use tracing_subscriber::fmt::FormatEvent;
+use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::fmt::time::FormatTime;
 use tracing_subscriber::fmt::time::OffsetTime;
-use tracing_subscriber::fmt::FmtContext;
-use tracing_subscriber::fmt::FormatEvent;
-use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
 
 use crate::node::error::BuilderError;
 
+/// Timestamp formatter used by [`ShortTargetFormatter`].
 type Timer = OffsetTime<&'static [BorrowedFormatItem<'static>]>;
 
 /// The file which logging events are written to by default.
@@ -118,6 +119,7 @@ pub(crate) const COLORED_TRACE: &str = "\x1b[0;35mTRACE\x1b[0m";
 ///
 /// [`tracing-subscriber`]: https://crates.io/crates/tracing-subscriber
 pub struct ShortTargetFormatter {
+    /// Timestamp formatter used for each log line.
     timer: Timer,
 }
 

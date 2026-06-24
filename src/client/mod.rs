@@ -10,31 +10,31 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use bdk_wallet::chain::keychain_txout::KeychainTxOutIndex;
+use bdk_wallet::KeychainKind;
+use bdk_wallet::Update;
+use bdk_wallet::Wallet;
 use bdk_wallet::chain::BlockId;
 use bdk_wallet::chain::CheckPoint;
 use bdk_wallet::chain::ConfirmationBlockTime;
 use bdk_wallet::chain::IndexedTxGraph;
 use bdk_wallet::chain::Merge;
 use bdk_wallet::chain::TxUpdate;
-use bdk_wallet::KeychainKind;
-use bdk_wallet::Update;
-use bdk_wallet::Wallet;
+use bdk_wallet::chain::keychain_txout::KeychainTxOutIndex;
 use bitcoin::Block;
 use bitcoin::OutPoint;
 use bitcoin::ScriptBuf;
 use floresta_chain::BlockConsumer;
 use floresta_chain::UtxoData;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::Mutex as AsyncMutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use crate::client::error::ClientError;
-use crate::node::fsm::State;
 use crate::node::Node;
+use crate::node::fsm::State;
 
 pub mod error;
 
@@ -55,10 +55,18 @@ pub enum ScanKind {
     /// Full-scans should use a much higher lookahead value than
     /// the [`Wallet`]'s default `lookahead`. If `custom_lookahead` is `None`,
     /// it's set to [`FULL_SCAN_LOOKAHEAD`].
-    FullScan { custom_lookahead: Option<u32> },
+    FullScan {
+        /// The lookahead value used for deriving script pubkeys.
+        custom_lookahead: Option<u32>,
+    },
 
     /// Scan from a custom start height up to the chain tip, using a custom `lookahead` value.
-    Custom { start_height: u32, custom_lookahead: u32 },
+    Custom {
+        /// The block height where the scan starts.
+        start_height: u32,
+        /// The lookahead value used for deriving script pubkeys.
+        custom_lookahead: u32,
+    },
 }
 
 /// An event emitted from a scan.
@@ -70,7 +78,10 @@ pub enum ScanEvent {
     /// The scan has finished.
     ///
     /// For continuous synching, `keep_going` is set to `true`.
-    Finished { keep_going: bool },
+    Finished {
+        /// Whether the scan will continue watching new blocks.
+        keep_going: bool,
+    },
 
     /// An error happened whilst scanning.
     Error(String),
@@ -83,7 +94,9 @@ pub enum ScanEvent {
 ///
 /// An ongoing scan can then be cancelled via [`ScanHandle::stop`].
 pub struct ScanHandle {
+    /// Token used to cancel the scan task.
     token: CancellationToken,
+    /// The spawned scan task, if it is still running.
     inner: Option<JoinHandle<Result<(), ClientError>>>,
 }
 
@@ -99,6 +112,10 @@ impl ScanHandle {
     /// Await a scan task to complete.
     ///
     /// Returns [`ClientError::ScanAborted`] if the task was aborted or panicked.
+    ///
+    /// # Errors
+    ///
+    /// Returns the scan task's error when the task exits with one.
     pub async fn join(&mut self) -> Result<(), ClientError> {
         let Some(inner) = self.inner.as_mut() else {
             return Ok(());
@@ -134,6 +151,7 @@ impl Drop for ScanHandle {
 /// Forwards validated [`Block`]s from the [`Node`]
 /// into a channel read by [`Client::scan_continuous`].
 struct BlockSink {
+    /// Channel used to forward validated blocks to the [`Client`].
     block_tx: UnboundedSender<(Block, u32)>,
 }
 
@@ -180,6 +198,10 @@ pub struct Client {
 
 impl Client {
     /// Create a new [`Client`] for requesting [`Wallet`] [`Update`]s from the given [`Node`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the [`Node`] and [`Wallet`] have different [`Network`](bitcoin::Network)s.
     pub fn new(node: Arc<Node>, wallet: &Wallet) -> Result<(Self, UnboundedReceiver<ScanEvent>), ClientError> {
         // The node and wallet must be on the same network
         if wallet.network() != node.config.network {
@@ -254,6 +276,11 @@ impl Client {
     ///  - [`ScanKind::Sync`]: scan from the [`Wallet`]'s latest checkpoint up to the chain tip
     ///  - [`ScanKind::FullScan`]: scan from genesis up to the chain tip
     ///  - [`ScanKind::Custom`]: scan from a custom start height up to the chain tip
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the [`Node`] is unavailable, the scan range is invalid,
+    /// script pubkeys cannot be derived, or the scan is cancelled.
     pub async fn scan(&mut self, scan_params: ScanKind) -> Result<(), ClientError> {
         // Wait for the node to reach operational
         // state before submitting a scan request
@@ -285,6 +312,11 @@ impl Client {
     ///  - [`ScanKind::Sync`]: scan from the [`Wallet`]'s latest checkpoint up to the chain tip
     ///  - [`ScanKind::FullScan`]: scan from genesis up to the chain tip
     ///  - [`ScanKind::Custom`]: scan from a custom start height up to the chain tip
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the initial scan fails, the [`Node`] becomes unavailable,
+    /// or the continuous scan is cancelled.
     pub async fn scan_continuous(&mut self, scan_params: ScanKind) -> Result<(), ClientError> {
         // Wait for the node to reach operational
         // state before submitting a scan request
@@ -310,7 +342,7 @@ impl Client {
                 let mut guard = block_subscriber.lock().await;
                 tokio::select! {
                     biased;
-                    _ = self.cancellation_token.cancelled() => {
+                    () = self.cancellation_token.cancelled() => {
                         return Err(ClientError::ScanAborted);
                     }
                     b = guard.recv() => match b {
@@ -356,7 +388,7 @@ impl Client {
                 _ => {}
             }
             tokio::select! {
-                _ = self.cancellation_token.cancelled() => return Err(ClientError::ScanAborted),
+                () = self.cancellation_token.cancelled() => return Err(ClientError::ScanAborted),
                 changed = rx.changed() => {
                     if changed.is_err() {
                         return Err(ClientError::UnresponsiveNode);
@@ -456,7 +488,7 @@ impl Client {
         };
 
         // Use the node's filter height as the end height
-        let stop_height = self.node.get_filter_height().map_err(ClientError::Node)?;
+        let stop_height = self.node.get_filter_height().map_err(ClientError::from)?;
 
         // Throw an error if the scan range is negative
         if start_height > stop_height {
@@ -468,15 +500,16 @@ impl Client {
 
         // Request the node to provide hashes of blocks
         // with relevant transactions containing `spks`
-        let hashes = tokio::select! {
-            // Early return if the scan was aborted
-            biased;
-            _ = scan_token.cancelled() => return Err(ClientError::ScanAborted),
-            // Request hashes from the node
-            result = self.node.match_filters(spks, start_height, stop_height) => {
-                result.map_err(ClientError::Node)?
-            }
-        };
+        if scan_token.is_cancelled() {
+            return Err(ClientError::ScanAborted);
+        }
+        let hashes = self
+            .node
+            .match_filters(&spks, start_height, stop_height)
+            .map_err(ClientError::from)?;
+        if scan_token.is_cancelled() {
+            return Err(ClientError::ScanAborted);
+        }
 
         // Request the node to fetch blocks from its peers
         let blocks = if hashes.is_empty() {
@@ -485,10 +518,10 @@ impl Client {
             tokio::select! {
                 // Early return if the scan was aborted
                 biased;
-                _ = scan_token.cancelled() => return Err(ClientError::ScanAborted),
+                () = scan_token.cancelled() => return Err(ClientError::ScanAborted),
                 // Request blocks from the node in parallel
                 result = self.node.fetch_blocks(&hashes) => {
-                    result.map_err(ClientError::Node)?
+                    result.map_err(ClientError::from)?
                 }
             }
         };
@@ -501,7 +534,7 @@ impl Client {
 
             // Request the node to get the height associated with a block hash
             let hash = block.block_hash();
-            let height = self.node.get_block_height(&hash).map_err(ClientError::Node)?;
+            let height = self.node.get_block_height(&hash).map_err(ClientError::from)?;
 
             // Construct a change set by applying the block to the transaction graph
             let changeset = self.tx_graph.apply_block_relevant(&block, height);
@@ -528,7 +561,7 @@ impl Client {
         // such that subsequent scans start from this height
         if self.checkpoint.height() < stop_height {
             // Request the node to get the hash associated with a height
-            let stop_hash = self.node.get_block_hash(stop_height).map_err(ClientError::Node)?;
+            let stop_hash = self.node.get_block_hash(stop_height).map_err(ClientError::from)?;
             // Update the latest checkpoint to this block
             self.checkpoint = self.checkpoint.clone().insert(BlockId {
                 height: stop_height,

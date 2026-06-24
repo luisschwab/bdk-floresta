@@ -49,20 +49,29 @@ use halfin::utreexod::UtreexoDConf;
 use halfin::wait_for_filter_height;
 use halfin::wait_for_height;
 use tokio::sync::RwLock;
+use tracing::Level;
 use tracing::error;
 use tracing::info;
 use tracing::warn;
-use tracing::Level;
 
+/// Network used by this example.
 const NETWORK: Network = Network::Regtest;
+
+/// Directory used for node data and logs.
 const DATA_DIR: &str = "./examples/data/client_regtest/";
 
+/// External descriptor used by the [`Client`]'s wallet.
 const DESC_EXT: &str = "tr([697412fb/86h/1h/0h]tpubDD5LyUwjWvkndncfQqMcNko6coES1ZehnsqykLLe8E3w7RX5dveHMJrXxhpvYLnSqQBuPVw9Lk7gSYnS9xyoLRQ21xpebdpCFt5ZNyorhHb/0/*)";
+
+/// Internal descriptor used by the [`Client`]'s wallet.
 const DESC_INT: &str = "tr([697412fb/86h/1h/0h]tpubDD5LyUwjWvkndncfQqMcNko6coES1ZehnsqykLLe8E3w7RX5dveHMJrXxhpvYLnSqQBuPVw9Lk7gSYnS9xyoLRQ21xpebdpCFt5ZNyorhHb/1/*)";
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> anyhow::Result<()> {
-    env::set_var("RUST_LOG", "client_regtest=info");
+    unsafe {
+        env::set_var("RUST_LOG", "client_regtest=info");
+    }
 
     let _logger = Logger {
         log_level: Level::INFO,

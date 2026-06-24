@@ -1,8 +1,8 @@
 # bdk-floresta
 
 <p>
-    <!-- <a href="https://crates.io/crates/bdk_floresta"><img src="https://img.shields.io/crates/v/bdk_floresta.svg"/></a> -->
-    <!-- <a href="https://docs.rs/bdk_floresta"><img src="https://img.shields.io/badge/docs.rs-bdk--floresta-brightgreen"/></a> -->
+    <!-- <a href="https://crates.io/crates/bdk-floresta"><img src="https://img.shields.io/crates/v/bdk-floresta.svg"/></a> -->
+    <!-- <a href="https://docs.rs/bdk-floresta"><img src="https://img.shields.io/badge/docs.rs-bdk-floresta-brightgreen"/></a> -->
     <a href="https://blog.rust-lang.org/2025/02/20/Rust-1.85.0/"><img src="https://img.shields.io/badge/MSRV-1.85.0%2B-orange.svg"/></a>
     <a href="https://github.com/luisschwab/bdk-floresta/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-red.svg"/></a>
     <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml/badge.svg"></a>
@@ -36,8 +36,6 @@ To install them with `cargo`, run:
 ~$ cargo install just
 
 ~$ cargo install cargo-rbmt
-
-~$ cargo install uv
 ```
 
 Alternatively, use your preferred package manager to install `just` and `uv`.

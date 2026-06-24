@@ -2,46 +2,48 @@
 
 //! # Client Errors
 //!
-//! Error types related to the [`Client`] type.
+//! Error types related to the [`Client`](crate::client::Client) type.
 
 use core::error;
 use core::fmt;
 
-#[allow(unused)]
-use bdk_wallet::KeychainKind;
-#[allow(unused)]
-use bdk_wallet::Wallet;
 use bitcoin::Network;
 
-#[allow(unused)]
-use crate::client::Client;
 use crate::node::error::NodeError;
-#[allow(unused)]
-use crate::node::Node;
 
-/// Errors that can occur when interacting with a [`Client`].
+/// Errors that can occur when interacting with a [`Client`](crate::client::Client).
 #[derive(Debug)]
 pub enum ClientError {
-    /// The [`Node`] and the [`Wallet`] are not on the same network.
-    NetworkMismatch { node_net: Network, wallet_net: Network },
+    /// The [`Node`](crate::node::Node) and the [`Wallet`](bdk_wallet::Wallet) are not on the same network.
+    NetworkMismatch {
+        /// The network configured on the node.
+        node_net: Network,
+        /// The network configured on the wallet.
+        wallet_net: Network,
+    },
 
-    /// The scan has been aborted by the caller, or the [`Node`] was [`Drop`]ed.
+    /// The scan has been aborted by the caller, or the [`Node`](crate::node::Node) was [`Drop`]ed.
     ScanAborted,
 
     /// The start height is greater than the stop height.
-    InvalidRange { start_height: u32, stop_height: u32 },
+    InvalidRange {
+        /// The requested scan start height.
+        start_height: u32,
+        /// The requested scan stop height.
+        stop_height: u32,
+    },
 
-    /// The [`Wallet`] has no [external keychain](KeychainKind::External).
+    /// The [`Wallet`](bdk_wallet::Wallet) has no [external keychain](bdk_wallet::KeychainKind::External).
     NoExternalKeychain,
 
-    /// The associated [`Node`] is shutting down or inactive.
+    /// The associated [`Node`](crate::node::Node) is shutting down or inactive.
     UnresponsiveNode,
 
     /// The lock is poisoned.
     PoisonedLock,
 
-    /// An error originating from the underlying [`Node`].
-    Node(NodeError),
+    /// An error originating from the underlying [`Node`](crate::node::Node).
+    Node(Box<NodeError>),
 }
 
 #[rustfmt::skip]
@@ -68,13 +70,13 @@ impl error::Error for ClientError {
             Self::NoExternalKeychain => None,
             Self::UnresponsiveNode => None,
             Self::PoisonedLock => None,
-            Self::Node(e) => Some(e),
+            Self::Node(e) => Some(e.as_ref()),
         }
     }
 }
 
 impl From<NodeError> for ClientError {
     fn from(e: NodeError) -> Self {
-        Self::Node(e)
+        Self::Node(Box::new(e))
     }
 }

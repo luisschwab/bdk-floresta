@@ -10,28 +10,28 @@ fn main() {
     let bdk_floresta_version = get_bdk_floresta_version();
 
     // Get floresta-wire's version from Cargo.toml or fallback to Cargo.lock
-    let floresta_wire_version = get_dependency_version("floresta-wire").unwrap();
+    let floresta_wire_version = source_dependency_version("floresta-wire").unwrap();
 
     // Build bdk_floresta's user agent in Bitcoin Core style:
     // `/floresta-wire:A.B.C/bdk-floresta:X.Y.Z`
     let user_agent = format!(
         "/floresta-wire:{}/bdk-floresta:{}/",
         floresta_wire_version,
-        bdk_floresta_version.replace("v", ""),
+        bdk_floresta_version.replace('v', ""),
     );
 
     println!("cargo:rustc-env=USER_AGENT={user_agent}");
     println!("cargo:rustc-env=GIT_DESCRIBE={bdk_floresta_version}");
     println!("cargo:rustc-env=FLORESTA_WIRE_VERSION={floresta_wire_version}");
 
-    // Re-run if HEAD, build.rs, Cargo.toml or Cargo.lock change
+    // Re-run if HEAD, build.rs, `Cargo.toml` or `Cargo.lock` change
     println!("cargo:rerun-if-changed=.git/HEAD");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=Cargo.lock");
 }
 
-/// Get bdk_floresta's version from Cargo.toml
+/// Source `bdk_floresta`'s version from `Cargo.toml`.
 fn get_bdk_floresta_version() -> String {
     let manifest = fs::read_to_string("Cargo.toml").unwrap();
     let toml: Value = toml::from_str(&manifest).unwrap();
@@ -45,16 +45,16 @@ fn get_bdk_floresta_version() -> String {
 
 /// Try to get the version of a particular dependency.
 ///
-/// Gets it from `Cargo.toml`, or falls back to `Cargo.lock`.
-fn get_dependency_version(dep: &str) -> Option<String> {
-    if let Some(version) = get_version_from_cargo_toml(dep) {
+/// Sources it from `Cargo.toml`, or falls back to `Cargo.lock`.
+fn source_dependency_version(dep: &str) -> Option<String> {
+    if let Some(version) = source_version_from_cargo_toml(dep) {
         return Some(version);
     }
-    get_version_from_cargo_lock(dep)
+    source_version_from_cargo_lock(dep)
 }
 
-/// Get the version of a dependency from `Cargo.toml`.
-fn get_version_from_cargo_toml(dep_name: &str) -> Option<String> {
+/// Source the version of a dependency from `Cargo.toml`.
+fn source_version_from_cargo_toml(dep_name: &str) -> Option<String> {
     let manifest = fs::read_to_string("Cargo.toml").ok()?;
     let toml: Value = toml::from_str(&manifest).ok()?;
 
@@ -87,8 +87,8 @@ fn get_version_from_cargo_toml(dep_name: &str) -> Option<String> {
     None
 }
 
-/// Get the version of a dependency from `Cargo.lock`.
-fn get_version_from_cargo_lock(dep_name: &str) -> Option<String> {
+/// Source the version of a dependency from `Cargo.lock`.
+fn source_version_from_cargo_lock(dep_name: &str) -> Option<String> {
     let lock_content = std::fs::read_to_string("Cargo.lock").ok()?;
     let lock: toml::Value = toml::from_str(&lock_content).ok()?;
 

@@ -14,35 +14,36 @@ use std::sync::OnceLock;
 
 use bitcoin::BlockHash;
 use bitcoin::Network;
-use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
-use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_chain::AssumeValidArg;
 use floresta_chain::ChainParams;
 use floresta_chain::ChainState;
+use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
+use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStoreConfig;
 use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
 use floresta_compact_filters::network_filters::NetworkFilters;
 use floresta_mempool::Mempool;
+use floresta_wire::UtreexoNodeConfig;
 use floresta_wire::address_man::AddressMan;
 use floresta_wire::address_man::ReachableNetworks;
-use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node::UtreexoNode;
+use floresta_wire::node::running_ctx::RunningNode;
 use floresta_wire::node_handle::NodeHandle;
-use floresta_wire::UtreexoNodeConfig;
-use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
+use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "logger")]
 use crate::logger::Logger;
+use crate::node::Node;
 use crate::node::error::BuilderError;
 use crate::node::fsm::State;
-use crate::node::Node;
 
 /// The number of bytes per megabyte.
 const BYTES_PER_MB: usize = 1_000_000;
 
 /// Configuration parameters for building a [`Node`].
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug)]
 pub struct NodeConfig {
     /// The [`Network`] which the [`Node`] will operate on.
@@ -94,7 +95,7 @@ pub struct NodeConfig {
     pub mempool_size: usize,
 
     /// The maximum number of addresses held in the [`AddressMan`].
-    /// Defaults to 50_000 addresses.
+    /// Defaults to `50_000` addresses.
     pub address_man_size: Option<usize>,
 
     /// The set of networks this node will communicate on.
@@ -178,12 +179,15 @@ impl Builder {
     }
 
     /// Instantiate a [`Builder`] from a [`NodeConfig`].
+    #[must_use]
     pub fn with_config(mut self, config: NodeConfig) -> Self {
         self.config = config;
         self
     }
 
+    /// Configure the tracing subscriber logger.
     #[cfg(feature = "logger")]
+    #[must_use]
     pub fn with_logger(mut self, logger: Logger) -> Self {
         self.logger = Some(logger);
         self
@@ -192,13 +196,18 @@ impl Builder {
     /// Build a [`Node`] from a [`Builder`].
     ///
     /// It will not run the [`Node`]. To run it, call [`Node::run()`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the node data directory, chain store, chain state,
+    /// logger, or the inner node cannot be initialized.
     pub fn build(self) -> Result<Node, BuilderError> {
         // Create a directory for node data.
         fs::create_dir_all(&self.config.datadir).map_err(BuilderError::CreateDirectory)?;
 
         // Init the logger and keep a guard to it, if logging to a file is enabled
         #[cfg(feature = "logger")]
-        let _log_guard = if let Some(logger) = self.logger {
+        let log_guard = if let Some(logger) = self.logger {
             logger.init()?
         } else {
             None
@@ -255,7 +264,7 @@ impl Builder {
             chain_state,
             block_filters,
             #[cfg(feature = "logger")]
-            _log_guard,
+            _log_guard: log_guard,
         })
     }
 }
