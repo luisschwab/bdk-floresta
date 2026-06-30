@@ -9,7 +9,7 @@
 //!
 //! - **Log level**: controlled by the `RUST_LOG` environment variable, falling back to [`Logger::log_level`] if unset.
 //! - **Target formatting**: at `INFO` and above, well-known `floresta_*` module paths are shortened to human-friendly
-//!   aliases (e.g. `floresta_wire::p2p_wire::node` → `floresta::wire`). At `DEBUG` and below, the full module path is
+//!   aliases (e.g. `floresta::wire::p2p_wire::node` → `floresta::wire`). At `DEBUG` and below, the full module path is
 //!   preserved.
 //! - **Timestamp**: at `INFO` and above, timestamps are formatted as `YYYY-MM-DD HH:MM:SS`. At `DEBUG` and below,
 //!   milliseconds are included: `YYYY-MM-DD HH:MM:SS.mmm`.

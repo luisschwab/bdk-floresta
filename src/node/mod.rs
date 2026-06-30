@@ -22,22 +22,22 @@ use bitcoin::block::Header;
 use bitcoin::p2p::address::AddrV2;
 use builder::NodeConfig;
 use error::NodeError;
-use floresta_chain::BlockConsumer;
-use floresta_chain::ChainState;
-use floresta_chain::pruned_utreexo::BlockchainInterface;
-use floresta_chain::pruned_utreexo::UpdatableChainstate;
-use floresta_chain::pruned_utreexo::flat_chain_store::FlatChainStore;
-use floresta_compact_filters::flat_filters_store::FlatFiltersStore;
-use floresta_compact_filters::network_filters::NetworkFilters;
-use floresta_wire::bitcoin_socket_addr::BitcoinSocketAddr;
-use floresta_wire::node::UtreexoNode;
-use floresta_wire::node::running_ctx::RunningNode;
-use floresta_wire::node_handle::NodeHandle;
-use floresta_wire::node_interface::ChainMethods;
-use floresta_wire::node_interface::MempoolMethods;
-use floresta_wire::node_interface::NetworkMethods;
-use floresta_wire::node_interface::PeerInfo;
-use floresta_wire::rustreexo::stump::Stump;
+use floresta::chain::BlockConsumer;
+use floresta::chain::ChainState;
+use floresta::chain::pruned_utreexo::BlockchainInterface;
+use floresta::chain::pruned_utreexo::UpdatableChainstate;
+use floresta::chain::pruned_utreexo::flat_chain_store::FlatChainStore;
+use floresta::compact_filters::flat_filters_store::FlatFiltersStore;
+use floresta::compact_filters::network_filters::NetworkFilters;
+use floresta::wire::bitcoin_socket_addr::BitcoinSocketAddr;
+use floresta::wire::node::UtreexoNode;
+use floresta::wire::node::running_ctx::RunningNode;
+use floresta::wire::node_handle::NodeHandle;
+use floresta::wire::node_interface::ChainMethods;
+use floresta::wire::node_interface::MempoolMethods;
+use floresta::wire::node_interface::NetworkMethods;
+use floresta::wire::node_interface::PeerInfo;
+use floresta::wire::rustreexo::stump::Stump;
 use futures::future;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
@@ -77,7 +77,7 @@ pub enum Action {
     DisconnectingFromPeer(SocketAddr),
 
     /// The [`Node`] is removing a peer from its
-    /// [address manager](floresta_wire::address_man::AddressMan).
+    /// [address manager](floresta::wire::address_man::AddressMan).
     RemovingPeer(SocketAddr),
 
     /// The [`Node`] is pinging all of its peers.
@@ -493,7 +493,7 @@ impl Node {
 
     /// Subscribe and receive every new [`Block`] the [`Node`] validates.
     ///
-    /// Implements the [`BlockConsumer`] trait from [`floresta-chain`](floresta_chain).
+    /// Implements the [`BlockConsumer`] trait from [`floresta-chain`](floresta::chain).
     pub fn block_subscriber<T: BlockConsumer + 'static>(&self, block_consumer: Arc<T>) {
         self.chain_state.subscribe(block_consumer);
     }
@@ -551,7 +551,7 @@ impl Node {
 
     /// Fetch a [`Block`] given its [`BlockHash`].
     ///
-    /// Since [`floresta-chain`](floresta_chain) does not persist any
+    /// Since [`floresta-chain`](floresta::chain) does not persist any
     /// [`Block`]s, it must be requested over the wire from a peer.
     ///
     /// # Errors
@@ -575,7 +575,7 @@ impl Node {
     ///
     /// The [`Block`]s are returned in the same ordering of the provided hashes.
     ///
-    /// Since [`floresta-chain`](floresta_chain) does not persist any
+    /// Since [`floresta-chain`](floresta::chain) does not persist any
     /// [`Block`]s, they must be requested over the wire from a peer.
     ///
     /// # Errors
@@ -665,7 +665,7 @@ impl Node {
     }
 
     /// Remove a specific peer's address from the [`Node`]'s
-    /// [`AddressMan`](floresta_wire::address_man::AddressMan), given its [`SocketAddr`].
+    /// [`AddressMan`](floresta::wire::address_man::AddressMan), given its [`SocketAddr`].
     ///
     /// Returns a `bool` indicating whether the address was successfully removed.
     ///

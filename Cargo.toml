@@ -11,10 +11,6 @@ readme = "README.md"
 rust-version = "1.85.0" # MSRV
 edition = "2024"
 
-[features]
-default = ["logger"]
-logger = ["dep:tracing-appender", "dep:tracing-subscriber", "dep:time"]
-
 [[example]]
 name = "client_regtest"
 required-features = ["logger"]
@@ -23,14 +19,19 @@ required-features = ["logger"]
 name = "client_signet"
 required-features = ["logger"]
 
+[features]
+default = ["logger"]
+logger = ["dep:tracing-appender", "dep:tracing-subscriber", "dep:time"]
+
 [dependencies]
 bitcoin = { version = "=0.32.8" }
 bdk_wallet = { version = "=3.0.0" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97", features = ["flat-chainstore"] }
-floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+#floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97", features = ["flat-chainstore"] }
+#floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+#floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+#floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+#floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+floresta = { git = "https://github.com/luisschwab/Floresta", branch = "fix/floresta-re-exports", default-features = false, features = ["chain-flat-chainstore", "compact-filters", "domain", "mempool", "wire"] }
 futures = { version = "=0.3.32" }
 tokio = { version = "=1.52.3", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "=0.1.44" }
@@ -59,6 +60,7 @@ toolchains = { stable = "1.96.0", nightly = "nightly-2026-06-23" }
 tools = { cargo-audit = "=0.22.2", zizmor = "=1.26.1" }
 test = { sample_strategy = "all" }
 lint = { allowed_duplicates = [
+    "cpufeatures",
     "base64",                     # blame: bitcoin@v0.32.8 (v0.21) vs floresta-wire@v0.5.0 -> tonic@v0.14.5 (v0.22)
     "bitcoin_hashes",             # blame: bitcoin@v0.32.8 (v0.14), floresta-wire@v0.5.0 -> bip324@v0.10.0 (v0.15), floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v0.20)
     "bitcoin-consensus-encoding", # blame: floresta-chain@v0.5.0 -> rustreexo@v0.5.0 -> bitcoin_hashes@v0.20.0 (v0.1.0) vs bitcoin-io@v0.3.0 / bitcoin_hashes@v1.0.0 (v1.0.0)
@@ -69,7 +71,6 @@ lint = { allowed_duplicates = [
     "hex-conservative",           # blame: bitcoin@v0.32.8 (v0.2), floresta-wire@v0.5.0 -> bip324@v0.10.0 -> bitcoin_hashes@v0.15.0 (v0.3), floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v1.1)
     "rand",                       # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 (v0.8) vs floresta-wire@v0.5.0 -> rand@v0.9.4 (v0.9)
     "rand_core",                  # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_core@v0.6.4 (v0.6) vs floresta-wire@v0.5.0 -> rand@v0.9.4 -> rand_core@v0.9.5 (v0.9)
-    "rand_chacha",                # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_chacha@v0.3.1 (v0.3) vs floresta-wire@v0.5.0 -> rand@v0.9.4 -> rand_chacha@v0.9.0 (v0.9)
     "windows-sys",                # blame: floresta-wire@v0.5.0 -> ring@v0.17.14 (v0.52), dns-lookup@v2.1.1 (v0.60), tokio@v1.52.3 (v0.61)
     "windows-targets",            # blame: cascades from windows-sys versions above
     "windows_aarch64_gnullvm",    # blame: cascades from windows-targets versions above
