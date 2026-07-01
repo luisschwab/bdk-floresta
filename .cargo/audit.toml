@@ -1,11 +1,9 @@
 [advisories]
 ignore = [
     # Cargo.lock
-    "RUSTSEC-2026-0186", # blame: floresta-chain@v0.5.0 -> memmap2@v0.9.10
 
     # Cargo-recent.lock
     "RUSTSEC-2026-0097", # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.5
-    "RUSTSEC-2026-0186", # blame: floresta-chain@v0.5.0 -> memmap2@v0.9.10
 
     # Cargo-minimal.lock
     "RUSTSEC-2024-0421", # blame: floresta-wire@v0.5.0 -> ureq@v3.1.0 -> cookie_store@v0.22.0 -> url@v2.3.1 -> idna@v0.3.0
