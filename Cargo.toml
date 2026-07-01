@@ -83,7 +83,10 @@ lint = { allowed_duplicates = [
 ] }
 
 [lints.rust]
+missing_debug_implementations = "allow"
 missing_docs = "warn"
+unreachable_pub = "warn"
+unused_qualifications = "warn"
 
 # Copied over from `rust-bitcoin`
 [lints.clippy]
