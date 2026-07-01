@@ -378,10 +378,7 @@ impl Node {
     ///
     /// Returns [`NodeError::NotRunning`] if the [`Node`] has not been started.
     pub fn uptime(&self) -> Result<Duration, NodeError> {
-        self.started_at
-            .get()
-            .map(std::time::Instant::elapsed)
-            .ok_or(NodeError::NotRunning)
+        self.started_at.get().map(Instant::elapsed).ok_or(NodeError::NotRunning)
     }
 
     /// Subscribe to [`State`] transitions.

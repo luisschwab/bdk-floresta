@@ -89,8 +89,8 @@ fn source_version_from_cargo_toml(dep_name: &str) -> Option<String> {
 
 /// Source the version of a dependency from `Cargo.lock`.
 fn source_version_from_cargo_lock(dep_name: &str) -> Option<String> {
-    let lock_content = std::fs::read_to_string("Cargo.lock").ok()?;
-    let lock: toml::Value = toml::from_str(&lock_content).ok()?;
+    let lock_content = fs::read_to_string("Cargo.lock").ok()?;
+    let lock: Value = toml::from_str(&lock_content).ok()?;
 
     // Cargo.lock has an array of packages.
     let packages = lock.get("package")?.as_array()?;
