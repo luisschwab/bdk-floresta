@@ -167,7 +167,7 @@ impl From<UtreexoNodeConfig> for NodeConfig {
 pub struct Builder {
     /// Configuration for building the [`Node`].
     pub config: NodeConfig,
-    /// Configuration for building the tracing subscriber logger.
+    /// Configuration for building the tracing subscriber [`Logger`].
     #[cfg(feature = "logger")]
     pub logger: Option<Logger>,
 }

@@ -26,11 +26,11 @@ required-features = ["logger"]
 [dependencies]
 bitcoin = { version = "=0.32.8" }
 bdk_wallet = { version = "=3.0.0" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97", features = ["flat-chainstore"] }
-floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "cb1d60828f4a39fbb311975059f2c7eb3d18bc97" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d", features = ["flat-chainstore"] }
+floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d" }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d" }
 futures = { version = "=0.3.32" }
 tokio = { version = "=1.52.3", features = ["rt", "signal", "sync", "time"] }
 tracing = { version = "=0.1.44" }
@@ -64,12 +64,12 @@ lint = { allowed_duplicates = [
     "bitcoin-consensus-encoding", # blame: floresta-chain@v0.5.0 -> rustreexo@v0.5.0 -> bitcoin_hashes@v0.20.0 (v0.1.0) vs bitcoin-io@v0.3.0 / bitcoin_hashes@v1.0.0 (v1.0.0)
     "bitcoin-internals",          # blame: bitcoin@v0.32.8 (v0.3), rustreexo@v0.5.0 -> bitcoin-io@v0.3.0 (v0.4), rustreexo@v0.5.0 -> bitcoin_hashes@v0.20.0 (v0.5)
     "bitcoin-io",                 # blame: bitcoin@v0.32.8 (v0.1) vs floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v0.3)
+    "cpufeatures",                # blame: sha2@v0.10.9 / sha3@v0.10.9 vs rand@v0.10.1 -> chacha20@v0.10.1
     "getrandom",                  # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_core@v0.6.4 (v0.2) vs floresta-wire@v0.5.0 -> rand@v0.9.4 (v0.3)
     "hashbrown",
     "hex-conservative",           # blame: bitcoin@v0.32.8 (v0.2), floresta-wire@v0.5.0 -> bip324@v0.10.0 -> bitcoin_hashes@v0.15.0 (v0.3), floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v1.1)
     "rand",                       # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 (v0.8) vs floresta-wire@v0.5.0 -> rand@v0.9.4 (v0.9)
     "rand_core",                  # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_core@v0.6.4 (v0.6) vs floresta-wire@v0.5.0 -> rand@v0.9.4 -> rand_core@v0.9.5 (v0.9)
-    "rand_chacha",                # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_chacha@v0.3.1 (v0.3) vs floresta-wire@v0.5.0 -> rand@v0.9.4 -> rand_chacha@v0.9.0 (v0.9)
     "windows-sys",                # blame: floresta-wire@v0.5.0 -> ring@v0.17.14 (v0.52), dns-lookup@v2.1.1 (v0.60), tokio@v1.52.3 (v0.61)
     "windows-targets",            # blame: cascades from windows-sys versions above
     "windows_aarch64_gnullvm",    # blame: cascades from windows-targets versions above
