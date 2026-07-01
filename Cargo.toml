@@ -46,8 +46,8 @@ bitcoin-consensus-encoding = { version = "=1.0.0-rc.3" } # blame: bitcoin-io v0.
 toml = { version = "=1.1.2" }
 
 [dev-dependencies]
-halfin = { version = "=0.4.0" }
 anyhow = { version = "=1.0.102" }
+halfin = { version = "=0.5.0" }
 tokio = { version = "=1.52.3", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.docs.rs]

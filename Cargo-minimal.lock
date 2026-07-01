@@ -480,9 +480,9 @@ dependencies = [
 
 [[package]]
 name = "corepc-client"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f6120efc48c970c94978f846c3c1562cb5e3afa8b00039f3a03f9f68ce4b5d6"
+checksum = "349238a237f42ae84050dc449406a734a752c418b9dd531ecb4e93e7b97d094e"
 dependencies = [
  "bitcoin",
  "corepc-types",
@@ -494,9 +494,9 @@ dependencies = [
 
 [[package]]
 name = "corepc-types"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f095534efdb8f2f43d48b9c3e9f35aefdf29ec6a5f1895064f575a67bc2a8dfe"
+checksum = "86c274042a89391a324ab313b5210680969d02a9fa977733c3354aea4d7a4883"
 dependencies = [
  "bitcoin",
  "serde",
@@ -607,18 +607,6 @@ name = "either"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5845bf77d497f79416df39462df26d4a8b71dd6440246848ee63709476dbb9a6"
-
-[[package]]
-name = "electrum-client"
-version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1970c5d7bd9de6d4041cbfc3e46faa3e85fe7efcea2b0eb06750d3ae1ef577b7"
-dependencies = [
- "bitcoin",
- "log",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "equivalent"
@@ -914,15 +902,13 @@ dependencies = [
 
 [[package]]
 name = "halfin"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f087a4e5490520412816ab19f3103795045537815ddc1a28002ff4491b7404f4"
+checksum = "2a68bf753ddec6e77d6a2b9f2a6d265a46cc63929e3b4351d2cf57853e70069f"
 dependencies = [
- "anyhow",
  "bitcoin_hashes 0.20.0",
  "bitreq",
  "corepc-client",
- "electrum-client",
  "flate2",
  "serde_json",
  "tar",
@@ -2469,9 +2455,9 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "8.0.2"
+version = "8.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81995fafaaaf6ae47a7d0cc83c67caf92aeb7e5331650ae6ff856f7c0c60c459"
+checksum = "48d7cd18d4acb58fb3cdfe9ea54e6cd96a4e7d4cc45c56338b236e82dad47248"
 
 [[package]]
 name = "winapi"
