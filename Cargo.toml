@@ -25,7 +25,7 @@ required-features = ["logger"]
 
 [dependencies]
 bitcoin = { version = "=0.32.8" }
-bdk_wallet = { version = "=3.0.0" }
+bdk_wallet = { version = "=3.1.0" }
 floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d", features = ["flat-chainstore"] }
 floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d" }
 floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "73e748e61303721f86ba50e700ab833794828e9d" }
