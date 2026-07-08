@@ -8,21 +8,7 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-    signatures:
-        name: Signatures
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: Checkout Repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-              with:
-                  persist-credentials: false
-                  fetch-depth: 0
-
-            - name: Assert Commits are Signed
-              run: bash contrib/check-commit-signatures.sh
-
-    conventional-commits:
+    conventional:
         name: Conventional Commits
         runs-on: ubuntu-latest
 
@@ -37,3 +23,17 @@ jobs:
               uses: webiny/action-conventional-commits@7f91b1595ca1951cdb671ddc9f07a49081ec5b69 # v1.4.2
               with:
                   allowed-commit-types: "feat,fix,doc,refactor,test,ci,chore,fuzz,bench"
+
+    signatures:
+        name: Signatures
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
+                  fetch-depth: 0
+
+            - name: Assert Commits are PGP-Signed
+              run: bash contrib/check-signatures.sh

@@ -11,6 +11,7 @@ on:
 permissions: {}
 env:
     CARGO_TERM_COLOR: always
+    RBMT_LOG_LEVEL: progress
 
 jobs:
     cargo-audit:
