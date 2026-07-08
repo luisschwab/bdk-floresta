@@ -32,7 +32,7 @@ It also uses `uv` to run Zizmor, for GitHub Action static analysis.
 
 To install them with `cargo`, run:
 
-```shell
+```text
 ~$ cargo install just
 
 ~$ cargo install cargo-rbmt
@@ -42,29 +42,25 @@ Alternatively, use your preferred package manager to install `just` and `uv`.
 
 A `justfile` is provided for convenience. Run `just` to see available commands:
 
-```shell
-~$ just
+```text
 > bdk-floresta
 > A Floresta-powered chain-source crate for BDK
 
 Available recipes:
-    audit                   # Run `cargo audit` on all lockfiles and prune ignored advisories [alias: a]
-    build                   # Build `bdk-floresta` and examples [alias: b]
-    check                   # Check code formatting, compilation, linting [alias: c]
-    check-commit-signatures # Check if commits are PGP-signed
-    check-features          # Check that all feature combinations compile
-    delete item="data"      # Delete files: data, target, lockfiles [alias: d]
-    doc                     # Generate documentation
-    doc-open                # Generate and open documentation
-    example-client-regtest  # Run the `client_regtest` example [alias: cr]
-    example-client-signet   # Run the `client_signet` example [alias: cs]
-    fmt                     # Format code [alias: f]
-    lock                    # Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock` [alias: l]
-    pre-push                # Run pre-push checks [alias: p]
-    shellcheck              # Run ShellCheck [alias: sc]
-    test                    # Run tests across with relevant toolchain and lockfile combinations [alias: t]
-    toolchains              # Install and/or Update `cargo-rbmt` and Stable and Nightly toolchains
-    zizmor                  # Run Zizmor [alias: z]
+    audit                  # Run `cargo audit` on all lockfiles and prune ignored advisories [alias: a]
+    check                  # Check Formatting, Linting and Documentation [alias: c]
+    docs                   # Generate Documentation
+    docs-open              # Generate and Open Documentation
+    example-client-regtest # Run the Regtest Client Example [alias: cr]
+    example-client-signet  # Run the Signet Client Cxample [alias: cs]
+    fmt                    # Format Code [alias: f]
+    lock                   # Regenerate Lockfiles [alias: l]
+    pre-push               # Run pre-push checks [alias: p]
+    shellcheck             # Run ShellCheck [alias: sc]
+    test                   # Run Tests [alias: t]
+    toolchains             # Update Stable and Nightly Toolchains
+    tools                  # Install cargo-rbmt Tools
+    zizmor                 # Run Zizmor [alias: z]
 ```
 
 ## Architecture

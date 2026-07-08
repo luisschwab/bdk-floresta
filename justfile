@@ -1,7 +1,5 @@
 alias a := audit
-alias b := build
 alias c := check
-alias d := delete
 alias f := fmt
 alias cr := example-client-regtest
 alias cs := example-client-signet
@@ -10,6 +8,8 @@ alias t := test
 alias sc := shellcheck
 alias z := zizmor
 alias p := pre-push
+
+export RBMT_LOG_LEVEL := env("RBMT_LOG_LEVEL", "verbose")
 
 _default:
     @echo "> bdk-floresta"
@@ -21,60 +21,50 @@ audit:
     bash contrib/run-cargo-audit.sh
     bash contrib/prune-audit-ignores.sh
 
-[doc: "Build `bdk-floresta` and examples"]
-build:
-    RBMT_LOG_LEVEL=verbose cargo rbmt build --release
-    RBMT_LOG_LEVEL=verbose cargo rbmt build --release --examples
-
-[doc: "Check code formatting, compilation, linting"]
+[doc: "Check Formatting, Linting and Documentation"]
 check:
-    RBMT_LOG_LEVEL=verbose cargo rbmt fmt --check
-    RBMT_LOG_LEVEL=verbose cargo rbmt lint
-    RBMT_LOG_LEVEL=verbose cargo rbmt docsrs
+    cargo rbmt fmt --check
+    cargo rbmt lint
+    cargo rbmt docs
 
-[doc: "Delete files: data, target, lockfiles"]
-delete item="data":
-    just _delete-{{ item }}
+[doc: "Generate Documentation"]
+docs:
+    cargo rbmt docs
 
-[doc: "Generate documentation"]
-doc:
-    RBMT_LOG_LEVEL=verbose cargo rbmt docsrs
+[doc: "Generate and Open Documentation"]
+docs-open:
+    cargo rbmt docs --open
 
-[doc: "Generate and open documentation"]
-doc-open:
-    RBMT_LOG_LEVEL=verbose cargo rbmt docsrs --open
-
-[doc: "Run the `client_regtest` example"]
+[doc: "Run the Regtest Client Example"]
 example-client-regtest:
     rm -rf examples/data/client_regtest
-    BLOCKS=25 cargo run --release --example client_regtest
+    BLOCKS=25 cargo rbmt run -- run --release --example client_regtest
 
-[doc: "Run the `client_signet` example"]
+[doc: "Run the Signet Client Example"]
 example-client-signet:
     rm -rf examples/data/client_signet
-    cargo run --release --example client_signet
+    cargo rbmt run -- run --release --example client_signet
 
-[doc: "Format code"]
+[doc: "Format Code"]
 fmt:
-    RBMT_LOG_LEVEL=verbose cargo rbmt fmt
+    cargo rbmt fmt
 
-[doc: "Regenerate `Cargo-recent.lock` and `Cargo-minimal.lock`"]
+[doc: "Regenerate Lockfiles"]
 lock:
-  RBMT_LOG_LEVEL=verbose cargo rbmt lock
+  cargo rbmt lock
 
-[doc: "Run tests with relevant toolchain and lockfile combinations"]
+[doc: "Run Tests"]
 test:
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile recent
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile minimal
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain msrv --lockfile minimal
+    cargo rbmt test --toolchain stable --lockfile recent
+    cargo rbmt test --toolchain stable --lockfile minimal
+    cargo rbmt test --toolchain msrv --lockfile minimal
 
-[doc: "Install and/or Update `cargo-rbmt` and Stable and Nightly toolchains"]
+[doc: "Update Stable and Nightly Toolchains"]
 toolchains:
-    bash contrib/install-cargo-rbmt.sh
-    RBMT_LOG_LEVEL=verbose cargo rbmt toolchains --update-stable
-    RBMT_LOG_LEVEL=verbose cargo rbmt toolchains --update-nightly
+    cargo rbmt toolchains --update-stable
+    cargo rbmt toolchains --update-nightly
 
-[doc: "Install cargo-rbmt tools"]
+[doc: "Install cargo-rbmt Tools"]
 tools:
     RBMT_LOG_LEVEL=progress cargo rbmt tools
 
@@ -91,19 +81,8 @@ zizmor:
 pre-push:
     @just lock
     @just check
-    @just doc
+    @just docs
     @just test
     @just shellcheck
     @just zizmor
     @just audit
-
-_delete-data:
-    rm -rf examples/data
-
-_delete-target:
-    rm -rf target/
-
-_delete-lockfiles:
-    rm -f Cargo.lock
-    rm -f Cargo-recent.lock
-    rm -f Cargo-minimal.lock
