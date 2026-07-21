@@ -144,7 +144,6 @@ dependencies = [
  "anyhow",
  "bdk_wallet",
  "bitcoin",
- "bitcoin-consensus-encoding 1.0.0-rc.3",
  "floresta-chain",
  "floresta-compact-filters",
  "floresta-domain",
@@ -246,15 +245,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitcoin-consensus-encoding"
-version = "1.0.0-rc.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cd69023e5db2f3f7241672de6be29408373ba0ff407e7fda71d70d728bec05a"
-dependencies = [
- "bitcoin-internals 0.5.0",
-]
-
-[[package]]
 name = "bitcoin-internals"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,7 +289,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6fb823712b12e5cfccdb9a2b6a62de2dc42ddb5ec489511025eebeba1c21829"
 dependencies = [
- "bitcoin-consensus-encoding 0.1.0",
+ "bitcoin-consensus-encoding",
  "bitcoin-internals 0.5.0",
  "bitcoin_hashes 0.20.0",
 ]
@@ -356,7 +346,7 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a8a45c2b41c457a9a9e4670422fcbdf109afb3b22bc920b4045e8bdfd788a3d"
 dependencies = [
- "bitcoin-consensus-encoding 0.1.0",
+ "bitcoin-consensus-encoding",
  "bitcoin-internals 0.5.0",
  "hex-conservative 0.3.0",
 ]
