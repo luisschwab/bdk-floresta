@@ -44,10 +44,6 @@ jobs:
             - name: Setup cargo-rbmt
               uses: ./.github/actions/setup-rbmt
 
-            - name: Install cargo-rbmt Tools
-              shell: bash
-              run: cargo rbmt tools
-
             - name: Generate Fresh Lockfile
               if: ${{ matrix.lockfile == 'Cargo.lock' }}
               shell: bash
@@ -90,10 +86,6 @@ jobs:
 
             - name: Setup cargo-rbmt
               uses: ./.github/actions/setup-rbmt
-
-            - name: Install cargo-rbmt Tools
-              shell: bash
-              run: cargo rbmt tools
 
             - name: Run Zizmor
               shell: bash
