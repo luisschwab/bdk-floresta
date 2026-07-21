@@ -259,9 +259,6 @@ name = "bitcoin-internals"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a90bbbfa552b49101a230fb2668f3f9ef968c81e6f83cf577e1d4b80f689e1aa"
-dependencies = [
- "hex-conservative 0.3.2",
-]
 
 [[package]]
 name = "bitcoin-internals"
@@ -289,13 +286,13 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-io"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd1a5e0e2112a702941a5c82fe0a31954c2900686053c33f59af64feab61d981"
+checksum = "f6fb823712b12e5cfccdb9a2b6a62de2dc42ddb5ec489511025eebeba1c21829"
 dependencies = [
- "bitcoin-consensus-encoding 1.0.0-rc.3",
- "bitcoin-internals 0.4.2",
- "bitcoin_hashes 0.18.0",
+ "bitcoin-consensus-encoding 0.1.0",
+ "bitcoin-internals 0.5.0",
+ "bitcoin_hashes 0.20.0",
 ]
 
 [[package]]
@@ -325,17 +322,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e5d09f16329cd545d7e6008b2c6b2af3a90bc678cf41ac3d2f6755943301b16"
 dependencies = [
  "bitcoin-io 0.2.0",
- "hex-conservative 0.3.2",
-]
-
-[[package]]
-name = "bitcoin_hashes"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cb7fdb8e07d365e9cd16993fb3c4e04f734c66e334b9cb3c0479fa5437b0ed5"
-dependencies = [
- "bitcoin-consensus-encoding 1.0.0-rc.3",
- "bitcoin-internals 0.4.2",
  "hex-conservative 0.3.2",
 ]
 
@@ -653,7 +639,7 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=73e748e61303721f86ba50e700ab833794828e9d#73e748e61303721f86ba50e700ab833794828e9d"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=424858bc6edce21fe49bc46864b780b141480673#424858bc6edce21fe49bc46864b780b141480673"
 dependencies = [
  "bitcoin",
  "floresta-common",
@@ -669,10 +655,10 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=73e748e61303721f86ba50e700ab833794828e9d#73e748e61303721f86ba50e700ab833794828e9d"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=424858bc6edce21fe49bc46864b780b141480673#424858bc6edce21fe49bc46864b780b141480673"
 dependencies = [
  "bitcoin",
- "hashbrown 0.17.0",
+ "hashbrown 0.17.1",
  "sha2",
  "spin",
  "tracing",
@@ -681,7 +667,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=73e748e61303721f86ba50e700ab833794828e9d#73e748e61303721f86ba50e700ab833794828e9d"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=424858bc6edce21fe49bc46864b780b141480673#424858bc6edce21fe49bc46864b780b141480673"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -690,7 +676,7 @@ dependencies = [
 [[package]]
 name = "floresta-domain"
 version = "0.1.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=73e748e61303721f86ba50e700ab833794828e9d#73e748e61303721f86ba50e700ab833794828e9d"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=424858bc6edce21fe49bc46864b780b141480673#424858bc6edce21fe49bc46864b780b141480673"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -700,7 +686,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=73e748e61303721f86ba50e700ab833794828e9d#73e748e61303721f86ba50e700ab833794828e9d"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=424858bc6edce21fe49bc46864b780b141480673#424858bc6edce21fe49bc46864b780b141480673"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -714,7 +700,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=73e748e61303721f86ba50e700ab833794828e9d#73e748e61303721f86ba50e700ab833794828e9d"
+source = "git+https://github.com/getfloresta/Floresta.git?rev=424858bc6edce21fe49bc46864b780b141480673#424858bc6edce21fe49bc46864b780b141480673"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -931,16 +917,14 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 dependencies = [
- "allocator-api2",
- "equivalent",
  "foldhash",
 ]
 
 [[package]]
 name = "hashbrown"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 dependencies = [
  "allocator-api2",
  "equivalent",
@@ -1189,7 +1173,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
- "hashbrown 0.17.0",
+ "hashbrown 0.17.1",
 ]
 
 [[package]]
@@ -1272,11 +1256,11 @@ checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "lru"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e0b564323a0fb6d54b864f625ae139de9612e27edb944dda37c109f05aac531"
+checksum = "8a860605968fce16869fd239cf4237a82f3ac470723415db603b0e8b6c8d4fb9"
 dependencies = [
- "hashbrown 0.17.0",
+ "hashbrown 0.17.1",
 ]
 
 [[package]]
@@ -1608,12 +1592,13 @@ dependencies = [
 
 [[package]]
 name = "rustreexo"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8353cd48bea30340eced2a11770e47bb6b83f0e7e679742301f3332e6ec1f6ab"
+checksum = "dfd192515a261e313333836d17857e2ae6cdf97d3c57f43f45804b6f657b07f0"
 dependencies = [
- "bitcoin-io 0.3.0",
+ "bitcoin-io 0.5.0",
  "bitcoin_hashes 0.20.0",
+ "foldhash",
  "hashbrown 0.16.1",
  "hex-conservative 1.2.0",
 ]
@@ -1778,9 +1763,9 @@ dependencies = [
 
 [[package]]
 name = "spin"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5fe4ccb98d9c292d56fec89a5e07da7fc4cf0dc11e156b41793132775d3e591"
+checksum = "023a211cb3138dbc438680b32560ad89f699977624c9f8dbb95a47d5b4c07dd3"
 
 [[package]]
 name = "stable_deref_trait"
