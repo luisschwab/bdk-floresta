@@ -9,7 +9,7 @@ alias sc := shellcheck
 alias z := zizmor
 alias p := pre-push
 
-export RBMT_LOG_LEVEL := env("RBMT_LOG_LEVEL", "verbose")
+export RBMT_LOG_LEVEL := env("RBMT_LOG_LEVEL", "progress")
 
 _default:
     @echo "> bdk-floresta"
@@ -55,9 +55,9 @@ lock:
 
 [doc: "Run Tests"]
 test:
-    cargo rbmt test --toolchain stable --lockfile recent
-    cargo rbmt test --toolchain stable --lockfile minimal
-    cargo rbmt test --toolchain msrv --lockfile minimal
+    RBMT_LOG_LEVEL=progress cargo rbmt test --toolchain stable --lockfile recent
+    RBMT_LOG_LEVEL=progress cargo rbmt test --toolchain stable --lockfile minimal
+    RBMT_LOG_LEVEL=progress cargo rbmt test --toolchain msrv --lockfile minimal
 
 [doc: "Update Stable and Nightly Toolchains"]
 toolchains:
@@ -66,7 +66,7 @@ toolchains:
 
 [doc: "Install cargo-rbmt Tools"]
 tools:
-    RBMT_LOG_LEVEL=progress cargo rbmt tools
+    cargo rbmt tools
 
 [doc: "Run ShellCheck"]
 shellcheck:
