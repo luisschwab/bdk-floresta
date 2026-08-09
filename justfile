@@ -36,11 +36,14 @@ docs-open:
     cargo rbmt docs --open
 
 [doc: "Run the Regtest Client Example"]
+[env("BLOCKS", "25")]
+[env("RBMT_LOG_LEVEL", "verbose")]
 example-client-regtest:
     rm -rf examples/data/client_regtest
-    BLOCKS=25 cargo rbmt run -- run --release --example client_regtest
+    cargo rbmt run -- run --release --example client_regtest
 
 [doc: "Run the Signet Client Example"]
+[env("RBMT_LOG_LEVEL", "verbose")]
 example-client-signet:
     rm -rf examples/data/client_signet
     cargo rbmt run -- run --release --example client_signet
