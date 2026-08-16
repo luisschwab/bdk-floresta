@@ -8,7 +8,7 @@
 set -uo pipefail
 
 AUDIT_TOML=".cargo/audit.toml"
-LOCKFILES=("Cargo.lock" "Cargo-recent.lock" "Cargo-minimal.lock")
+LOCKFILES=("Cargo.lock" "Cargo-maximum.lock" "Cargo-recent.lock" "Cargo-minimal.lock")
 
 command -v cargo-audit >/dev/null 2>&1 || { echo "cargo-audit was not found on \$PATH"; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo "jq was not found on \$PATH"; exit 1; }

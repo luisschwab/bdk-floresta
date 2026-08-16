@@ -54,7 +54,7 @@ fmt:
 
 [doc: "Regenerate Lockfiles"]
 lock:
-  cargo rbmt lock
+  cargo rbmt lock --lockfiles minimal,recent,maximum
 
 [doc: "Run Tests"]
 test:

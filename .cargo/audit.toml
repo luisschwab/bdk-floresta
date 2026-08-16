@@ -1,6 +1,11 @@
 [advisories]
 ignore = [
+    # All lockfiles
+    "RUSTSEC-2026-0253", # TODO(@luisschwab): remove after Floresta bumps `lru@0.18.2`
+
     # Cargo.lock
+
+    # Cargo-maximum.lock
 
     # Cargo-recent.lock
     "RUSTSEC-2026-0097", # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.5
