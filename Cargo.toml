@@ -24,30 +24,30 @@ name = "client_signet"
 required-features = ["logger"]
 
 [dependencies]
-bitcoin = { version = "=0.32.8" }
-bdk_wallet = { version = "=3.1.0" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "eb2c087d41fdc4fc3529c07598ec54458652a299", features = ["flat-chainstore"] }
-floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "eb2c087d41fdc4fc3529c07598ec54458652a299" }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "eb2c087d41fdc4fc3529c07598ec54458652a299" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "eb2c087d41fdc4fc3529c07598ec54458652a299" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "eb2c087d41fdc4fc3529c07598ec54458652a299" }
-futures = { version = "=0.3.32" }
-tokio = { version = "=1.52.3", features = ["rt", "signal", "sync", "time"] }
-tracing = { version = "=0.1.44" }
-tracing-appender = { version = "=0.2.5", optional = true }
-tracing-subscriber = { version = "=0.3.23", features = ["ansi", "env-filter", "time"], optional = true }
+bdk_wallet = { version = "3" }
+bitcoin = { version = "0.32.8" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
+floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
+futures = { version = "0.3" }
 time = { version = "=0.3.45", features = ["macros", "local-offset"], optional = true } # time >0.3.45 requires Rust 1.88.0
-tokio-util = { version = "=0.7.18" }
+tokio = { version = "1.52.3", features = ["rt", "signal", "sync", "time"] }
+tokio-util = { version = "0.7.1" }
+tracing = { version = "0.1.44" }
+tracing-appender = { version = "0.2", optional = true }
+tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter", "time"], optional = true }
 # Pinned transitive deps:
-lazy_static = { version = "=1.5.0" } # blame: sharded-slab@v0.1.7 -> tracing-subscriber@v0.3.23
+lazy_static = { version = "1.5.0" } # blame: sharded-slab@v0.1.4 -> tracing-subscriber@v0.3.20
 
 [build-dependencies]
-toml = { version = "=1.1.2" }
+toml = { version = "1" }
 
 [dev-dependencies]
-anyhow = { version = "=1.0.103" }
-halfin = { version = "=0.5.0" }
-tokio = { version = "=1.52.3", features = ["macros", "rt-multi-thread"] }
+anyhow = { version = "1.0.103" }
+halfin = { version = "0.5.0" }
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.docs.rs]
 all-features = true

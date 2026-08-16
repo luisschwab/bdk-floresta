@@ -12,10 +12,10 @@ runs:
               echo "Installing cargo-rbmt@v${RBMT_VERSION} from crates.io"
               cargo install cargo-rbmt --version "$RBMT_VERSION" --locked
 
-        - name: Install Rust Toolchains
+        - name: Install Toolchains
           shell: bash
           run: cargo rbmt toolchains
 
-        - name: Install cargo-rbmt Tools
+        - name: Install Tools
           shell: bash
           run: cargo rbmt tools

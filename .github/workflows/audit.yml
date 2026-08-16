@@ -27,6 +27,8 @@ jobs:
                 include:
                     - name: Fresh Lockfile
                       lockfile: Cargo.lock
+                    - name: Maximum Lockfile
+                      lockfile: Cargo-maximum.lock
                     - name: Recent Lockfile
                       lockfile: Cargo-recent.lock
                     - name: Minimal Lockfile

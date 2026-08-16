@@ -2,7 +2,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-# This script runs `cargo audit` against all three lockfiles
+# This script runs `cargo audit` against all four lockfiles
 # and prints a structured summary of warnings and vulnerabilities.
 #
 # Vulnerabilities and warnings which do not stem from direct
@@ -20,7 +20,7 @@ WARNING_COUNTER=0
 WARNING_FAILURE_COUNTER=0
 VULNERABILITY_COUNTER=0
 
-LOCKFILES=("Cargo.lock" "Cargo-recent.lock" "Cargo-minimal.lock")
+LOCKFILES=("Cargo.lock" "Cargo-maximum.lock" "Cargo-recent.lock" "Cargo-minimal.lock")
 
 declare -A AUDIT_OUTPUT
 declare -A WARNING_COUNT
@@ -259,6 +259,9 @@ DEPENDENCIES_DIRECT=$(cargo metadata --format-version 1 2>/dev/null | jq -r '
 
 echo "> Auditing Cargo.lock"
 process_lockfile "Cargo.lock"
+
+echo "> Auditing Cargo-maximum.lock"
+process_lockfile "Cargo-maximum.lock"
 
 echo "> Auditing Cargo-recent.lock"
 process_lockfile "Cargo-recent.lock"
