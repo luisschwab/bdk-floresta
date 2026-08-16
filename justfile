@@ -58,9 +58,9 @@ lock:
 
 [doc: "Run Tests"]
 test:
-    RBMT_LOG_LEVEL=progress cargo rbmt test --toolchain stable --lockfile recent
-    RBMT_LOG_LEVEL=progress cargo rbmt test --toolchain stable --lockfile minimal
-    RBMT_LOG_LEVEL=progress cargo rbmt test --toolchain msrv --lockfile minimal
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile recent
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile minimal
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain msrv --lockfile minimal
 
 [doc: "Update Stable and Nightly Toolchains"]
 toolchains:
