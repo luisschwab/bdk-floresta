@@ -57,10 +57,11 @@ lock:
   cargo rbmt lock --lockfiles minimal,recent,maximum
 
 [doc: "Run Tests"]
+[env("RBMT_LOG_LEVEL", "verbose")]
 test:
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile recent
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile minimal
-    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain msrv --lockfile minimal
+    cargo rbmt test --toolchain stable --lockfile recent
+    cargo rbmt test --toolchain stable --lockfile minimal
+    cargo rbmt test --toolchain msrv --lockfile minimal
 
 [doc: "Update Stable and Nightly Toolchains"]
 toolchains:
@@ -70,6 +71,7 @@ toolchains:
 [doc: "Install cargo-rbmt Tools"]
 tools:
     cargo rbmt tools
+    cargo rbmt tools --update
 
 [doc: "Run ShellCheck"]
 shellcheck:
