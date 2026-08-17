@@ -54,31 +54,31 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.rbmt]
-version = "0.5.2"
-toolchains = { stable = "1.97.1", nightly = "nightly-2026-08-03" }
-tools = { cargo-audit = "=0.22.2", zizmor = "=1.26.1" }
+version = "0.5.3"
+toolchains = { stable = "1.97.1", nightly = "nightly-2026-08-17" }
+tools = { cargo-audit = "0.22.2", zizmor = "1.29.0" }
 test = { sample_strategy = "all" }
 lint = { allowed_duplicates = [
-    "base64",                     # blame: bitcoin@v0.32.8 (v0.21) vs floresta-wire@v0.5.0 -> tonic@v0.14.5 (v0.22)
-    "bitcoin_hashes",             # blame: bitcoin@v0.32.8 (v0.14), floresta-wire@v0.5.0 -> bip324@v0.10.0 (v0.15), floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v0.20)
-    "bitcoin-internals",          # blame: bitcoin@v0.32.8 (v0.3), rustreexo@v0.5.0 -> bitcoin-io@v0.3.0 (v0.4), rustreexo@v0.5.0 -> bitcoin_hashes@v0.20.0 (v0.5)
-    "bitcoin-io",                 # blame: bitcoin@v0.32.8 (v0.1) vs floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v0.3)
-    "cpufeatures",                # blame: sha2@v0.10.9 / sha3@v0.10.9 vs rand@v0.10.1 -> chacha20@v0.10.1
-    "getrandom",                  # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_core@v0.6.4 (v0.2) vs floresta-wire@v0.5.0 -> rand@v0.9.4 (v0.3)
+    "base64",
+    "bitcoin_hashes",
+    "bitcoin-internals",
+    "bitcoin-io",
+    "cpufeatures",
+    "getrandom",
     "hashbrown",
-    "hex-conservative",           # blame: bitcoin@v0.32.8 (v0.2), floresta-wire@v0.5.0 -> bip324@v0.10.0 -> bitcoin_hashes@v0.15.0 (v0.3), floresta-chain@v0.5.0 -> rustreexo@v0.5.0 (v1.1)
-    "rand",                       # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 (v0.8) vs floresta-wire@v0.5.0 -> rand@v0.9.4 (v0.9)
-    "rand_core",                  # blame: floresta-wire@v0.5.0 -> bip324@v0.10.0 -> rand@v0.8.6 -> rand_core@v0.6.4 (v0.6) vs floresta-wire@v0.5.0 -> rand@v0.9.4 -> rand_core@v0.9.5 (v0.9)
-    "windows-sys",                # blame: floresta-wire@v0.5.0 -> ring@v0.17.14 (v0.52), dns-lookup@v2.1.1 (v0.60), tokio@v1.52.3 (v0.61)
-    "windows-targets",            # blame: cascades from windows-sys versions above
-    "windows_aarch64_gnullvm",    # blame: cascades from windows-targets versions above
-    "windows_aarch64_msvc",       # blame: cascades from windows-targets versions above
-    "windows_i686_gnu",           # blame: cascades from windows-targets versions above
-    "windows_i686_gnullvm",       # blame: cascades from windows-targets versions above
-    "windows_i686_msvc",          # blame: cascades from windows-targets versions above
-    "windows_x86_64_gnu",         # blame: cascades from windows-targets versions above
-    "windows_x86_64_gnullvm",     # blame: cascades from windows-targets versions above
-    "windows_x86_64_msvc",        # blame: cascades from windows-targets versions above
+    "hex-conservative",
+    "rand",
+    "rand_core",
+    "windows-sys",
+    "windows-targets",
+    "windows_aarch64_gnullvm",
+    "windows_aarch64_msvc",
+    "windows_i686_gnu",
+    "windows_i686_gnullvm",
+    "windows_i686_msvc",
+    "windows_x86_64_gnu",
+    "windows_x86_64_gnullvm",
+    "windows_x86_64_msvc",
 ] }
 
 [lints.rust]
