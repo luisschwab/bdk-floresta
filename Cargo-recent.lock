@@ -135,6 +135,7 @@ dependencies = [
  "anyhow",
  "bdk_wallet",
  "bitcoin",
+ "bytes",
  "floresta-chain",
  "floresta-compact-filters",
  "floresta-domain",
@@ -143,7 +144,10 @@ dependencies = [
  "futures",
  "h2",
  "halfin",
+ "keccak",
  "lazy_static",
+ "rand 0.8.6",
+ "ring",
  "time",
  "tokio",
  "tokio-util",
@@ -151,6 +155,7 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
