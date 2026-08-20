@@ -26,11 +26,11 @@ required-features = ["logger"]
 [dependencies]
 bdk_wallet = { version = "3" }
 bitcoin = { version = "0.32.8" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
-floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
+floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
 futures = { version = "0.3" }
 time = { version = "=0.3.45", features = ["macros", "local-offset"], optional = true } # time >0.3.45 requires Rust 1.88.0
 tokio = { version = "1.52.3", features = ["rt", "signal", "sync", "time"] }
@@ -40,6 +40,7 @@ tracing-appender = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter", "time"], optional = true }
 # Pinned transitive deps:
 lazy_static = { version = "1.5.0" } # blame: sharded-slab@v0.1.4 -> tracing-subscriber@v0.3.20
+h2 = { version = "0.4.17" } # blame: floresta-wire@10ca218 -> tonic@0.14.5 -> hyper-timeout@0.5.2 -> hyper@1.10.1 -> h2@0.4.15 (RUSTSEC-2024-0332)
 
 [build-dependencies]
 toml = { version = "1" }
