@@ -26,11 +26,11 @@ required-features = ["logger"]
 [dependencies]
 bdk_wallet = { version = "3" }
 bitcoin = { version = "0.32.8" }
-floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774", features = ["flat-chainstore"] }
-floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
-floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
-floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
-floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "4056f7ec9d1f3788be26c46996155ec2101e7774" }
+floresta-chain = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21", features = ["flat-chainstore"] }
+floresta-compact-filters = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
+floresta-domain = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
+floresta-mempool = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
+floresta-wire = { git = "https://github.com/getfloresta/Floresta.git", rev = "10ca218188fe18f628a4088adefa29a83e84db21" }
 futures = { version = "0.3" }
 time = { version = "=0.3.45", features = ["macros", "local-offset"], optional = true } # time >0.3.45 requires Rust 1.88.0
 tokio = { version = "1.52.3", features = ["rt", "signal", "sync", "time"] }
@@ -39,7 +39,13 @@ tracing = { version = "0.1.44" }
 tracing-appender = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter", "time"], optional = true }
 # Pinned transitive deps:
+bytes = { version = "1.11.1" } # blame: floresta-wire@10ca218 -> tonic@0.14.5 -> axum@0.8.0 -> bytes@1.7.1 (RUSTSEC-2026-0007)
+h2 = { version = "0.4.17" } # blame: floresta-wire@10ca218 -> tonic@0.14.5 -> hyper-timeout@0.5.2 -> hyper@1.10.1 -> h2@0.4.15 (RUSTSEC-2024-0332)
 lazy_static = { version = "1.5.0" } # blame: sharded-slab@v0.1.4 -> tracing-subscriber@v0.3.20
+rand = { version = "0.8.6" } # blame: floresta-wire@10ca218 -> bip324@0.11.0 -> secp256k1@0.29.0 -> rand@0.8.0 (RUSTSEC-2024-0097)
+ring = { version = "0.17.12" } # blame: floresta-wire@10ca218 -> rustls@0.23.40 -> ring@0.17.0 (RUSTSEC-2025-0009)
+url = { version = "2.5.4" } # blame: floresta-wire@10ca218 -> ureq@3.3.0 -> cookie_store@0.22.0 -> url@2.3.1 -> idna@0.3.0 (RUSTSEC-2024-0421)
+keccak = { version = "0.1.6" } # blame: floresta-wire@10ca218 -> sha3@0.10.9 -> keccak@0.1.4 (RUSTSEC-2026-0012)
 
 [build-dependencies]
 toml = { version = "1" }

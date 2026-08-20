@@ -16,7 +16,7 @@ _default:
     @echo "> A Floresta-powered chain-source crate for BDK\n"
     @just --list
 
-[doc: "Run `cargo audit` on all lockfiles and prune ignored advisories"]
+[doc: "Audit dependencies"]
 audit:
     bash contrib/run-cargo-audit.sh
     bash contrib/prune-audit-ignores.sh

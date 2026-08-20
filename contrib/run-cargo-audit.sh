@@ -47,7 +47,7 @@ get_dependency_path() {
         local package
         depth=$(printf '%s' "$line" | grep -o '^[0-9]\+')
         [ -z "$depth" ] && break
-        package=$(printf '%s' "$line" | sed 's/^[0-9]*//' | sed 's/ \(v[^ ]*\).*/@\1/')
+        package=$(printf '%s' "$line" | sed 's/^[0-9]*//' | sed 's/ v\([^ ]*\).*/@\1/')
 
         if [ "$depth" -eq $((depth_previous + 1)) ]; then
             path+=("$package")
@@ -101,7 +101,7 @@ while queue:
     path    = queue.popleft()
     current = path[-1]
     if current in workspace_roots:
-        path_parts = [packages_by_id[package_id]['name'] + '@v' + packages_by_id[package_id]['version'] for package_id in reversed(path)]
+        path_parts = [packages_by_id[package_id]['name'] + '@' + packages_by_id[package_id]['version'] for package_id in reversed(path)]
         print(' -> '.join(path_parts))
         sys.exit(0)
     for parent in reverse_deps[current]:
@@ -164,9 +164,9 @@ format_findings() {
             branch_transitive="${indent}│   └── "
         fi
 
-        echo "${branch}$advisory_id | $package_name@v$package_version | $title"
+        echo "${branch}$advisory_id | $package_name@$package_version | $title"
 
-        local dependency_path_key="${package_name}@v${package_version}"
+        local dependency_path_key="${package_name}@${package_version}"
         if [ -n "${DEPENDENCY_PATHS[$dependency_path_key]+x}" ]; then
             local dependency_path="${DEPENDENCY_PATHS[$dependency_path_key]}"
             if [[ "$dependency_path" == "__LOCKFILE_ONLY__:"* ]]; then
@@ -218,16 +218,16 @@ process_lockfile() {
     # Cache dependency paths for all transitive findings while `Cargo.lock` is present
     local findings_all
     findings_all=$(echo "$audit_output" | jq -r '
-        [.warnings | to_entries[] | .value[] | "\(.package.name)@v\(.package.version)"],
-        [.vulnerabilities.list[] | "\(.package.name)@v\(.package.version)"]
+        [.warnings | to_entries[] | .value[] | "\(.package.name)@\(.package.version)"],
+        [.vulnerabilities.list[] | "\(.package.name)@\(.package.version)"]
         | .[]' | sort -u)
 
     while IFS= read -r package_key; do
         [ -z "$package_key" ] && continue
         local package_name
         local package_version
-        package_name="${package_key%@v*}"
-        package_version="${package_key##*@v}"
+        package_name="${package_key%@*}"
+        package_version="${package_key##*@}"
 
         if echo "$DEPENDENCIES_DIRECT" | grep -qx "$package_name"; then
             continue
