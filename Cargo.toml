@@ -45,7 +45,7 @@ lazy_static = { version = "1.5.0" } # blame: sharded-slab@v0.1.4 -> tracing-subs
 rand = { version = "0.8.6" } # blame: floresta-wire@10ca218 -> bip324@0.11.0 -> secp256k1@0.29.0 -> rand@0.8.0 (RUSTSEC-2024-0097)
 ring = { version = "0.17.12" } # blame: floresta-wire@10ca218 -> rustls@0.23.40 -> ring@0.17.0 (RUSTSEC-2025-0009)
 url = { version = "2.5.4" } # blame: floresta-wire@10ca218 -> ureq@3.3.0 -> cookie_store@0.22.0 -> url@2.3.1 -> idna@0.3.0 (RUSTSEC-2024-0421)
-keccak = { version = "0.1.6" } # blame: floresta-wire@10ca218 -> sha3@0.10.9 -> keccak@0.1.4 (RUSTSEC-2026-0012)
+keccak = { version = "0.2.0" } # blame: floresta-wire@10ca218 -> sha3@0.10.9 -> keccak@0.1.4 (RUSTSEC-2026-0012)
 
 [build-dependencies]
 toml = { version = "1" }
