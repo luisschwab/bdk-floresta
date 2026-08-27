@@ -19,16 +19,16 @@ pub enum BuilderError {
     CreateDirectory(io::Error),
 
     /// Failed to create a `ChainState`.
-    ChainState(floresta_chain::BlockchainError),
+    ChainState(floresta::chain::BlockchainError),
 
     /// Failed to load or create a new chain store.
-    ChainStoreInit(floresta_chain::FlatChainstoreError),
+    ChainStoreInit(floresta::chain::FlatChainstoreError),
 
     /// Compact Block Filter error.
-    CompactBlockFilter(floresta_compact_filters::IterableFilterStoreError),
+    CompactBlockFilter(floresta::compact_filters::IterableFilterStoreError),
 
     /// Failed to build the inner node.
-    BuildInner(floresta_wire::error::WireError),
+    BuildInner(floresta::wire::error::WireError),
 
     #[cfg(feature = "logger")]
     /// Failed to setup the tracing subscriber logger.
@@ -83,10 +83,10 @@ pub enum NodeError {
     UnresponsiveNode(tokio::sync::oneshot::error::RecvError),
 
     /// Blockchain related errors.
-    Blockchain(floresta_chain::BlockchainError),
+    Blockchain(floresta::chain::BlockchainError),
 
     /// Mempool related errors.
-    Mempool(floresta_domain::mempool::error::MempoolError),
+    Mempool(floresta::domain::mempool::error::MempoolError),
 
     /// Failed to fetch all of the requested blocks.
     MissingBlock(bitcoin::BlockHash),
@@ -103,7 +103,7 @@ pub enum NodeError {
     NoSpksProvided,
 
     /// Compact Block Filter related errors.
-    CompactBlockFilter(floresta_compact_filters::IterableFilterStoreError),
+    CompactBlockFilter(floresta::compact_filters::IterableFilterStoreError),
 
     /// The requested `stop_height` exceeds the Compact Block Filter store's height.
     StopHeightExceedsFilterTip {

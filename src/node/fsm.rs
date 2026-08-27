@@ -36,7 +36,7 @@ pub enum State {
 
     // TODO(@luisschwab): how do we figure out when we are in this state?
     /// S2: The [`Node`](crate::node::Node) is bootstrapping its
-    /// [address manager](floresta_wire::address_man::AddressMan) from DNS seeders.
+    /// [address manager](floresta::wire::address_man::AddressMan) from DNS seeders.
     DnsBootstrapping,
 
     /// S3: The [`Node`](crate::node::Node) is synchronizing headers from its peers.
