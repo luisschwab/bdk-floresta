@@ -57,7 +57,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.rbmt]
 version = "0.5.3"
-toolchains = { stable = "1.97.1", nightly = "nightly-2026-08-17" }
+toolchains = { stable = "1.98.0", nightly = "nightly-2026-08-27" }
 tools = { cargo-audit = "0.22.2", zizmor = "1.29.0" }
 test = { sample_strategy = "all" }
 lint = { allowed_duplicates = [
