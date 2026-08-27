@@ -32,6 +32,9 @@ jobs:
             - name: Setup cargo-rbmt
               uses: ./.github/actions/setup-rbmt
 
+            - name: Setup libbitcoinkernel
+              uses: ./.github/actions/setup-libbitcoinkernel
+
             - name: Assert the PR is Bisectable
               shell: bash
               env:
@@ -82,7 +85,7 @@ jobs:
             - name: Setup cargo-rbmt
               uses: ./.github/actions/setup-rbmt
 
-            - name: Run ${{ matrix.task }}
+            - name: Check ${{ matrix.task }}
               shell: bash
               run: cargo rbmt ${{ matrix.task }}
 
@@ -114,6 +117,9 @@ jobs:
 
             - name: Setup cargo-rbmt
               uses: ./.github/actions/setup-rbmt
+
+            - name: Setup libbitcoinkernel
+              uses: ./.github/actions/setup-libbitcoinkernel
 
             - name: Run Tests
               shell: bash
