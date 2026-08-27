@@ -13,8 +13,8 @@ env:
     RUST_BACKTRACE: 1
 
 jobs:
-    bisectable:
-        name: Bisectable PR
+    bisectability:
+        name: PR Bisectability
         runs-on: ubuntu-latest
         if: github.event_name == 'pull_request'
 
@@ -35,29 +35,11 @@ jobs:
             - name: Setup libbitcoinkernel
               uses: ./.github/actions/setup-libbitcoinkernel
 
-            - name: Assert the PR is Bisectable
+            - name: Assert PR Bisectability
               shell: bash
               env:
-                  RBMT_LOG_LEVEL: quiet
-              run: |
-                  mapfile -t commits < <(git rev-list --reverse "${{ github.event.pull_request.base.sha }}..HEAD")
-                  commit_count="${#commits[@]}"
-
-                  for index in "${!commits[@]}"; do
-                      commit_sha="${commits[$index]}"
-                      commit_sha_short="$(git rev-parse --short "${commit_sha}")"
-                      commit_title="$(git log -1 --format=%s "${commit_sha}")"
-
-                      git checkout --quiet --detach "${commit_sha}"
-                      if ! cargo rbmt run build --quiet >build.log 2>&1; then
-                          printf '\n[%d/%d] %s: %s [FAIL]\n' "$((index + 1))" "${commit_count}" "${commit_sha_short}" "${commit_title}"
-                          printf '\n'
-                          cat build.log
-                          exit 1
-                      fi
-
-                      printf '\n[%d/%d] %s: %s [OK]\n' "$((index + 1))" "${commit_count}" "${commit_sha_short}" "${commit_title}"
-                  done
+                  RBMT_LOG_LEVEL: progress
+              run: cargo rbmt run --baseline "${{ github.event.pull_request.base.sha }}" -- test
 
     check:
         name: Check - ${{ matrix.name }}
