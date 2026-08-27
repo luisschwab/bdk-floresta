@@ -1,0 +1,57 @@
+name: Setup libbitcoinkernel
+description: Install dependencies required to build libbitcoinkernel-sys
+
+runs:
+    using: composite
+
+    steps:
+        - name: Install Linux Dependencies
+          if: runner.os == 'Linux'
+          shell: bash
+          run: |
+              sudo apt-get update
+              sudo apt-get install -y \
+                  build-essential \
+                  cmake \
+                  libboost-all-dev
+
+        - name: Install macOS Dependencies
+          if: runner.os == 'macOS'
+          shell: bash
+          run: brew install boost cmake
+
+        - name: Install Windows Dependencies
+          if: runner.os == 'Windows'
+          shell: pwsh
+          run: | # zizmor: ignore[github-env]
+              # Use the runner's temporary directory for the vcpkg checkout
+              $vcpkgRoot = "$env:RUNNER_TEMP\vcpkg"
+
+              # Download `vcpkg` to install the required Boost libraries
+              git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+
+              # Build the `vcpkg` executable with telemetry disabled
+              & "$vcpkgRoot\bootstrap-vcpkg.bat" -disableMetrics
+
+              # Install the static Boost components required by `libbitcoinkernel-sys`
+              & "$vcpkgRoot\vcpkg.exe" install `
+                  boost-headers:x64-windows-static `
+                  boost-multi-index:x64-windows-static
+
+              # Locate the installed static Boost package
+              $boostRoot = "$vcpkgRoot\installed\x64-windows-static"
+
+              # Expose the `vcpkg` checkout to subsequent workflow steps
+              "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+              # Tell CMake where to find Boost
+              "BOOST_ROOT=$boostRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+              # Tell CMake where to find Boost headers
+              "BOOST_INCLUDEDIR=$boostRoot\include" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+              # Tell CMake where to find static Boost libraries
+              "BOOST_LIBRARYDIR=$boostRoot\lib" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+              # Add the Boost library directory to subsequent steps' search path
+              "$boostRoot\lib" | Out-File -FilePath $env:GITHUB_PATH -Append

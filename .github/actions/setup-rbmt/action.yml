@@ -2,7 +2,7 @@ name: Setup cargo-rbmt
 description: Install cargo-rbmt from crates.io
 
 runs:
-    using: "composite"
+    using: composite
 
     steps:
         - name: Install cargo-rbmt

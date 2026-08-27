@@ -136,11 +136,7 @@ dependencies = [
  "bdk_wallet",
  "bitcoin",
  "bytes",
- "floresta-chain",
- "floresta-compact-filters",
- "floresta-domain",
- "floresta-mempool",
- "floresta-wire",
+ "floresta",
  "futures",
  "h2",
  "halfin",
@@ -330,6 +326,15 @@ dependencies = [
  "bitcoin-consensus-encoding",
  "bitcoin-internals 0.5.0",
  "hex-conservative 0.3.2",
+]
+
+[[package]]
+name = "bitcoinkernel"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2af4fd16f643d5bc585073c8513a9fde0a72278a38d0957b78cfd8f2c21bbb36"
+dependencies = [
+ "libbitcoinkernel-sys",
 ]
 
 [[package]]
@@ -633,11 +638,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "floresta"
+version = "0.5.0"
+source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+dependencies = [
+ "floresta-chain",
+ "floresta-compact-filters",
+ "floresta-domain",
+ "floresta-mempool",
+ "floresta-wire",
+]
+
+[[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=10ca218188fe18f628a4088adefa29a83e84db21#10ca218188fe18f628a4088adefa29a83e84db21"
+source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
 dependencies = [
  "bitcoin",
+ "bitcoinkernel",
  "floresta-common",
  "lru",
  "memmap2",
@@ -651,7 +669,7 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=10ca218188fe18f628a4088adefa29a83e84db21#10ca218188fe18f628a4088adefa29a83e84db21"
+source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
 dependencies = [
  "bitcoin",
  "hashbrown 0.17.1",
@@ -663,7 +681,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=10ca218188fe18f628a4088adefa29a83e84db21#10ca218188fe18f628a4088adefa29a83e84db21"
+source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -672,7 +690,7 @@ dependencies = [
 [[package]]
 name = "floresta-domain"
 version = "0.1.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=10ca218188fe18f628a4088adefa29a83e84db21#10ca218188fe18f628a4088adefa29a83e84db21"
+source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -682,7 +700,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=10ca218188fe18f628a4088adefa29a83e84db21#10ca218188fe18f628a4088adefa29a83e84db21"
+source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -696,7 +714,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta.git?rev=10ca218188fe18f628a4088adefa29a83e84db21#10ca218188fe18f628a4088adefa29a83e84db21"
+source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -1213,6 +1231,15 @@ name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+
+[[package]]
+name = "libbitcoinkernel-sys"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2906bc31f02dff7af9611fe9129c9eae021bd359f9d8e79824026fe1aaf28ab1"
+dependencies = [
+ "cc",
+]
 
 [[package]]
 name = "libbz2-rs-sys"

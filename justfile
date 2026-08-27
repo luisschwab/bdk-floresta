@@ -18,8 +18,22 @@ _default:
 
 [doc: "Audit dependencies"]
 audit:
-    bash contrib/run-cargo-audit.sh
-    bash contrib/prune-audit-ignores.sh
+    @echo "Auditing Cargo.lock"
+    cargo generate-lockfile
+    cargo audit --file Cargo.lock
+
+    @echo "\nAuditing Cargo-maximum.lock"
+    cargo audit --file Cargo-maximum.lock
+
+    @echo "\nAuditing Cargo-recent.lock"
+    cargo audit --file Cargo-recent.lock
+
+    @echo "\nAuditing Cargo-minimal.lock"
+    cargo audit --file Cargo-minimal.lock
+
+[doc: "Assert Commit Bisectability"]
+bisectability baseline="master":
+    cargo rbmt run --baseline "{{ baseline }}" -- build --quiet
 
 [doc: "Check Formatting, Linting and Documentation"]
 check:
