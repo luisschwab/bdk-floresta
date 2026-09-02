@@ -25,7 +25,6 @@ use bitcoin::OutPoint;
 use bitcoin::ScriptBuf;
 use floresta::chain::BlockConsumer;
 use floresta::chain::UtxoData;
-use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
@@ -151,17 +150,47 @@ impl Drop for ScanHandle {
 /// Forwards validated [`Block`]s from the [`Node`]
 /// into a channel read by [`Client::scan_continuous`].
 struct BlockSink {
-    /// Channel used to forward validated blocks to the [`Client`].
-    block_tx: UnboundedSender<(Block, u32)>,
+    /// Active channel used to forward validated blocks to the [`Client`].
+    block_tx: Mutex<Option<UnboundedSender<(Block, u32)>>>,
 }
 
 impl BlockConsumer for BlockSink {
     fn on_block(&self, block: &Block, height: u32, _spent_utxos: Option<&HashMap<OutPoint, UtxoData>>) {
-        let _ = self.block_tx.send((block.clone(), height));
+        let block_tx = {
+            let Ok(block_tx) = self.block_tx.lock() else {
+                return;
+            };
+            let Some(block_tx) = block_tx.as_ref().cloned() else {
+                return;
+            };
+            block_tx
+        };
+        let _ = block_tx.send((block.clone(), height));
     }
 
     fn wants_spent_utxos(&self) -> bool {
         false
+    }
+}
+
+/// Keeps a [`BlockSink`] active for the lifetime of a continuous scan.
+struct BlockFwdGuard {
+    /// The block sink controlled by this guard.
+    block_sink: Arc<BlockSink>,
+}
+
+impl BlockFwdGuard {
+    /// Keep block forwarding active until the returned guard is dropped.
+    fn new(block_sink: Arc<BlockSink>) -> Self {
+        Self { block_sink }
+    }
+}
+
+impl Drop for BlockFwdGuard {
+    fn drop(&mut self) {
+        if let Ok(mut block_tx) = self.block_sink.block_tx.lock() {
+            block_tx.take();
+        }
     }
 }
 
@@ -170,8 +199,8 @@ pub struct Client {
     /// The associated [`Node`] which this [`Client`] will submit scan requests to.
     node: Arc<Node>,
 
-    /// A subscriber for new [`Block`]s that the [`Node`] validates whist a scan is in progress.
-    block_subscriber: Arc<AsyncMutex<UnboundedReceiver<(Block, u32)>>>,
+    /// A block sink registered lazily when continuous scanning starts.
+    block_sink: Option<Arc<BlockSink>>,
 
     /// The [`Client`]'s latest [`CheckPoint`].
     checkpoint: CheckPoint,
@@ -239,14 +268,9 @@ impl Client {
         // Used to set the starting height for client scan requests
         let checkpoint = wallet.latest_checkpoint();
 
-        // Create a channel for receiving new blocks;
-        let (block_tx, block_rx) = mpsc::unbounded_channel::<(Block, u32)>();
-        let block_subscriber = Arc::new(AsyncMutex::new(block_rx));
-        node.block_subscriber(Arc::new(BlockSink { block_tx }));
-
         let client = Self {
             node,
-            block_subscriber,
+            block_sink: None,
             checkpoint,
             tx_graph,
             event_tx,
@@ -268,6 +292,33 @@ impl Client {
     /// or [`scan_continuous`](Self::scan_continuous).
     pub fn cancellation_token(&self) -> CancellationToken {
         self.cancellation_token.clone()
+    }
+
+    /// Enable block forwarding for the lifetime of a continuous scan.
+    ///
+    /// Lazily registers an active [`BlockSink`] with the [`Node`], attaches a fresh channel
+    /// for this scan, and returns a [`BlockFwdGuard`] that disables forwarding when [`Drop`]ped.
+    /// Activation happens after IBD and before the initial CBF scan so historical blocks are
+    /// not retained while blocks arriving during the scan are queued.
+    fn enable_block_forwarding(&mut self) -> Result<(UnboundedReceiver<(Block, u32)>, BlockFwdGuard), ClientError> {
+        let (block_tx, block_receiver) = mpsc::unbounded_channel();
+
+        let block_sink = if let Some(block_sink) = self.block_sink.as_ref() {
+            let block_sink = block_sink.clone();
+            let mut active_tx = block_sink.block_tx.lock().map_err(|_| ClientError::PoisonedLock)?;
+            *active_tx = Some(block_tx);
+            drop(active_tx);
+            block_sink
+        } else {
+            let block_sink = Arc::new(BlockSink {
+                block_tx: Mutex::new(Some(block_tx)),
+            });
+            self.node.block_subscriber(block_sink.clone());
+            self.block_sink = Some(block_sink.clone());
+            block_sink
+        };
+        let block_fwd_guard = BlockFwdGuard::new(block_sink);
+        Ok((block_receiver, block_fwd_guard))
     }
 
     /// Request the [`Node`] to perform a scan using the [`Wallet`] associated with this [`Client`].
@@ -322,8 +373,12 @@ impl Client {
         // state before submitting a scan request
         self.wait_until_ready().await?;
 
-        // Run the initial CBF scan; new blocks arriving via `on_block`
-        // queue up in `block_subscriber` while this runs
+        // Subscribe only after IBD has finished. The CBF scan below covers
+        // any blocks validated before this point, while the subscriber queues
+        // blocks that arrive after this point and during the scan.
+        let (mut block_receiver, _block_fwd_guard) = self.enable_block_forwarding()?;
+
+        // New blocks arriving via `on_block` queue up in `block_receiver` while the CBF scan runs
         let scan_result = self.scan_inner(scan_params).await;
 
         // Broadcast a notification if the CBF scan is done or an error occurred
@@ -335,21 +390,17 @@ impl Client {
         self.send_event(event)?;
         scan_result?;
 
-        // Subscribe to new blocks validated by the `Node`
-        let block_subscriber = self.block_subscriber.clone();
+        // Receive new validated blocks from the `Node`
         loop {
-            let (block, height) = {
-                let mut guard = block_subscriber.lock().await;
-                tokio::select! {
-                    biased;
-                    () = self.cancellation_token.cancelled() => {
-                        return Err(ClientError::ScanAborted);
-                    }
-                    b = guard.recv() => match b {
-                        Some(b) => b,
-                        None => return Err(ClientError::UnresponsiveNode),
-                    },
+            let (block, height) = tokio::select! {
+                biased;
+                () = self.cancellation_token.cancelled() => {
+                    return Err(ClientError::ScanAborted);
                 }
+                b = block_receiver.recv() => match b {
+                    Some(b) => b,
+                    None => return Err(ClientError::UnresponsiveNode),
+                },
             };
 
             // Skip blocks that are already known to the `Wallet`
@@ -376,8 +427,7 @@ impl Client {
         Ok(())
     }
 
-    /// Wait for the [`Node`] to reach [`State::Operational`] before
-    /// submitting any requests to it.
+    /// Wait for the [`Node`] to reach [`State::Operational`] before submitting any requests to it.
     async fn wait_until_ready(&self) -> Result<(), ClientError> {
         let mut rx = self.node.subscribe_state();
         loop {
