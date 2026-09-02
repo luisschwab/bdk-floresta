@@ -109,3 +109,53 @@ jobs:
             - name: Run Tests
               shell: bash
               run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lockfile ${{ matrix.lockfile }}
+
+    llvm-cov:
+        name: LLVM Cov
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+
+            - name: Setup Rust Cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+            - name: Setup cargo-rbmt
+              uses: ./.github/actions/setup-rbmt
+
+            - name: Setup libbitcoinkernel
+              uses: ./.github/actions/setup-libbitcoinkernel
+
+            # ElectrumX needs Python 3.10 to run
+            - name: Setup Python 3.10
+              uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+              with:
+                  python-version: '3.10'
+
+            - name: Collect Coverage Data
+              shell: bash
+              run: |
+                  cargo rbmt run --toolchain stable -- llvm-cov \
+                      --all-features \
+                      --no-report \
+                      --ignore-filename-regex '(^|/)test[.]rs$'
+
+            - name: Generate LCOV Coverage Report
+              shell: bash
+              run: |
+                  mkdir -p target/llvm-cov
+                  cargo rbmt run --toolchain stable -- llvm-cov report \
+                      --lcov \
+                      --output-path target/llvm-cov/lcov.info \
+                      --ignore-filename-regex '(^|/)test[.]rs$'
+
+            - name: Upload Coverage Report to Codecov
+              uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: target/llvm-cov/lcov.info
+                  disable_search: true
+                  fail_ci_if_error: true
