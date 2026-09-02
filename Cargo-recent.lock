@@ -144,6 +144,7 @@ dependencies = [
  "lazy_static",
  "rand 0.8.6",
  "ring",
+ "rustls",
  "time",
  "tokio",
  "tokio-util",
@@ -238,6 +239,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin-consensus-encoding"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6712f9c6fd6785b3b270884e57c441c403dc5d7e19ca45368c97c7a1de3000ec"
+dependencies = [
+ "bitcoin-internals 0.6.0",
+]
+
+[[package]]
 name = "bitcoin-internals"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -262,6 +272,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin-internals"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d573f4cf32996a8dce612e4348cece65a241f1882ed594047c9ba348e8869fa5"
+
+[[package]]
 name = "bitcoin-io"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -282,7 +298,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6fb823712b12e5cfccdb9a2b6a62de2dc42ddb5ec489511025eebeba1c21829"
 dependencies = [
- "bitcoin-consensus-encoding",
+ "bitcoin-consensus-encoding 0.1.0",
  "bitcoin-internals 0.5.0",
  "bitcoin_hashes 0.20.0",
 ]
@@ -323,16 +339,27 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a8a45c2b41c457a9a9e4670422fcbdf109afb3b22bc920b4045e8bdfd788a3d"
 dependencies = [
- "bitcoin-consensus-encoding",
+ "bitcoin-consensus-encoding 0.1.0",
  "bitcoin-internals 0.5.0",
  "hex-conservative 0.3.2",
 ]
 
 [[package]]
-name = "bitcoinkernel"
-version = "0.2.1"
+name = "bitcoin_hashes"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2af4fd16f643d5bc585073c8513a9fde0a72278a38d0957b78cfd8f2c21bbb36"
+checksum = "a67800fcf7f3ca52f7796d4466948a424326b225950c79d1e76d0458760bb25d"
+dependencies = [
+ "bitcoin-consensus-encoding 1.2.0",
+ "bitcoin-internals 0.6.0",
+ "cpufeatures 0.2.17",
+]
+
+[[package]]
+name = "bitcoinkernel"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "202e7d3409ef1457abbe72404cfb3f43a104980313cc685e45cfe0366048618d"
 dependencies = [
  "libbitcoinkernel-sys",
 ]
@@ -640,7 +667,7 @@ dependencies = [
 [[package]]
 name = "floresta"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+source = "git+https://github.com/getfloresta/Floresta?rev=c0457dc12697bb8d6339b59d4468dbe1cb1a3f14#c0457dc12697bb8d6339b59d4468dbe1cb1a3f14"
 dependencies = [
  "floresta-chain",
  "floresta-compact-filters",
@@ -652,9 +679,10 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+source = "git+https://github.com/getfloresta/Floresta?rev=c0457dc12697bb8d6339b59d4468dbe1cb1a3f14#c0457dc12697bb8d6339b59d4468dbe1cb1a3f14"
 dependencies = [
  "bitcoin",
+ "bitcoin_hashes 1.1.0",
  "bitcoinkernel",
  "floresta-common",
  "lru",
@@ -669,7 +697,7 @@ dependencies = [
 [[package]]
 name = "floresta-common"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+source = "git+https://github.com/getfloresta/Floresta?rev=c0457dc12697bb8d6339b59d4468dbe1cb1a3f14#c0457dc12697bb8d6339b59d4468dbe1cb1a3f14"
 dependencies = [
  "bitcoin",
  "hashbrown 0.17.1",
@@ -681,7 +709,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+source = "git+https://github.com/getfloresta/Floresta?rev=c0457dc12697bb8d6339b59d4468dbe1cb1a3f14#c0457dc12697bb8d6339b59d4468dbe1cb1a3f14"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -690,7 +718,7 @@ dependencies = [
 [[package]]
 name = "floresta-domain"
 version = "0.1.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+source = "git+https://github.com/getfloresta/Floresta?rev=c0457dc12697bb8d6339b59d4468dbe1cb1a3f14#c0457dc12697bb8d6339b59d4468dbe1cb1a3f14"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -700,13 +728,13 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+source = "git+https://github.com/getfloresta/Floresta?rev=c0457dc12697bb8d6339b59d4468dbe1cb1a3f14#c0457dc12697bb8d6339b59d4468dbe1cb1a3f14"
 dependencies = [
  "ahash",
  "bitcoin",
  "floresta-chain",
  "floresta-domain",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rustreexo",
  "tracing",
 ]
@@ -714,7 +742,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=81a858d9196721ad1ad1752e36a3e46250d5a263#81a858d9196721ad1ad1752e36a3e46250d5a263"
+source = "git+https://github.com/getfloresta/Floresta?rev=c0457dc12697bb8d6339b59d4468dbe1cb1a3f14#c0457dc12697bb8d6339b59d4468dbe1cb1a3f14"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -723,7 +751,7 @@ dependencies = [
  "floresta-common",
  "floresta-compact-filters",
  "floresta-domain",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rustls",
  "rustreexo",
  "serde",
@@ -1234,9 +1262,9 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libbitcoinkernel-sys"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2906bc31f02dff7af9611fe9129c9eae021bd359f9d8e79824026fe1aaf28ab1"
+checksum = "ccee819dc48af6ce3fb213e6f93bae7a7231cd0689b0435afd86ab167cad5321"
 dependencies = [
  "cc",
 ]
@@ -1500,9 +1528,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
+checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
 dependencies = [
  "chacha20",
  "getrandom 0.4.3",
@@ -1580,9 +1608,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.40"
+version = "0.23.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef86cd5876211988985292b91c96a8f2d298df24e75989a43a3c73f2d4d8168b"
+checksum = "6b92b125634d9b795e7beca796cc790df15a7fb38323bf3196fda83292d06b1f"
 dependencies = [
  "log",
  "once_cell",

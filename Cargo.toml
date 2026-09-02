@@ -26,7 +26,7 @@ required-features = ["logger"]
 [dependencies]
 bdk_wallet = { version = "3" }
 bitcoin = { version = "0.32.8" }
-floresta = { git = "https://github.com/getfloresta/Floresta", rev = "81a858d9196721ad1ad1752e36a3e46250d5a263", features = ["chain-bitcoinkernel", "chain-flat-chainstore", "compact-filters", "domain", "mempool", "wire"] }
+floresta = { git = "https://github.com/getfloresta/Floresta", rev = "c0457dc12697bb8d6339b59d4468dbe1cb1a3f14", features = ["chain-bitcoinkernel", "chain-flat-chainstore", "compact-filters", "domain", "mempool", "wire"] }
 futures = { version = "0.3" }
 time = { version = "=0.3.45", features = ["macros", "local-offset"], optional = true } # note: time >0.3.45 requires Rust 1.88.0
 tokio = { version = "1.52.3", features = ["rt", "signal", "sync", "time"] }
@@ -35,13 +35,14 @@ tracing = { version = "0.1.44" }
 tracing-appender = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter", "time"], optional = true }
 # Pinned transitive deps:
-bytes = { version = "1.11.1" } # blame: floresta-wire@81a858d -> tonic@0.14.5 -> axum@0.8.0 -> bytes@1.7.1 (RUSTSEC-2026-0007)
-h2 = { version = "0.4.17" } # blame: floresta-wire@81a858d -> tonic@0.14.5 -> hyper-timeout@0.5.2 -> hyper@1.10.1 -> h2@0.4.15 (RUSTSEC-2024-0332)
+bytes = { version = "1.11.1" } # blame: floresta-wire@c0457dc -> tonic@0.14.5 -> axum@0.8.0 -> bytes@1.7.1 (RUSTSEC-2026-0007)
+h2 = { version = "0.4.17" } # blame: floresta-wire@c0457dc -> tonic@0.14.5 -> hyper-timeout@0.5.2 -> hyper@1.10.1 -> h2@0.4.15 (RUSTSEC-2024-0332)
 lazy_static = { version = "1.5.0" } # blame: sharded-slab@v0.1.4 -> tracing-subscriber@v0.3.20
-rand = { version = "0.8.6" } # blame: floresta-wire@81a858d -> bip324@0.11.0 -> secp256k1@0.29.0 -> rand@0.8.0 (RUSTSEC-2024-0097)
-ring = { version = "0.17.12" } # blame: floresta-wire@81a858d -> rustls@0.23.40 -> ring@0.17.0 (RUSTSEC-2025-0009)
-url = { version = "2.5.4" } # blame: floresta-wire@81a858d -> ureq@3.3.0 -> cookie_store@0.22.0 -> url@2.3.1 -> idna@0.3.0 (RUSTSEC-2024-0421)
-keccak = { version = "0.1.6" } # blame: floresta-wire@81a858d -> sha3@0.10.9 -> keccak@0.1.4 (RUSTSEC-2026-0012)
+rand = { version = "0.8.6" } # blame: floresta-wire@c0457dc -> bip324@0.11.0 -> secp256k1@0.29.0 -> rand@0.8.0 (RUSTSEC-2024-0097)
+ring = { version = "0.17.12" } # blame: floresta-wire@c0457dc -> rustls@0.23.40 -> ring@0.17.0 (RUSTSEC-2025-0009)
+rustls = { version = "=0.23.41", default-features = false } # blame: floresta-wire@c0457dc requires rustls@=0.23.41
+url = { version = "2.5.4" } # blame: floresta-wire@c0457dc -> ureq@3.3.0 -> cookie_store@0.22.0 -> url@2.3.1 -> idna@0.3.0 (RUSTSEC-2024-0421)
+keccak = { version = "0.1.6" } # blame: floresta-wire@c0457dc -> sha3@0.10.9 -> keccak@0.1.4 (RUSTSEC-2026-0012)
 
 [build-dependencies]
 toml = { version = "1" }
@@ -62,6 +63,7 @@ tools = { cargo-audit = "0.22.2", zizmor = "1.29.0" }
 test = { sample_strategy = "all" }
 lint = { allowed_duplicates = [
     "base64",
+    "bitcoin-consensus-encoding",
     "bitcoin_hashes",
     "bitcoin-internals",
     "bitcoin-io",
