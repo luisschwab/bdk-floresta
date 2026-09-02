@@ -67,7 +67,10 @@ jobs:
             - name: Setup cargo-rbmt
               uses: ./.github/actions/setup-rbmt
 
-            - name: Check ${{ matrix.task }}
+            - name: Setup libbitcoinkernel
+              uses: ./.github/actions/setup-libbitcoinkernel
+
+            - name: Check ${{ matrix.name }}
               shell: bash
               run: cargo rbmt ${{ matrix.task }}
 
