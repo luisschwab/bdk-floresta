@@ -9,6 +9,7 @@ alias sc := shellcheck
 alias z := zizmor
 alias p := pre-push
 
+stable := `cargo rbmt toolchains --stable`
 export RBMT_LOG_LEVEL := env("RBMT_LOG_LEVEL", "progress")
 
 _default:
@@ -34,6 +35,18 @@ audit:
 [doc: "Assert Commit Bisectability"]
 bisectability baseline="master":
     cargo rbmt run --baseline "{{ baseline }}" -- build --quiet
+
+[doc: "Generate Code Coverage"]
+[env("CARGO_LLVM_COV_SETUP", "yes")]
+coverage:
+    cargo +{{ stable }} llvm-cov \
+        --all-features \
+        --html \
+        --ignore-filename-regex '(^|/)test[.]rs$'
+    cargo +{{ stable }} llvm-cov report \
+        --lcov \
+        --output-path target/llvm-cov/lcov.info \
+        --ignore-filename-regex '(^|/)test[.]rs$'
 
 [doc: "Check Formatting, Linting and Documentation"]
 check:
