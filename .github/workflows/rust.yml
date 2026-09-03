@@ -30,10 +30,10 @@ jobs:
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
             - name: Setup cargo-rbmt
-              uses: ./.github/actions/setup-rbmt
+              uses: $/.github/actions/setup-rbmt
 
             - name: Setup libbitcoinkernel
-              uses: ./.github/actions/setup-libbitcoinkernel
+              uses: $/.github/actions/setup-libbitcoinkernel
 
             - name: Assert PR Bisectability
               shell: bash
@@ -65,10 +65,10 @@ jobs:
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
             - name: Setup cargo-rbmt
-              uses: ./.github/actions/setup-rbmt
+              uses: $/.github/actions/setup-rbmt
 
             - name: Setup libbitcoinkernel
-              uses: ./.github/actions/setup-libbitcoinkernel
+              uses: $/.github/actions/setup-libbitcoinkernel
 
             - name: Check ${{ matrix.name }}
               shell: bash
@@ -101,10 +101,10 @@ jobs:
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
             - name: Setup cargo-rbmt
-              uses: ./.github/actions/setup-rbmt
+              uses: $/.github/actions/setup-rbmt
 
             - name: Setup libbitcoinkernel
-              uses: ./.github/actions/setup-libbitcoinkernel
+              uses: $/.github/actions/setup-libbitcoinkernel
 
             - name: Run Tests
               shell: bash
@@ -124,10 +124,10 @@ jobs:
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
             - name: Setup cargo-rbmt
-              uses: ./.github/actions/setup-rbmt
+              uses: $/.github/actions/setup-rbmt
 
             - name: Setup libbitcoinkernel
-              uses: ./.github/actions/setup-libbitcoinkernel
+              uses: $/.github/actions/setup-libbitcoinkernel
 
             # ElectrumX needs Python 3.10 to run
             - name: Setup Python 3.10

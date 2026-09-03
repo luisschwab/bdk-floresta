@@ -36,10 +36,10 @@ jobs:
                   cache-on-failure: false
 
             - name: Setup cargo-rbmt
-              uses: ./.github/actions/setup-rbmt
+              uses: $/.github/actions/setup-rbmt
 
             - name: Setup libbitcoinkernel
-              uses: ./.github/actions/setup-libbitcoinkernel
+              uses: $/.github/actions/setup-libbitcoinkernel
 
             - name: Run ${{ matrix.name }} Example
               run: cargo rbmt run -- run --release --example ${{ matrix.example }}
