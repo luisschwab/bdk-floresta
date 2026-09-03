@@ -1,0 +1,63 @@
+name: Update
+
+on:
+    schedule:
+        - cron: '0 12 * * 3' # Wednesday, 12:00:00 UTC
+    workflow_dispatch:
+
+permissions: {}
+
+jobs:
+    update:
+        name: Tools and Toolchains
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+
+            - name: Setup Rust Cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+            - name: Setup cargo-rbmt
+              uses: $/.github/actions/setup-rbmt
+
+            - name: Configure Git for the Clanker
+              env:
+                  PGP_FINGERPRINT: ${{ secrets.REDOX_CLANKER_PGP_FINGERPRINT }}
+                  PGP_SECKEY: ${{ secrets.REDOX_CLANKER_PGP_SECKEY }}
+              run: |
+                  printf '%s' "$PGP_SECKEY" | gpg --batch --import
+                  git config user.name "Reduction-Oxidation Clanker"
+                  git config user.email "redox-clanker@luisschwab.net"
+                  git config user.signingkey "$PGP_FINGERPRINT"
+                  git config commit.gpgsign true
+
+            - name: Update Tools and Toolchains
+              env:
+                  RBMT_LOG_LEVEL: progress
+              run: |
+                  cargo rbmt tools --update
+                  cargo rbmt toolchains --update-stable
+                  cargo rbmt toolchains --update-nightly
+                  cargo rbmt fmt
+
+            - name: Source Update Date
+              run: echo "UPDATE_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
+
+            - name: Create Pull Request
+              uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+              with:
+                  token: ${{ secrets.REDOX_CLANKER_CREATE_PR_TOKEN }}
+                  base: master
+                  branch: bot/automated-tool-toolchain-update
+                  delete-branch: true
+                  commit-message: "chore: bump tools and/or toolchains"
+                  committer: Reduction-Oxidation Clanker <redox-clanker@luisschwab.net>
+                  author: Reduction-Oxidation Clanker <redox-clanker@luisschwab.net>
+                  title: Update Tools and Toolchains [${{ env.UPDATE_DATE }}]
