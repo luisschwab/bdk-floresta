@@ -111,7 +111,7 @@ jobs:
               run: cargo rbmt test --toolchain ${{ matrix.toolchain }} --lockfile ${{ matrix.lockfile }}
 
     llvm-cov:
-        name: LLVM Cov
+        name: Coverage
         runs-on: ubuntu-latest
 
         steps:
