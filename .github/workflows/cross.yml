@@ -21,7 +21,7 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    - runner: macos-latest
+                    - runner: macos-26
                       target: aarch64-apple-darwin
 
                     - runner: ubuntu-24.04-arm
@@ -176,3 +176,117 @@ jobs:
                   export "CARGO_TARGET_${cargo_target_env}_RUNNER=${{ matrix.emulator }} -L ${{ matrix.sysroot }}"
 
                   cargo rbmt run -- test --target "${{ matrix.target }}" --tests
+
+    # Build 64-bit Android targets and run x86_64 tests in an emulator
+    cross-android:
+        name: "${{ matrix.target }} [android_ndk]"
+        runs-on: ubuntu-24.04
+        env:
+            ANDROID_API_LEVEL: 24
+            ANDROID_TARGET: ${{ matrix.target }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    # TODO(@luisschwab): run this target in an emulator when GitHub-hosted ARM64 runners support nested
+                    # virtualization: https://github.com/ReactiveCircus/android-emulator-runner/issues/453
+                    - target: aarch64-linux-android
+                      execute-tests: false
+
+                    - target: x86_64-linux-android
+                      execute-tests: true
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+
+            - name: Setup Rust Cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+              with:
+                  key: ${{ matrix.target }}
+
+            - name: Setup cargo-rbmt
+              uses: $/.github/actions/setup-rbmt
+
+            - name: Setup libbitcoinkernel
+              uses: $/.github/actions/setup-libbitcoinkernel
+
+            - name: Expose Boost to the Android NDK
+              shell: bash
+              run: |
+                  # Let CMake discover the host Boost package while the NDK compiler resolves
+                  # its header-only dependency from the Android sysroot, without seeing the host's libc
+                  boost_configs=(/usr/lib/"$(gcc -print-multiarch)"/cmake/Boost-*/BoostConfig.cmake)
+                  test -f "${boost_configs[0]}"
+                  boost_dir="${boost_configs[0]%/*}"
+                  ndk_sysroot="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+                  sudo ln -s /usr/include/boost "$ndk_sysroot/usr/include/boost"
+
+                  echo "CMAKE_PREFIX_PATH=$boost_dir${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}" >> "$GITHUB_ENV"
+
+            - name: Resolve Stable Toolchain Version
+              shell: bash
+              run: echo "STABLE_TOOLCHAIN=$(cargo rbmt toolchains --stable)" >> "$GITHUB_ENV"
+
+            - name: "Install Rust Target: ${{ matrix.target }}"
+              shell: bash
+              run: rustup target add --toolchain "$STABLE_TOOLCHAIN" "${{ matrix.target }}"
+
+            - name: Configure Android Toolchain and Test Runner
+              shell: bash
+              run: |
+                  android_runner="$RUNNER_TEMP/android-runner"
+
+                  # Cargo invokes this runner with the test binary followed by the test arguments
+                  # Copy the binary into the emulator and execute it in Android's userspace
+                  printf '%s\n' \
+                      '#!/usr/bin/env bash' \
+                      'set -euo pipefail' \
+                      'binary="$1"' \
+                      'shift' \
+                      'remote_binary="/data/local/tmp/$(basename "$binary")"' \
+                      'cleanup() { adb shell rm -f "$remote_binary" >/dev/null 2>&1 || true; }' \
+                      'trap cleanup EXIT' \
+                      'adb push "$binary" "$remote_binary" >/dev/null' \
+                      'adb shell chmod 755 "$remote_binary"' \
+                      'adb shell "$remote_binary" "$@"' \
+                      > "$android_runner"
+
+                  # Configure target-scoped NDK tools, leaving native build scripts on the host toolchain
+                  target_env="$(printf '%s' "$ANDROID_TARGET" | tr '-' '_')"
+                  cargo_target_env="$(printf '%s' "$ANDROID_TARGET" | tr 'a-z-' 'A-Z_')"
+                  ndk_bin="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+                  cc="$ndk_bin/${ANDROID_TARGET}${ANDROID_API_LEVEL}-clang"
+
+                  chmod +x "$android_runner"
+                  {
+                      echo "AR_${target_env}=$ndk_bin/llvm-ar"
+                      echo "CC_${target_env}=$cc"
+                      echo "CARGO_TARGET_${cargo_target_env}_LINKER=$cc"
+                      echo "CARGO_TARGET_${cargo_target_env}_RUNNER=$android_runner"
+                  } >> "$GITHUB_ENV"
+
+            - name: Compile
+              if: matrix.execute-tests == false
+              shell: bash
+              run: cargo rbmt run -- build --lib --all-features --target "${{ matrix.target }}"
+
+            - name: Enable KVM
+              if: matrix.execute-tests
+              shell: bash
+              run: |
+                  # Grant the runner access to KVM so the Android emulator can use hardware acceleration
+                  echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+                  sudo udevadm control --reload-rules
+                  sudo udevadm trigger --name-match=kvm
+
+            - name: Run Tests
+              if: matrix.execute-tests
+              uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+              with:
+                  api-level: 24
+                  arch: x86_64
+                  emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+                  script: cargo rbmt run -- test --lib --tests --all-features --target "${{ matrix.target }}"
