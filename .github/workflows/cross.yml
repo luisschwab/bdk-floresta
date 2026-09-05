@@ -290,3 +290,156 @@ jobs:
                   arch: x86_64
                   emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
                   script: cargo rbmt run -- test --lib --tests --all-features --target "${{ matrix.target }}"
+
+    # Build ARM64 Apple device targets and run ARM64 simulator tests
+    cross-apple:
+        name: "${{ matrix.target }} [apple]"
+        runs-on: macos-26
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - target: aarch64-apple-ios
+                      system-name: iOS
+                      sysroot: iphoneos
+                      deployment-env: IPHONEOS_DEPLOYMENT_TARGET
+                      deployment-target: "14.0"
+                      execute-tests: false
+
+                    - target: aarch64-apple-ios-sim
+                      system-name: iOS
+                      sysroot: iphonesimulator
+                      deployment-env: IPHONEOS_DEPLOYMENT_TARGET
+                      deployment-target: "14.0"
+                      simulator-platform: iOS
+                      execute-tests: true
+
+                    - target: aarch64-apple-tvos
+                      system-name: tvOS
+                      sysroot: appletvos
+                      deployment-env: TVOS_DEPLOYMENT_TARGET
+                      deployment-target: "14.0"
+                      execute-tests: false
+
+                    - target: aarch64-apple-tvos-sim
+                      system-name: tvOS
+                      sysroot: appletvsimulator
+                      deployment-env: TVOS_DEPLOYMENT_TARGET
+                      deployment-target: "14.0"
+                      simulator-platform: tvOS
+                      execute-tests: true
+
+                    - target: aarch64-apple-watchos
+                      system-name: watchOS
+                      sysroot: watchos
+                      deployment-env: WATCHOS_DEPLOYMENT_TARGET
+                      deployment-target: "7.0"
+                      execute-tests: false
+
+                    - target: aarch64-apple-watchos-sim
+                      system-name: watchOS
+                      sysroot: watchsimulator
+                      deployment-env: WATCHOS_DEPLOYMENT_TARGET
+                      deployment-target: "7.0"
+                      simulator-platform: watchOS
+                      execute-tests: true
+
+                    - target: aarch64-apple-visionos
+                      system-name: visionOS
+                      sysroot: xros
+                      deployment-env: XROS_DEPLOYMENT_TARGET
+                      deployment-target: "1.0"
+                      execute-tests: false
+
+                    - target: aarch64-apple-visionos-sim
+                      system-name: visionOS
+                      sysroot: xrsimulator
+                      deployment-env: XROS_DEPLOYMENT_TARGET
+                      deployment-target: "1.0"
+                      simulator-platform: xrOS
+                      execute-tests: true
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+
+            - name: Setup Rust Cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+              with:
+                  key: ${{ matrix.target }}
+
+            - name: Setup cargo-rbmt
+              uses: $/.github/actions/setup-rbmt
+
+            - name: Setup libbitcoinkernel
+              uses: $/.github/actions/setup-libbitcoinkernel
+
+            - name: Resolve Stable Toolchain Version
+              shell: bash
+              run: echo "STABLE_TOOLCHAIN=$(cargo rbmt toolchains --stable)" >> "$GITHUB_ENV"
+
+            - name: "Install Rust Target: ${{ matrix.target }}"
+              shell: bash
+              run: rustup target add --toolchain "$STABLE_TOOLCHAIN" "${{ matrix.target }}"
+
+            - name: Configure the CMake Toolchain
+              shell: bash
+              run: |
+                  # Cross-compile Bitcoin Core for the selected Apple SDK and make its CMake
+                  # checks compile static libraries so they do not try to link or run target executables
+                  toolchain="$RUNNER_TEMP/apple-cross.cmake"
+                  boost_prefix="$(brew --prefix boost)"
+                  boost_configs=("$boost_prefix"/lib/cmake/Boost-*/BoostConfig.cmake)
+                  test -f "${boost_configs[0]}"
+                  boost_dir="${boost_configs[0]%/*}"
+
+                  printf '%s\n' \
+                      'set(CMAKE_SYSTEM_NAME ${{ matrix.system-name }})' \
+                      'set(CMAKE_OSX_SYSROOT ${{ matrix.sysroot }})' \
+                      'set(CMAKE_OSX_ARCHITECTURES arm64)' \
+                      'set(CMAKE_OSX_DEPLOYMENT_TARGET ${{ matrix.deployment-target }})' \
+                      'set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)' \
+                      'set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)' \
+                      "set(Boost_DIR \"$boost_dir\")" \
+                      > "$toolchain"
+
+                  # Keep rustc and cc-rs on the same deployment floor as the CMake build so
+                  # Rust libraries do not link against newer Bitcoin Core object files
+                  {
+                      echo "CMAKE_TOOLCHAIN_FILE=$toolchain"
+                      echo "${{ matrix.deployment-env }}=${{ matrix.deployment-target }}"
+                  } >> "$GITHUB_ENV"
+
+            - name: Compile
+              if: matrix.execute-tests == false
+              shell: bash
+              run: cargo rbmt run -- build --lib --all-features --target "${{ matrix.target }}"
+
+            - name: Boot Simulator
+              if: matrix.execute-tests
+              shell: bash
+              run: |
+                  # Pick the newest available runtime for this platform instead of pinning an
+                  # OS patch version or device model from the periodically updated runner image
+                  runtime_id="$(xcrun simctl list runtimes available --json | jq -er --arg platform '${{ matrix.simulator-platform }}' '[.runtimes[] | select(.isAvailable and .platform == $platform)] | sort_by(.version | split(".") | map(tonumber)) | last | .identifier')"
+                  simulator_udid="$(xcrun simctl list devices available --json | jq -er --arg runtime "$runtime_id" '.devices[$runtime][0].udid')"
+                  cargo_target_env="$(printf '%s' '${{ matrix.target }}' | tr 'a-z-' 'A-Z_')"
+
+                  xcrun simctl boot "$simulator_udid"
+                  xcrun simctl bootstatus "$simulator_udid" -b
+                  {
+                      echo "SIMULATOR_UDID=$simulator_udid"
+                      echo "CARGO_TARGET_${cargo_target_env}_RUNNER=xcrun simctl spawn $simulator_udid"
+                  } >> "$GITHUB_ENV"
+
+            - name: Run Tests
+              if: matrix.execute-tests
+              shell: bash
+              run: cargo rbmt run -- test --lib --tests --all-features --target "${{ matrix.target }}"
+
+            - name: Shut Down Simulator
+              if: matrix.execute-tests && always()
+              shell: bash
+              run: test -z "${SIMULATOR_UDID:-}" || xcrun simctl shutdown "$SIMULATOR_UDID"
