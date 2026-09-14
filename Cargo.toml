@@ -40,7 +40,7 @@ h2 = { version = "0.4.17" } # blame: floresta-wire@c0457dc -> tonic@0.14.5 -> hy
 lazy_static = { version = "1.5.0" } # blame: sharded-slab@v0.1.4 -> tracing-subscriber@v0.3.20
 rand = { version = "0.8.6" } # blame: floresta-wire@c0457dc -> bip324@0.11.0 -> secp256k1@0.29.0 -> rand@0.8.0 (RUSTSEC-2024-0097)
 ring = { version = "0.17.12" } # blame: floresta-wire@c0457dc -> rustls@0.23.40 -> ring@0.17.0 (RUSTSEC-2025-0009)
-rustls = { version = "=0.23.41", default-features = false } # blame: floresta-wire@c0457dc requires rustls@=0.23.41
+rustls = { version = "=0.23.41", default-features = false } # blame: floresta-wire@c0457dc requires rustls@=0.23.42
 url = { version = "2.5.4" } # blame: floresta-wire@c0457dc -> ureq@3.3.0 -> cookie_store@0.22.0 -> url@2.3.1 -> idna@0.3.0 (RUSTSEC-2024-0421)
 keccak = { version = "0.1.6" } # blame: floresta-wire@c0457dc -> sha3@0.10.9 -> keccak@0.1.4 (RUSTSEC-2026-0012)
 
