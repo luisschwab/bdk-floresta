@@ -63,7 +63,6 @@ pre-push:
     cargo rbmt lock --lockfiles minimal,recent,maximum
     # Check Formatting
     cargo rbmt fmt --check
-    @echo
     # Check Linting
     cargo rbmt lint
     # Check Documentation
