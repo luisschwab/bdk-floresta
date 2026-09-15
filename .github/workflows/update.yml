@@ -2,10 +2,14 @@ name: Update
 
 on:
     schedule:
-        - cron: '0 12 * * 3' # Wednesday, 12:00:00 UTC
+        - cron: '0 9 1 * *' # First day of each month @ 09:00:00 UTC
     workflow_dispatch:
 
 permissions: {}
+env:
+    CARGO_TERM_COLOR: always
+    RUST_BACKTRACE: 1
+    RBMT_LOG_LEVEL: verbose
 
 jobs:
     update:
@@ -23,11 +27,13 @@ jobs:
 
             - name: Setup Rust Cache
               uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+              with:
+                  cache-on-failure: true
 
             - name: Setup cargo-rbmt
               uses: $/.github/actions/setup-rbmt
 
-            - name: Configure Git for the Clanker
+            - name: Configure the Clanker's Git Identity
               env:
                   PGP_FINGERPRINT: ${{ secrets.REDOX_CLANKER_PGP_FINGERPRINT }}
                   PGP_SECKEY: ${{ secrets.REDOX_CLANKER_PGP_SECKEY }}
@@ -38,6 +44,16 @@ jobs:
                   git config user.signingkey "$PGP_FINGERPRINT"
                   git config commit.gpgsign true
 
+            - name: Snapshot Current Tool and Toolchain Versions
+              run: |
+                  cargo metadata --no-deps --format-version=1 |
+                      jq --compact-output --exit-status \
+                          --arg manifest "$GITHUB_WORKSPACE/Cargo.toml" \
+                          '.packages[] | select(.manifest_path == $manifest) | .metadata.rbmt.tools' \
+                          > "$RUNNER_TEMP/tools-before.json"
+                  cargo rbmt toolchains --stable > "$RUNNER_TEMP/stable-before.txt"
+                  cargo rbmt toolchains --nightly > "$RUNNER_TEMP/nightly-before.txt"
+
             - name: Update Tools and Toolchains
               env:
                   RBMT_LOG_LEVEL: progress
@@ -47,8 +63,113 @@ jobs:
                   cargo rbmt toolchains --update-nightly
                   cargo rbmt fmt
 
-            - name: Source Update Date
-              run: echo "UPDATE_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
+            - name: Snapshot Updated Tool and Toolchain Versions
+              run: |
+                  cargo metadata --no-deps --format-version=1 |
+                      jq --compact-output --exit-status \
+                          --arg manifest "$GITHUB_WORKSPACE/Cargo.toml" \
+                          '.packages[] | select(.manifest_path == $manifest) | .metadata.rbmt.tools' \
+                          > "$RUNNER_TEMP/tools-after.json"
+                  cargo rbmt toolchains --stable > "$RUNNER_TEMP/stable-after.txt"
+                  cargo rbmt toolchains --nightly > "$RUNNER_TEMP/nightly-after.txt"
+
+            - name: Generate Update Metadata for Commit and PR
+              id: metadata
+              uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+              with:
+                  script: |
+                      const fs = require('node:fs');
+                      const path = require('node:path');
+
+                      const readSnapshot = (name) => fs.readFileSync(
+                          path.join(process.env.RUNNER_TEMP, name),
+                          'utf8',
+                      ).trim();
+
+                      const snapshot = (state) => ({
+                          tools: JSON.parse(readSnapshot(`tools-${state}.json`)),
+                          toolchains: {
+                              stable: readSnapshot(`stable-${state}.txt`),
+                              nightly: readSnapshot(`nightly-${state}.txt`),
+                          },
+                      });
+                      const previous = snapshot('before');
+                      const current = snapshot('after');
+
+                      const changes = (table) => {
+                          const before = previous[table];
+                          const after = current[table];
+
+                          if (
+                              before === null
+                              || after === null
+                              || typeof before !== 'object'
+                              || typeof after !== 'object'
+                              || Array.isArray(before)
+                              || Array.isArray(after)
+                          ) {
+                              throw new Error(`Invalid ${table} version metadata`);
+                          }
+
+                          for (const version of [...Object.values(before), ...Object.values(after)]) {
+                              if (typeof version !== 'string') {
+                                  throw new Error(`Invalid ${table} version: ${version}`);
+                              }
+                          }
+
+                          return Object.entries(after).flatMap(([name, version]) => {
+                              const oldVersion = before[name];
+                              return oldVersion !== undefined && oldVersion !== version
+                                  ? [{ name, oldVersion, version }]
+                                  : [];
+                          });
+                      };
+
+                      const tools = changes('tools');
+                      const toolchains = changes('toolchains');
+                      const subjects = [
+                          ...(tools.length > 0 ? ['tools'] : []),
+                          ...(toolchains.length > 0 ? ['toolchains'] : []),
+                      ];
+                      const updatedSubjects = subjects.length > 0
+                          ? subjects
+                          : ['tools', 'toolchains'];
+                      const commitTitle = `chore(ci): bump ${updatedSubjects.join(' and ')}`;
+                      const updateDate = new Date().toISOString().slice(0, 10);
+                      const prTitle = `Update Tools and Toolchains [${updateDate}]`;
+                      const withV = (version) => version.startsWith('v')
+                          ? version
+                          : `v${version}`;
+                      const toolChanges = tools.map(({ name, oldVersion, version }) =>
+                          `* Bump \`${name}\` from ${withV(oldVersion)} to ${withV(version)}`);
+                      const toolchainChanges = toolchains.map(({ name, oldVersion, version }) =>
+                          `* Bump ${name} from ${oldVersion} to ${version}`);
+                      const sections = [];
+                      if (tools.length > 0) {
+                          sections.push([
+                              '## Tools',
+                              ...toolChanges,
+                          ].join('\n'));
+                      }
+                      if (toolchains.length > 0) {
+                          sections.push([
+                              '## Toolchains',
+                              ...toolchainChanges,
+                          ].join('\n'));
+                      }
+                      const changelog = sections.join('\n\n');
+                      const prBody = changelog.length > 0
+                          ? ['## Changelog', '', '```', changelog, '```'].join('\n')
+                          : '';
+                      const commitBody = [toolChanges, toolchainChanges]
+                          .filter((section) => section.length > 0)
+                          .map((section) => section.join('\n'))
+                          .join('\n\n');
+
+                      core.setOutput('pr_title', prTitle);
+                      core.setOutput('pr_body', prBody);
+                      core.setOutput('commit_title', commitTitle);
+                      core.setOutput('commit_body', commitBody);
 
             - name: Create Pull Request
               uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
@@ -57,7 +178,11 @@ jobs:
                   base: master
                   branch: bot/automated-tool-toolchain-update
                   delete-branch: true
-                  commit-message: "chore: bump tools and/or toolchains"
+                  commit-message: |-
+                      ${{ steps.metadata.outputs.commit_title }}
+
+                      ${{ steps.metadata.outputs.commit_body }}
                   committer: Reduction-Oxidation Clanker <redox-clanker@luisschwab.net>
                   author: Reduction-Oxidation Clanker <redox-clanker@luisschwab.net>
-                  title: Update Tools and Toolchains [${{ env.UPDATE_DATE }}]
+                  title: ${{ steps.metadata.outputs.pr_title }}
+                  body: ${{ steps.metadata.outputs.pr_body }}
