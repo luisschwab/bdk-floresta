@@ -47,20 +47,33 @@ A `justfile` is provided for convenience. Run `just` to see available commands:
 > A Floresta-powered chain-source crate for BDK
 
 Available recipes:
-    audit                  # Run `cargo audit` on all lockfiles and prune ignored advisories [alias: a]
-    check                  # Check Formatting, Linting and Documentation [alias: c]
-    docs                   # Generate Documentation
-    docs-open              # Generate and Open Documentation
-    example-client-regtest # Run the Regtest Client Example [alias: cr]
-    example-client-signet  # Run the Signet Client Cxample [alias: cs]
-    fmt                    # Format Code [alias: f]
-    lock                   # Regenerate Lockfiles [alias: l]
-    pre-push               # Run pre-push checks [alias: p]
-    shellcheck             # Run ShellCheck [alias: sc]
-    test                   # Run Tests [alias: t]
-    toolchains             # Update Stable and Nightly Toolchains
-    tools                  # Install cargo-rbmt Tools
-    zizmor                 # Run Zizmor [alias: z]
+    [Dependencies]
+    lock                            # Regenerate Lockfiles [alias: l]
+
+    [Documentation]
+    docs                            # Generate Documentation [alias: d]
+    docs-open                       # Generate and Open Documentation [alias: do]
+
+    [Examples]
+    example-client-regtest          # Run the Regtest Client Example [alias: cr]
+    example-client-signet           # Run the Signet Client Example [alias: cs]
+
+    [Quality]
+    audit                           # Audit Cargo Dependencies [alias: a]
+    bisectability baseline="master" # Assert Commit Bisectability [alias: b]
+    check                           # Check Formatting, Linting and Documentation [alias: c]
+    fmt                             # Format Code [alias: f]
+    pre-push                        # Run Pre-Push Checks [alias: p]
+    shellcheck                      # Run ShellCheck [alias: sc]
+    zizmor                          # Run Zizmor [alias: z]
+
+    [Setup]
+    install-tools-toolchains        # Install Tools and Toolchains
+    update-tools-toolchains         # Update Tools and Toolchains
+
+    [Testing]
+    coverage                        # Generate Coverage Report [alias: cov]
+    test                            # Run Tests [alias: t]
 ```
 
 ## Architecture
