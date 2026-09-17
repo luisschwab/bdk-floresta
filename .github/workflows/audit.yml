@@ -5,13 +5,17 @@ on:
         branches: [ master ]
     pull_request:
     schedule:
-        - cron: '0 12 * * *' # Daily, 12:00:00 UTC
+        - cron: '0 9 * * *' # Daily @ 09:00:00 UTC
     workflow_dispatch:
 
-permissions: {}
+concurrency:
+    # Cancel in-progress runs on branch updates
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 env:
     CARGO_TERM_COLOR: always
-    RBMT_LOG_LEVEL: progress
+    RBMT_LOG_LEVEL: verbose
+permissions: {}
 
 jobs:
     cargo-audit:
