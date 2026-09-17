@@ -41,13 +41,13 @@ use bdk_floresta::logger::Logger;
 use bdk_wallet::Wallet;
 use bdk_wallet::WalletEvent;
 use bitcoin::Network;
-use halfin::bitcoind::BitcoinD;
-use halfin::bitcoind::BitcoinDConf;
+use halfin::node::bitcoind::BitcoinD;
+use halfin::node::bitcoind::BitcoinDConf;
 use halfin::node::connect;
+use halfin::node::utreexod::UtreexoD;
+use halfin::node::utreexod::UtreexoDConf;
 use halfin::node::wait_for_filter_height;
 use halfin::node::wait_for_height;
-use halfin::utreexod::UtreexoD;
-use halfin::utreexod::UtreexoDConf;
 use tokio::sync::RwLock;
 use tracing::Level;
 use tracing::error;
@@ -95,7 +95,6 @@ async fn main() -> anyhow::Result<()> {
     info!("> BITCOIND: SPAWNED");
 
     let utreexod_conf = UtreexoDConf {
-        args: vec!["--regtest", "--notls", "--nodnsseed", "--noassumeutreexo", "--cfilters"],
         staticdir: Some(PathBuf::from(DATA_DIR).join("utreexod")),
         ..Default::default()
     };

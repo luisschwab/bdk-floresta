@@ -353,6 +353,7 @@ dependencies = [
  "bitcoin-consensus-encoding 1.2.0",
  "bitcoin-internals 0.6.0",
  "cpufeatures 0.2.17",
+ "hex-conservative 1.2.0",
 ]
 
 [[package]]
@@ -916,19 +917,19 @@ dependencies = [
 
 [[package]]
 name = "halfin"
-version = "0.5.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a68bf753ddec6e77d6a2b9f2a6d265a46cc63929e3b4351d2cf57853e70069f"
+checksum = "d897e2121f002f74736a3fc2e788f228188a5faf94318f69fea8dccce113a6a1"
 dependencies = [
- "bitcoin_hashes 0.20.0",
+ "bitcoin_hashes 1.1.0",
  "bitreq",
  "corepc-client",
  "flate2",
+ "rustls",
  "serde_json",
  "tar",
  "tempfile",
  "tracing",
- "which",
  "zip",
 ]
 
@@ -2298,12 +2299,6 @@ checksum = "bf85cb06032201fa7c6f829d7db5a7e5aa45bcc0655327713065f6f0576731bf"
 dependencies = [
  "rustls-pki-types",
 ]
-
-[[package]]
-name = "which"
-version = "8.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48d7cd18d4acb58fb3cdfe9ea54e6cd96a4e7d4cc45c56338b236e82dad47248"
 
 [[package]]
 name = "winapi"
