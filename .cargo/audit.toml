@@ -1,6 +1,6 @@
 [advisories]
 ignore = [
-    # All lockfiles
+    # All Lockfiles
     # Cargo.lock
     # Cargo-maximum.lock
     # Cargo-recent.lock

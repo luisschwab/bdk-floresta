@@ -1,14 +1,20 @@
 # bdk-floresta
 
-<p>
-    <!-- <a href="https://crates.io/crates/bdk-floresta"><img src="https://img.shields.io/crates/v/bdk-floresta.svg"/></a> -->
-    <!-- <a href="https://docs.rs/bdk-floresta"><img src="https://img.shields.io/badge/docs.rs-bdk-floresta-brightgreen"/></a> -->
-    <a href="https://blog.rust-lang.org/2025/02/20/Rust-1.85.0/"><img src="https://img.shields.io/badge/MSRV-1.85.0%2B-orange.svg"/></a>
-    <a href="https://github.com/luisschwab/bdk-floresta/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT%2FApache--2.0-red.svg"/></a>
-    <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml/badge.svg"></a>
-    <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/integration.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/integration.yml/badge.svg"></a>
-    <a href="https://github.com/luisschwab/bdk-floresta/actions/workflows/cross.yml"><img src="https://github.com/luisschwab/bdk-floresta/actions/workflows/cross.yml/badge.svg"></a>
-</p>
+<!-- [![crates.io][crates-badge]](https://crates.io/crates/bdk-floresta) -->
+<!-- [![docs.rs][docs-badge]](https://docs.rs/bdk-floresta) -->
+[![rustc][rustc-badge]](https://blog.rust-lang.org/2025/02/20/Rust-1.85.0/)
+[![license-mit-apache][license-badge]](https://github.com/luisschwab/bdk-floresta/blob/master/LICENSE)
+[![test suite][rust-badge]](https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml)
+[![integration tests][integration-badge]](https://github.com/luisschwab/bdk-floresta/actions/workflows/integration.yml)
+[![cross builds][cross-badge]](https://github.com/luisschwab/bdk-floresta/actions/workflows/cross.yml)
+
+[crates-badge]: https://img.shields.io/crates/v/bdk-floresta.svg
+[docs-badge]: https://img.shields.io/badge/docs.rs-bdk-floresta-brightgreen
+[rustc-badge]: https://img.shields.io/badge/MSRV-1.85.0%2B-orange.svg
+[license-badge]: https://img.shields.io/badge/License-MIT%2FApache--2.0-red.svg
+[rust-badge]: https://github.com/luisschwab/bdk-floresta/actions/workflows/rust.yml/badge.svg
+[integration-badge]: https://github.com/luisschwab/bdk-floresta/actions/workflows/integration.yml/badge.svg
+[cross-badge]: https://github.com/luisschwab/bdk-floresta/actions/workflows/cross.yml/badge.svg
 
 A Floresta-powered chain-source crate for BDK.
 

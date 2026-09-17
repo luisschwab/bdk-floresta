@@ -3,9 +3,11 @@ name: Commits
 on:
     pull_request:
 
+concurrency:
+    # Cancel in-progress runs on branch updates
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 permissions: {}
-env:
-    CARGO_TERM_COLOR: always
 
 jobs:
     conventional:

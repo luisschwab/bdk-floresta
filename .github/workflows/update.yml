@@ -2,14 +2,18 @@ name: Update
 
 on:
     schedule:
-        - cron: '0 9 1 * *' # First day of each month @ 09:00:00 UTC
+        - cron: '0 9 1 * *' # First day of the month @ 09:00:00 UTC
     workflow_dispatch:
 
-permissions: {}
+concurrency:
+    # Cancel in-progress runs on branch updates
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 env:
     CARGO_TERM_COLOR: always
     RUST_BACKTRACE: 1
     RBMT_LOG_LEVEL: verbose
+permissions: {}
 
 jobs:
     update:
@@ -34,15 +38,15 @@ jobs:
               uses: $/.github/actions/setup-rbmt
 
             - name: Configure the Clanker's Git Identity
-              env:
-                  PGP_FINGERPRINT: ${{ secrets.REDOX_CLANKER_PGP_FINGERPRINT }}
-                  PGP_SECKEY: ${{ secrets.REDOX_CLANKER_PGP_SECKEY }}
               run: |
                   printf '%s' "$PGP_SECKEY" | gpg --batch --import
                   git config user.name "Reduction-Oxidation Clanker"
                   git config user.email "redox-clanker@luisschwab.net"
                   git config user.signingkey "$PGP_FINGERPRINT"
                   git config commit.gpgsign true
+              env:
+                  PGP_FINGERPRINT: ${{ secrets.REDOX_CLANKER_PGP_FINGERPRINT }}
+                  PGP_SECKEY: ${{ secrets.REDOX_CLANKER_PGP_SECKEY }}
 
             - name: Snapshot Current Tool and Toolchain Versions
               run: |
@@ -55,13 +59,13 @@ jobs:
                   cargo rbmt toolchains --nightly > "$RUNNER_TEMP/nightly-before.txt"
 
             - name: Update Tools and Toolchains
-              env:
-                  RBMT_LOG_LEVEL: progress
               run: |
                   cargo rbmt tools --update
                   cargo rbmt toolchains --update-stable
                   cargo rbmt toolchains --update-nightly
                   cargo rbmt fmt
+              env:
+                  RBMT_LOG_LEVEL: progress
 
             - name: Snapshot Updated Tool and Toolchain Versions
               run: |
@@ -170,13 +174,14 @@ jobs:
                       core.setOutput('pr_body', prBody);
                       core.setOutput('commit_title', commitTitle);
                       core.setOutput('commit_body', commitBody);
+                      core.setOutput('branch', `clanker/tool-toolchain-update-${updateDate.replaceAll('-', '')}`);
 
             - name: Create Pull Request
               uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
               with:
                   token: ${{ secrets.REDOX_CLANKER_CREATE_PR_TOKEN }}
                   base: master
-                  branch: bot/automated-tool-toolchain-update
+                  branch: ${{ steps.metadata.outputs.branch }}
                   delete-branch: true
                   commit-message: |-
                       ${{ steps.metadata.outputs.commit_title }}

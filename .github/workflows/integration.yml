@@ -6,12 +6,16 @@ on:
     pull_request:
     workflow_dispatch:
 
-permissions:
-    contents: read
+concurrency:
+    # Cancel in-progress runs on branch updates
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 env:
     CARGO_TERM_COLOR: always
     RBMT_LOG_LEVEL: verbose
     RUST_BACKTRACE: 1
+permissions:
+    contents: read
 
 jobs:
     integration:

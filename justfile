@@ -70,9 +70,9 @@ pre-push:
     # Check PR Bisectability
     cargo rbmt run --baseline master -- test --quiet
     # Run Tests
-    cargo rbmt test --toolchain stable --lockfile recent
-    cargo rbmt test --toolchain stable --lockfile minimal
-    cargo rbmt test --toolchain msrv --lockfile minimal
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile recent
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile minimal
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain msrv --lockfile minimal
     # Audit Cargo Dependencies
     @just audit
     # Audit Shell Scripts
@@ -121,9 +121,9 @@ coverage:
 [doc: "Run Tests"]
 [group("Testing")]
 test:
-    cargo rbmt test --toolchain stable --lockfile recent
-    cargo rbmt test --toolchain stable --lockfile minimal
-    cargo rbmt test --toolchain msrv --lockfile minimal
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile recent
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain stable --lockfile minimal
+    RBMT_LOG_LEVEL=verbose cargo rbmt test --toolchain msrv --lockfile minimal
 
 # Examples
 
