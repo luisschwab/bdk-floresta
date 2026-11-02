@@ -552,7 +552,7 @@ dependencies = [
 [[package]]
 name = "floresta"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=3a47993595d1d865fb6bea6bce5e9818b5a6bd7e#3a47993595d1d865fb6bea6bce5e9818b5a6bd7e"
+source = "git+https://github.com/getfloresta/Floresta?rev=963afae8466e9ab36fce636fccde80f0da558b21#963afae8466e9ab36fce636fccde80f0da558b21"
 dependencies = [
  "floresta-chain",
  "floresta-compact-filters",
@@ -564,7 +564,7 @@ dependencies = [
 [[package]]
 name = "floresta-chain"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=3a47993595d1d865fb6bea6bce5e9818b5a6bd7e#3a47993595d1d865fb6bea6bce5e9818b5a6bd7e"
+source = "git+https://github.com/getfloresta/Floresta?rev=963afae8466e9ab36fce636fccde80f0da558b21#963afae8466e9ab36fce636fccde80f0da558b21"
 dependencies = [
  "bitcoin",
  "bitcoin_hashes 1.1.0",
@@ -593,7 +593,7 @@ dependencies = [
 [[package]]
 name = "floresta-compact-filters"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=3a47993595d1d865fb6bea6bce5e9818b5a6bd7e#3a47993595d1d865fb6bea6bce5e9818b5a6bd7e"
+source = "git+https://github.com/getfloresta/Floresta?rev=963afae8466e9ab36fce636fccde80f0da558b21#963afae8466e9ab36fce636fccde80f0da558b21"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -602,7 +602,7 @@ dependencies = [
 [[package]]
 name = "floresta-domain"
 version = "0.1.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=3a47993595d1d865fb6bea6bce5e9818b5a6bd7e#3a47993595d1d865fb6bea6bce5e9818b5a6bd7e"
+source = "git+https://github.com/getfloresta/Floresta?rev=963afae8466e9ab36fce636fccde80f0da558b21#963afae8466e9ab36fce636fccde80f0da558b21"
 dependencies = [
  "bitcoin",
  "floresta-chain",
@@ -611,7 +611,7 @@ dependencies = [
 [[package]]
 name = "floresta-mempool"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=3a47993595d1d865fb6bea6bce5e9818b5a6bd7e#3a47993595d1d865fb6bea6bce5e9818b5a6bd7e"
+source = "git+https://github.com/getfloresta/Floresta?rev=963afae8466e9ab36fce636fccde80f0da558b21#963afae8466e9ab36fce636fccde80f0da558b21"
 dependencies = [
  "ahash",
  "bitcoin",
@@ -625,7 +625,7 @@ dependencies = [
 [[package]]
 name = "floresta-wire"
 version = "0.5.0"
-source = "git+https://github.com/getfloresta/Floresta?rev=3a47993595d1d865fb6bea6bce5e9818b5a6bd7e#3a47993595d1d865fb6bea6bce5e9818b5a6bd7e"
+source = "git+https://github.com/getfloresta/Floresta?rev=963afae8466e9ab36fce636fccde80f0da558b21#963afae8466e9ab36fce636fccde80f0da558b21"
 dependencies = [
  "bip324",
  "bitcoin",
@@ -1623,9 +1623,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.52.3"
+version = "1.53.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
+checksum = "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
 dependencies = [
  "bytes",
  "libc",
